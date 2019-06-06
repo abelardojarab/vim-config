@@ -223,9 +223,18 @@ map <C-Right> <Esc>:bnext<CR>
 map <C-b> :NERDTreeToggle<CR>
 
 " Move lines up and down
-nnoremap <C-j> :m .+1<CR>==
-nnoremap <C-k> :m .-2<CR>==
-inoremap <C-j> <Esc>:m .+1<CR>==gi
-inoremap <C-k> <Esc>:m .-2<CR>==gi
-vnoremap <C-j> :m '>+1<CR>gv=gv
-vnoremap <C-k> :m '<-2<CR>gv=gv
+nnoremap <C-m> :m .+1<CR>==
+nnoremap <C-n> :m .-2<CR>==
+inoremap <C-m> <Esc>:m .+1<CR>==gi
+inoremap <C-n> <Esc>:m .-2<CR>==gi
+vnoremap <C-m> :m '>+1<CR>gv=gv
+vnoremap <C-n> :m '<-2<CR>gv=gv
+
+
+" --- Default vim file browser :Explore
+let g:netrw_liststyle = 3
+let g:netrw_banner = 0
+let g:netrw_browse_split = 1
+let g:netrw_altv = 1
+let g:netrw_winsize = 25
+
