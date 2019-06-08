@@ -10,6 +10,7 @@ set guioptions-=T " Removes top toolbar
 set guioptions-=r " Removes right hand scroll bar
 set go-=L " Removes left hand scroll bar
 set linespace=15
+set t_Co=256
 
 
 " --- editor settings
@@ -30,8 +31,6 @@ set smartcase                   " ignore case if search pattern is all lowercase
 set mouse=a                     "enable mouse automatically entering visual mode
 set clipboard=unnamed,unnamedplus                    "Use system clipboard by default
 
-" Use the same symbols as TextMate for tabstops and EOLs
-set listchars=tab:▸\ ,eol:¬
 
 " --- spell checking
 set spelllang=en_us         " spell checking
@@ -155,18 +154,14 @@ else
     let &t_EI = "\<Esc>]50;CursorShape=0\x7"
 endif
 
-" Down is really the next line
+" Ensures that vim moves up/down linewise instead of by wrapped lines
 nnoremap j gj
 nnoremap k gk
 
 " Easy escaping to normal model
 imap jj <esc>
 
-"Auto change directory to match current file ,cd
-nnoremap ,cd :cd %:p:h<CR>:pwd<CR>
-
 " Easier window navigation
-
 nmap <C-h> <C-w>h
 nmap <C-j> <C-w>j
 nmap <C-k> <C-w>k
@@ -174,7 +169,7 @@ nmap <C-l> <C-w>l
 map <Tab><Tab> <C-W>w
 
 " Resize vsplit
-nmap <C-v> :vertical resize +5<cr>
+nmap <C-w> :vertical resize +5<cr>
 
 " Create split below
 nmap :sp :rightbelow sp<cr>
@@ -190,20 +185,46 @@ nmap sp :split<cr>
 " Allow saving a sudo file if forgot to open as sudo
 cmap w!! w !sudo tee % >/dev/null
 
+" turns on nice popup menu for omni completion
+:highlight Pmenu ctermbg=238 gui=bold
+
 " --- Leader based key bindings
-let mapleader = ","
+nnoremap <SPACE> <Nop>
+let mapleader=" "
+
+"Auto change directory to match current file ,cd
+nnoremap <leader>cd :cd %:p:h<CR>:pwd<CR>
+
+" Go to tab by number
+noremap <leader>1 1gt
+noremap <leader>2 2gt
+noremap <leader>3 3gt
+noremap <leader>4 4gt
+noremap <leader>5 5gt
+noremap <leader>6 6gt
+noremap <leader>7 7gt
+noremap <leader>8 8gt
+noremap <leader>9 9gt
+noremap <leader>0 :tablast<cr>
 
 " Toggle paste mode
 nmap <leader>o :set paste!<CR>
 
 " Remove trailing whitespace
-nnoremap <leader>W :%s/\s\+$//<cr>:let @/=''<CR>
+nnoremap <leader>w :%s/\s\+$//<cr>:let @/=''<CR>
 
 " --- Plugins
 call plug#begin('~/.vim/plugged')
 " Other plugins here.
 Plug 'ctrlpvim/ctrlp.vim'
 Plug 'scrooloose/nerdtree', { 'on':  'NERDTreeToggle' }
+Plug 'bling/vim-airline'  " vim status bar
+Plug 'tpope/vim-fugitive' " Git integration
+Plug 'scrooloose/syntastic'  " adds syntax checking
+Plug 'tpope/vim-surround'  " quoting and parenthesizing made simple
+Plug 'tinyheero/vim-snippets'  " fork of honza/vim-snippets
+Plug 'tomtom/tcomment_vim'  " extensible & universal comment
+
 call plug#end()
 
 nnoremap <Leader>b :CtrlPBuffer<CR>
@@ -221,15 +242,6 @@ map <C-Right> <Esc>:bnext<CR>
 
 " Nerd Tree toggling
 map <C-b> :NERDTreeToggle<CR>
-
-" Move lines up and down
-nnoremap <C-m> :m .+1<CR>==
-nnoremap <C-n> :m .-2<CR>==
-inoremap <C-m> <Esc>:m .+1<CR>==gi
-inoremap <C-n> <Esc>:m .-2<CR>==gi
-vnoremap <C-m> :m '>+1<CR>gv=gv
-vnoremap <C-n> :m '<-2<CR>gv=gv
-
 
 " --- Default vim file browser :Explore
 let g:netrw_liststyle = 3
