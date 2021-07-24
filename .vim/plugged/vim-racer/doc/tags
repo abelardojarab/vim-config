@@ -1,0 +1,15 @@
+'g:racer_cmd'	vim-racer.txt	/*'g:racer_cmd'*
+'g:racer_experimental_completer'	vim-racer.txt	/*'g:racer_experimental_completer'*
+'g:racer_insert_paren'	vim-racer.txt	/*'g:racer_insert_paren'*
+:RacerDef	vim-racer.txt	/*:RacerDef*
+:RacerDoc	vim-racer.txt	/*:RacerDoc*
+racer	vim-racer.txt	/*racer*
+racer-commands	vim-racer.txt	/*racer-commands*
+racer-completion	vim-racer.txt	/*racer-completion*
+racer-contents	vim-racer.txt	/*racer-contents*
+racer-install	vim-racer.txt	/*racer-install*
+racer-intro	vim-racer.txt	/*racer-intro*
+racer-mapping	vim-racer.txt	/*racer-mapping*
+racer-settings	vim-racer.txt	/*racer-settings*
+racer-usage	vim-racer.txt	/*racer-usage*
+vim-racer	vim-racer.txt	/*vim-racer*

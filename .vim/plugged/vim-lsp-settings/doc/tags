@@ -1,0 +1,15 @@
+:LspSettingsGlobalEdit	vim-lsp-settings.txt	/*:LspSettingsGlobalEdit*
+:LspSettingsLocalEdit	vim-lsp-settings.txt	/*:LspSettingsLocalEdit*
+:LspSettingsStatus	vim-lsp-settings.txt	/*:LspSettingsStatus*
+LspInstallServer	vim-lsp-settings.txt	/*LspInstallServer*
+LspUninstallServer	vim-lsp-settings.txt	/*LspUninstallServer*
+g:lsp_settings_deny_local_keys	vim-lsp-settings.txt	/*g:lsp_settings_deny_local_keys*
+g:lsp_settings_enable_suggestions	vim-lsp-settings.txt	/*g:lsp_settings_enable_suggestions*
+g:lsp_settings_global_settings_dir	vim-lsp-settings.txt	/*g:lsp_settings_global_settings_dir*
+g:lsp_settings_servers_dir	vim-lsp-settings.txt	/*g:lsp_settings_servers_dir*
+vim-lsp-settings	vim-lsp-settings.txt	/*vim-lsp-settings*
+vim-lsp-settings-configuration	vim-lsp-settings.txt	/*vim-lsp-settings-configuration*
+vim-lsp-settings-contents	vim-lsp-settings.txt	/*vim-lsp-settings-contents*
+vim-lsp-settings-installation	vim-lsp-settings.txt	/*vim-lsp-settings-installation*
+vim-lsp-settings-introduction	vim-lsp-settings.txt	/*vim-lsp-settings-introduction*
+vim-lsp-settings.txt	vim-lsp-settings.txt	/*vim-lsp-settings.txt*

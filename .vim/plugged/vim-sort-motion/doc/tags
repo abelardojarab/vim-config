@@ -1,0 +1,4 @@
+'g:sort_motion'	sort_motion.txt	/*'g:sort_motion'*
+'g:sort_motion_lines'	sort_motion.txt	/*'g:sort_motion_lines'*
+'g:sort_motion_visual'	sort_motion.txt	/*'g:sort_motion_visual'*
+sort_motion.txt	sort_motion.txt	/*sort_motion.txt*

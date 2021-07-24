@@ -1,0 +1,251 @@
+*vp4.txt* integration with perforce
+
+                                       ___
+                                      //| |
+                          ___   __ __//_| |_
+                          \  \ // '_ \__  __|
+                           \  V/| |_) ; | |
+                            \_/ | .--'  |_|
+                                | |
+                                \_|
+
+         Integration with perforce.  Inspired by tpope/vim-fugitive.
+
+==============================================================================
+INTRO                                                              *vp4-intro*
+
+vp4 does the following:
+
+    * Provides commands for interacting with perforce while remaining in Vim
+    * Automatically detects operations on files not open for edit
+    * Ridiculously functional annotation by adding more useful information
+      such as the date, user, and description of the changelist
+    * Fantastical diffing, including vs depot, vs shelved, vs previous rev
+    * File history browsing, with which you can (fairly) easily diff two
+      arbitrary revisions of any file
+
+==============================================================================
+COMMANDS                                                        *vp4-commands*
+
+ANALYSIS - Query and display information about a file.
+
+    Annotate.|Vp4Annotate|
+    Diff.....|Vp4Diff|
+    Info.....|Vp4Info|
+    Filelog..|Vp4Filelog|
+
+CHANGE SPECIFICATION - Perform actions on changelists.
+
+    Change...|Vp4Change|
+    Describe.|Vp4Describe|
+    Shelve...|Vp4Shelve|
+
+FILE EDITING - Perform actions on files that alter their state in Perforce.
+
+    Add......|Vp4Add|
+    Delete...|Vp4Delete|
+    Edit.....|Vp4Edit|
+    Reopen...|Vp4Reopen|
+    Revert...|Vp4Revert|
+
+FILE EXPLORATION - Explore the depot
+
+    Explore..|Vp4Explore|
+
+------------------------------------------------------------------------------
+ANALYSIS
+                                                                 *Vp4Annotate*
+:[range]Vp4Annotate [q]
+Opens a scrollbound split showing the changelist where each line was last
+modified, and the date, user, and description of the changelist.  This feature
+is slow on large files with many different last changes.  To speed it up,
+visually select lines to fully annotate (recommended), or use the q option
+to show only the changelist number.  'q' exits.
+
+Opens a view like:>
+    +----------------------------------+------------------------+
+    | <Description> <date> <user> <cl> | for (auto elem : l) {  |
+    | <Description> <date> <user> <cl> |     std::cout << elem; |
+    |                ...               |          ...           |
+    +----------------------------------+------------------------+
+    | :Pannotate                                                |
+    +----------------------------------+------------------------+
+<
+
+Note: Annotations will be misaligned on files that are currently being edited.
+This is because `p4 annotate` works only submitted revisions of files.  To
+workaround this, it is suggested to open the last submitted revision of the
+filelog using :Vp4Filelog and run :Vp4Annotate on that.
+
+                                                                     *Vp4Diff*
+:Vp4Diff [s][p][@{cl}][#{rev}]
+With no arguments, the depot version of the current file in a vertical split,
+in diff mode.  Hit 'q' to exit.
+
+    With [s] diff with shelved in current changelist.  Only available if file
+    is open for edit and shelved.
+
+    With [p] diff with previous version.  Available on any file that exists in
+    the depot.
+
+    With [@{cl}] diff with shelved in changelist {cl}.  Available on any file
+    that exists in the depot, provided it is actually shelved in changelist.
+
+    With [#{rev}] diff with revision {rev}.
+
+                                                                     *Vp4Info*
+Call `fstat` on this file.
+
+                                                                  *Vp4Filelog*
+:Vp4Filelog [n]
+Populate the quick-fix or location list with the past [n] or default revisions
+of this file.  The file is not actually retrieved from the server until it is
+opened.  Lists in chronologically reverse order.
+
+Unset |g:vp4_open_loclist| to prevent the location list from being opened
+automatically.  Set |g:vp4_filelog_max| to limit the number of revisions
+listed by default.
+
+------------------------------------------------------------------------------
+CHANGE SPECIFICATION
+                                                                   *Vp4Change*
+Opens the change specification in a new split.  Equivalent to `p4 change -o`
+if current file is not already opened in a changelist and `p4 change -o -c
+{cl}` if already opened in a changelist.  Use the write (:w) command to make
+the change, quit (:q) to abort.
+
+                                                                 *Vp4Describe*
+Opens a preview window containing a description of the changelist in which the
+current file is open, obtained from `p4 describe <cl>`
+
+                                                                   *Vp4Shelve*
+:Vp4Shelve[!]
+Calls the shelve command for the current file, for the changelist in which it
+is currently open.  Not available unless the file is open in a named
+changelist (i.e. not the default changelist).  With [!] performs the command
+with '-f', overwriting any existing shelved version.
+
+------------------------------------------------------------------------------
+FILE EDITING
+                                                                      *Vp4Add*
+Opens current file for add.
+
+                                                                   *Vp4Delete*
+:Vp4Delete[!]
+Opens current file for delete.  Unloads current buffer.  Confirms before doing
+so; use [!] to skip confirmation.
+
+                                                                     *Vp4Edit*
+Opens current file for edit.
+
+                                                                   *Vp4Reopen*
+Move the current file to a different changelist.  Lists all open changelists
+and prompts for a selection.
+
+                                                                   *Vp4Revert*
+:Vp4Revert[!]
+Reverts current file.  Confirms before doing so.  Use [!] to skip
+confirmation.
+
+------------------------------------------------------------------------------
+EXPLORATION
+                                                                  *Vp4Explore*
+Opens depot file explorer at the current filepath.
+
+Key mappings:
+
+             +======+===========================================+
+             | Key  | function                                  |
+             +------+-------------------------------------------+
+             | <CR> | Expand/collapse directory; go to file     |
+             | -    | Explore parent node                       |
+             | c    | Change root of explorer to this directory |
+             | s    | Open file in new split, syncing if req.   |
+             | v    | Open file in new vsplit, syncing if req.  |
+             | t    | Open file in new tab, syncing if req.     |
+             | q    | Quit                                      |
+             +======+===========================================+
+
+Set g:vp4_sync_options to pass options to perforce sync command.
+------------------------------------------------------------------------------
+SYSTEM
+                                                                         *Vp4*
+:Vp4 <command>
+Run arbitrary perforce command.  Results are shown in a preview window.
+
+==============================================================================
+PASSIVE FEATURES                                                 *vp4-passive*
+
+Prompt for edit
+When writing a file, set |g:vp4_prompt_on_write| to enable prompt on write to
+`p4 edit` the file.
+
+Open depot file
+Set |g:vp4_allow_open_depot_file| to allow vim to be invoked on a depot path
+specification, like `vim //main/foo/bar/baz.cpp` where:
+    - if the file has been synced into the workspace, open the local file
+    - otherwise, fetch the file contents from server
+
+==============================================================================
+OPTIONS                                                          *vp4-options*
+
+*g:vp4_perforce_executable* Name of perforce executable.
+                            = p4 (default)
+
+*g:vp4_prompt_on_write*     Prompt for edit when (force) writing a file that
+                            has not already been opened for edit.
+                            = 0
+                            = 1 (default)
+
+*g:vp4_diff_suppress_header*
+                            Suppress perforce header information in file
+                            being diffed
+                            = 0
+                            = 1 (default)
+
+*g:vp4_annotate_revision*   Show revision number instead of changelist number
+                            in which line was changed.  Full annotation
+                            (username, date, description) is not available if
+                            set.
+                            = 0 (default)
+                            = 1
+
+*g:vp4_open_loclist*        Automatically open the location list after
+                            performing |Vp4Filelog|
+                            = 0
+                            = 1 (default)
+
+*g:vp4_filelog_max*         Limit the number of revisions listed by
+                            |Vp4Filelog|.  Runs faster with a smaller limit.
+                            = 10 (default)
+                            <= 0 lists all revisions
+
+*g:vp4_allow_open_depot_file*
+                            Allow invoking vim with a perforce depot path.  If
+                            the file is synced locally, open that file.
+                            Otherwise, open a new buffer with the server file
+                            contents.
+
+g:vp4_sync_options          Options to pass to perforce sync command when 
+                            syncing files via the Explorer.
+
+g:vp4_base_path_replacements
+                            Allows P4 paths to be replaced at command time
+                            = { /home/u/bad/repo/ : /home/u/good/repo} (ex)
+                            = {} (default)
+==============================================================================
+KNOWN ISSUES                                                      *vp4-issues*
+
+Extra line at top of depot file~
+In any command that issues a `p4 print`, i.e. any diff command, or opening
+other revisions of files, leaves an extra blank line at the top of the screen.
+
+==============================================================================
+CREDITS                                                          *vp4-credits*
+
+This plugin was heavily inspired by vim-fugitive.  Additionally, the author
+was helped greatly by the book Learn Vimscript the Hard Way and Vim's
+excellent built-in documentation.
+
+
+vim:tw=78:ts=8:ft=help:norl:
