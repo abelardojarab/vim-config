@@ -12,6 +12,7 @@ set go-=L " Removes left hand scroll bar
 set linespace=15
 set t_Co=256
 
+
 " --- editor settings ---
 set showmode                    " always show what mode we're currently editing in
 set nowrap                      " don't wrap lines
@@ -270,7 +271,9 @@ Plug 'liuchengxu/vim-which-key'
 
 " Copy paste
 Plug 'svermeulen/vim-cutlass'
+if !has('nvim')
 Plug 'svermeulen/vim-yoink'
+endif
 Plug 'svermeulen/vim-subversive'
 
 " Snippets
@@ -710,7 +713,8 @@ au BufNewFile, BufRead *.js, *.html, *.css
     \ set shiftwidth=2
 
 " --- Better copy paste ---
-let g:yoinkIncludeDeleteOperations   = 1
+let g:yoinkIncludeDeleteOperations    = 1
+let g:yoinkSyncSystemClipboardOnFocus = 0
 
 nnoremap x d
 xnoremap x d
