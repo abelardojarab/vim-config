@@ -276,6 +276,9 @@ if !has('nvim')
 Plug 'svermeulen/vim-yoink'
 endif
 Plug 'svermeulen/vim-subversive'
+if has('nvim')
+Plug 'bfredl/nvim-miniyank'
+endif
 
 " Snippets
 Plug 'Shougo/neosnippet.vim',

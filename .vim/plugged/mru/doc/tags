@@ -1,4 +1,5 @@
 :MRU	mru.txt	/*:MRU*
+:MRUToggle	mru.txt	/*:MRUToggle*
 :MruRefresh	mru.txt	/*:MruRefresh*
 MRU_Add_Menu	mru.txt	/*MRU_Add_Menu*
 MRU_Auto_Close	mru.txt	/*MRU_Auto_Close*

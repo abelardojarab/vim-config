@@ -30,6 +30,8 @@ IMPROVEMENTS:
   [[GH-3095]](https://github.com/fatih/vim-go/pull/3095)
 * Show LSP messages to users.
   [[GH-3058]](https://github.com/fatih/vim-go/pull/3058)
+* Check omnifunc's value before executing actions on CompletedDone event.
+  [[GH-3274]](https://github.com/fatih/vim-go/pull/3274)
 
 BUG FIXES:
 * Handle terminating parenthesis on hexadecimal values.
@@ -37,7 +39,9 @@ BUG FIXES:
 * Fix applying text edits from gopls.
   [[GH-3231]](https://github.com/fatih/vim-go/pull/3231)
 * Apply arguments to `:GoCoverageBrowser`.
-  [[GH-4031]](https://github.com/fatih/vim-go/pull/4031)
+  [[GH-3240]](https://github.com/fatih/vim-go/pull/3240)
+* Fix `:GoFillStruct` when `g:go_fillstruct_mode` is `gopls`.
+  [[GH-3279]](https://github.com/fatih/vim-go/pull/3279)
 
 ## v1.25 - (April 18, 2021)
 

@@ -20,7 +20,9 @@ bufstop-statusline	bufstop.txt	/*bufstop-statusline*
 bufstop-ultimate	bufstop.txt	/*bufstop-ultimate*
 bufstop.txt	bufstop.txt	/*bufstop.txt*
 g:BufstopAutoSpeedToggle	bufstop.txt	/*g:BufstopAutoSpeedToggle*
+g:BufstopData	bufstop.txt	/*g:BufstopData*
 g:BufstopDismissKey	bufstop.txt	/*g:BufstopDismissKey*
+g:BufstopIndicators	bufstop.txt	/*g:BufstopIndicators*
 g:BufstopKeys	bufstop.txt	/*g:BufstopKeys*
 g:BufstopLeader	bufstop.txt	/*g:BufstopLeader*
 g:BufstopModeNumFiles	bufstop.txt	/*g:BufstopModeNumFiles*

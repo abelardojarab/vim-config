@@ -1,12 +1,14 @@
-if exists('g:loaded_bufstop') 
+if exists('g:loaded_bufstop')
   finish
 endif
 
 let g:loaded_bufstop = 1
 
+let g:BufstopData = []
+
 let s:name = "--Bufstop--"
 let s:lsoutput = ""
-let s:types = ["fullname", "path", "shortname"]
+let s:types = ["fullname", "path", "shortname", "indicators"]
 let s:local_bufnr = -1
 let s:fast_mode = 0
 let s:preview_mode = 0
@@ -46,6 +48,10 @@ endif
 
 if !exists("g:BufstopSorting")
   let g:BufstopSorting = "MRU"
+endif
+
+if !exists("g:BufstopIndicators")
+  let g:BufstopIndicators = 0
 endif
 
 let s:keystr = g:BufstopKeys
@@ -95,18 +101,22 @@ endfunction
 
 " select a buffer from the Bufstop window
 function! s:BufstopSelectBuffer(k)
+  if len(g:BufstopData) == 0
+    return
+  endif
+
   let delkey = 0
 
   if (a:k == 'd')
     let delkey = 1
   endif
 
-  let keyno = strridx(s:keystr, a:k) 
+  let keyno = strridx(s:keystr, a:k)
   let s:bufnr = -1
 
   let pos = 0
   if (keyno >= 0 && !delkey)
-    for b in s:allbufs
+    for b in g:BufstopData
       let pos += 1
       if b.key ==# a:k
         let s:bufnr = b.bufno
@@ -116,36 +126,81 @@ function! s:BufstopSelectBuffer(k)
     " move cursor on the selected line
     exe pos
   else
-    let s:bufnr = s:allbufs[line('.')-1].bufno
+    let s:bufnr = g:BufstopData[line('.')-1].bufno
   endif
 
   if bufexists(s:bufnr)
     if delkey
-      call remove(s:allbufs, line('.')-1)
-      exe "silent bw ".s:bufnr
-      setlocal modifiable
-      exe "d"
-      setlocal nomodifiable
+      call s:BufstopWipeBuffer(s:bufnr)
     else
       exe "wincmd p"
       exe "silent b" s:bufnr
+      if !exists('b:bufstop_winview')
+        let b:bufstop_winview = winsaveview()
+      endif
       exe "wincmd p"
       if s:fast_mode
-        exe "q"
-        exe "wincmd p"
+        call s:BufstopRestoreWinview()
       endif
     endif
   endif
 endfunction
 
+" wipe a buffer without altering the window layout
+function! s:BufstopWipeBuffer(bufnr)
+  for window in range(1, winnr("$"))
+    if winbufnr(window) != a:bufnr
+      continue
+    endif
+
+    let candidate = g:BufstopData[0].bufno
+    if len(g:BufstopData) > 1 && line('.') == 1
+      let candidate = g:BufstopData[1].bufno
+    endif
+
+    exe window . "wincmd w"
+    exe "silent b" candidate
+    if !exists('b:bufstop_winview')
+      let b:bufstop_winview = winsaveview()
+    endif
+
+    " our candidate may still be the buffer we're trying to wipe
+    if bufnr("%") == a:bufnr
+      " load a dummy buffer in the window
+      exe "enew"
+      setlocal bufhidden=wipe
+      setlocal noswapfile
+      setlocal buftype=
+      setlocal nobuflisted
+    endif
+
+    exe "wincmd p"
+  endfor
+
+  call remove(g:BufstopData, line('.')-1)
+  exe "silent bw ".s:bufnr
+  setlocal modifiable
+  exe "d"
+  setlocal nomodifiable
+endfunction
+
+function! s:BufstopRestoreWinview()
+  exe "q"
+  exe "wincmd p"
+  if exists('b:bufstop_winview')
+    call winrestview(b:bufstop_winview)
+    unlet b:bufstop_winview
+  endif
+endfunction
+
 " create mappings for the Bufstop window
 function! s:MapKeys()
-  exe "nnoremap <buffer> <silent> " . g:BufstopDismissKey . " :q<cr><C-w>p"
+  exe "nnoremap <buffer> <silent> " . g:BufstopDismissKey . " :call <SID>BufstopRestoreWinview()<CR>"
   nnoremap <buffer> <silent> <cr>             :call <SID>BufstopSelectBuffer('cr')<cr>
   nnoremap <buffer> <silent> <2-LeftMouse>    :call <SID>BufstopSelectBuffer('cr')<cr>
   nnoremap <buffer> <silent> d                :call <SID>BufstopSelectBuffer('d')<cr>
 
-  for buf in s:allbufs
+  for buf in g:BufstopData
     exe "nnoremap <buffer> <silent> ". buf.key. "   :call <SID>BufstopSelectBuffer('" . buf.key . "')<cr>"
   endfor
 endfunction
@@ -174,13 +229,13 @@ endfunction
 
 " parse buffer list and get relevant info
 function! s:GetBufferInfo()
-  let s:allbufs = []
-  let [s:allbufs, allwidths] = [[], {}]
+  let g:BufstopData = []
+  let [g:BufstopData, allwidths] = [[], {}]
 
   for n in s:types
     let allwidths[n] = []
   endfor
- 
+
   let k = 0
 
   let bu_li = split(s:lsoutput, '\n')
@@ -193,13 +248,17 @@ function! s:GetBufferInfo()
 
   for buf in bu_li
     let bits = split(buf, '"')
-    let b = {"attributes": bits[0], "line": substitute(bits[2], '\s*', '', '')} 
-    
+    let pathbits = split(bits[1], '\\\|\/', 1)
+
+    let b = {}
+
+    let b.line = substitute(bits[2], '\s*', '', '')
     let b.path = bits[1]
     let b.fullname = bits[1]
-    let pathbits = split(bits[1], '\\\|\/', 1)
     let b.shortname = pathbits[len(pathbits)-1]
     let b.bufno = str2nr(bits[0])
+    let b.indicators = substitute(bits[0], '\s*\d\+', '', '')
+    let b.ext = fnamemodify(b.shortname, ":e")
 
     if (k < len(s:keys))
       let b.key = s:keys[k]
@@ -209,7 +268,7 @@ function! s:GetBufferInfo()
 
     let k = k + 1
 
-    call add(s:allbufs, b)
+    call add(g:BufstopData, b)
 
     for n in s:types
       call add(allwidths[n], len(b[n]))
@@ -222,13 +281,14 @@ function! s:GetBufferInfo()
     let s:allpads[n] = repeat(' ', max(allwidths[n]))
   endfor
 
-  return s:allbufs
+  return g:BufstopData
 endfunction
 
 " wrapper for Bufstop(), default mode
 function! BufstopSlow()
   let s:fast_mode = 0
   let s:preview_mode = 0
+  let b:bufstop_winview = winsaveview()
   call Bufstop()
   call s:UnmapPreviewKeys()
 endfunction
@@ -237,6 +297,7 @@ endfunction
 function! BufstopFast()
   let s:fast_mode = 1
   let s:preview_mode = 0
+  let b:bufstop_winview = winsaveview()
   call Bufstop()
   call s:UnmapPreviewKeys()
 endfunction
@@ -245,6 +306,7 @@ endfunction
 function! BufstopPreview()
   let s:fast_mode = 0
   let s:preview_mode = 1
+  let b:bufstop_winview = winsaveview()
   call Bufstop()
 
   call s:MapPreviewKeys()
@@ -259,7 +321,7 @@ function! Bufstop()
     return
   endif
 
-  redir => s:lsoutput 
+  redir => s:lsoutput
   exe "silent ls"
   redir END
 
@@ -269,20 +331,26 @@ function! Bufstop()
   for buf in bufdata
     let line = ''
     if buf.key ==# 'X'
-      let line = "  " . " " . "   "
+      let line = "  " . " "
     else
-      let line = "  " . buf.key . "   "
+      let line = "  " . buf.key
+    endif
+
+    if g:BufstopIndicators
+      let pad = s:allpads.indicators
+      let line .= buf.indicators . strpart(pad, len(buf.indicators))
+    else
+      let line .= "   "
     endif
 
     let path = buf["path"]
     let pad = s:allpads.shortname
 
-    " let shortn = fnamemodify(buf.shortname, ":r")
     let line .= buf.shortname . "  " . strpart(pad . path, len(buf.shortname))
-    
+
     call add(lines, line)
   endfor
-  
+
   exe g:BufstopSplit . " " . min([len(lines), 20]) . " split"
 
   if s:local_bufnr < 0
@@ -291,7 +359,7 @@ function! Bufstop()
   else
     exe "b ".s:local_bufnr
   endif
-  
+
   setlocal modifiable
   exe 'setlocal statusline=Bufstop:\ ' . len(lines) . '\ buffers'
   " delete evertying in the buffer
@@ -383,12 +451,12 @@ function! s:BufstopAppend(bufnr)
     let w:history = insert(w:history, a:bufnr, w:history_index)
 endfunction
 
-" add the buffer number to the global navigation history 
+" add the buffer number to the global navigation history
 function! s:BufstopGlobalAppend(bufnr)
   if (!buflisted(a:bufnr))
     return
   endif
-  call filter(g:Bufstop_history, 'v:val != '.a:bufnr) 
+  call filter(g:Bufstop_history, 'v:val != '.a:bufnr)
   call insert(g:Bufstop_history, a:bufnr)
 
   if !has_key(s:frequency_map, a:bufnr)
@@ -440,11 +508,11 @@ function! BufstopSwitchTo(bufidx)
   call filter(g:Bufstop_history, "buflisted(v:val)")
 
   if a:bufidx >= len(g:Bufstop_history)
-    if !exists("s:allbufs") || a:bufidx >= len(s:allbufs)
+    if !exists("g:BufstopData") || a:bufidx >= len(g:BufstopData)
       call s:BufstopEcho("outside range")
       return
     else
-      exe "b " . s:allbufs[a:bufidx].bufno
+      exe "b " . g:BufstopData[a:bufidx].bufno
     endif
   else
     exe "b " . g:Bufstop_history[a:bufidx]
@@ -468,7 +536,7 @@ function! s:BufstopSpeedMount()
   endif
 
   let s:saved_speed_keys = []
-  let idx = 0 
+  let idx = 0
   for key in g:BufstopSpeedKeys
     let combo = g:BufstopLeader . key
     let maparg = maparg(combo)
@@ -557,7 +625,7 @@ endfunction
 
 " entry point for BufstopMode
 function! BufstopMode()
-  redir => s:lsoutput 
+  redir => s:lsoutput
   exe "silent ls"
   redir END
 
@@ -657,16 +725,16 @@ augroup Bufstop
   exe "autocmd BufWinLeave,WinLeave " . s:name . " :call s:TimeoutFiddle(0)"
 augroup End
 
-command! Bufstop :call BufstopSlow()
-command! BufstopFast :call BufstopFast()
-command! BufstopPreview :call BufstopPreview()
-command! BufstopSpeedToggle :call BufstopSpeedToggle()
-command! BufstopBack :call <SID>BufstopBack()
-command! BufstopForward :call <SID>BufstopForward()
-command! BufstopMode :call <SID>BufstopModeStart()
-command! BufstopModeFast :call <SID>BufstopModeFastStart()
-command! BufstopStatusline :call <SID>BufstopStatusline()
-command! BufstopStatuslineFast :call <SID>BufstopStatuslineFast()
+command! Bufstop call BufstopSlow()
+command! BufstopFast call BufstopFast()
+command! BufstopPreview  call BufstopPreview()
+command! BufstopSpeedToggle call BufstopSpeedToggle()
+command! BufstopBack call <SID>BufstopBack()
+command! BufstopForward call <SID>BufstopForward()
+command! BufstopMode call <SID>BufstopModeStart()
+command! BufstopModeFast call <SID>BufstopModeFastStart()
+command! BufstopStatusline call <SID>BufstopStatusline()
+command! BufstopStatuslineFast call <SID>BufstopStatuslineFast()
 
 if g:BufstopAutoSpeedToggle
   call BufstopSpeedToggle()

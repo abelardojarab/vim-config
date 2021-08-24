@@ -10,10 +10,15 @@ let g:loaded_fugitive = 1
 
 let s:bad_git_dir = '/$\|^fugitive:'
 
+" FugitiveGitDir() returns the detected Git dir for the given buffer number,
+" or the current buffer if no argument is passed.  This will be an empty
+" string if no Git dir was found.  Use !empty(FugitiveGitDir()) to check if
+" Fugitive is active in the current buffer.  Do not rely on this for direct
+" filesystem access; use FugitiveFind('.git/whatever') instead.
 function! FugitiveGitDir(...) abort
-  if v:version < 704
+  if v:version < 703
     return ''
-  elseif !a:0 || type(a:1) == type(0) && a:1 < 0
+  elseif !a:0 || type(a:1) == type(0) && a:1 < 0 || a:1 is# get(v:, 'true', -1)
     if exists('g:fugitive_event')
       return g:fugitive_event
     endif
@@ -25,7 +30,7 @@ function! FugitiveGitDir(...) abort
       return b:git_dir
     endif
     return dir =~# s:bad_git_dir ? '' : dir
-  elseif type(a:1) == type(0)
+  elseif type(a:1) == type(0) && a:1 isnot# 0
     if a:1 == bufnr('') && (!exists('b:git_dir') || b:git_dir =~# s:bad_git_dir) && empty(&buftype)
       let b:git_dir = FugitiveExtractGitDir(expand('%:p'))
     endif
@@ -50,7 +55,11 @@ endfunction
 " exists, call FooReal("foo://bar").
 function! FugitiveReal(...) abort
   let file = a:0 ? a:1 : @%
-  if file =~# '^\a\a\+:' || a:0 > 1
+  if type(file) ==# type({})
+    let dir = FugitiveGitDir(file)
+    let tree = s:Tree(dir)
+    return FugitiveVimPath(empty(tree) ? dir : tree)
+  elseif file =~# '^\a\a\+:' || a:0 > 1
     return call('fugitive#Real', [file] + a:000[1:-1])
   elseif file =~# '^/\|^\a:\|^$'
     return file
@@ -67,14 +76,10 @@ endfunction
 " An optional second argument provides the Git dir, or the buffer number of a
 " buffer with a Git dir.  The default is the current buffer.
 function! FugitiveFind(...) abort
-  return fugitive#Find(a:0 ? a:1 : bufnr(''), FugitiveGitDir(a:0 > 1 ? a:2 : -1))
-endfunction
-
-function! FugitivePath(...) abort
-  if a:0 > 1
-    return fugitive#Path(a:1, a:2, FugitiveGitDir(a:0 > 2 ? a:3 : -1))
+  if a:0 && (type(a:1) ==# type({}) || type(a:1) ==# type(0))
+    return call('fugitive#Find', a:000[1:-1] + [FugitiveGitDir(a:1)])
   else
-    return FugitiveReal(a:0 ? a:1 : @%)
+    return fugitive#Find(a:0 ? a:1 : bufnr(''), FugitiveGitDir(a:0 > 1 ? a:2 : -1))
   endif
 endfunction
 
@@ -95,13 +100,15 @@ function! FugitiveParse(...) abort
 endfunction
 
 " FugitiveResult() returns an object encapsulating the result of the most
-" recend :Git command.  Will be empty if no result is available.  Pass in the
-" name of a temp buffer to get the result object for that command instead.
-" Contains the following keys:
+" recent :Git command.  Will be empty if no result is available.  During a
+" User FugitiveChanged event, this is guaranteed to correspond to the :Git
+" command that triggered the event, or be empty if :Git was not the trigger.
+" Pass in the name of a temp buffer to get the result object for that command
+" instead.  Contains the following keys:
 "
 " * "args": List of command arguments, starting with the subcommand.  Will be
 "   empty for usages like :Git --help.
-" * "dir": Git dir of the relevant repository.
+" * "git_dir": Git dir of the relevant repository.
 " * "exit_status": The integer exit code of the process.
 " * "flags": Flags passed directly to Git, like -c and --help.
 " * "file": Path to file containing command output.  Not guaranteed to exist,
@@ -110,16 +117,19 @@ function! FugitiveResult(...) abort
   return call('fugitive#Result', a:000)
 endfunction
 
-" FugitivePrepare() constructs a Git command string which can be executed with
-" functions like system() and commands like :!.  Integer arguments will be
-" treated as buffer numbers, and the appropriate relative path inserted in
-" their place.
+" FugitiveShellCommand() turns an array of arugments into a Git command string
+" which can be executed with functions like system() and commands like :!.
+" Integer arguments will be treated as buffer numbers, and the appropriate
+" relative path inserted in their place.
 "
-" If the first argument is a string that looks like a path or an empty string,
-" it will be used as the Git dir.  If it's a buffer number, the Git dir for
-" that buffer will be used.  The default is the current buffer.
+" An optional second argument provides the Git dir, or the buffer number of a
+" buffer with a Git dir.  The default is the current buffer.
+function! FugitiveShellCommand(...) abort
+  return call('fugitive#ShellCommand', a:000)
+endfunction
+
 function! FugitivePrepare(...) abort
-  return call('fugitive#Prepare', a:000)
+  return call('fugitive#ShellCommand', a:000)
 endfunction
 
 " FugitiveConfig() get returns an opaque structure that can be passed to other
@@ -127,13 +137,17 @@ endfunction
 " when performing multiple config queries.  Do not rely on the internal
 " structure of the return value as it is not guaranteed.  If you want a full
 " dictionary of every config value, use FugitiveConfigGetRegexp('.*').
+"
+" An optional argument provides the Git dir, or the buffer number of a
+" buffer with a Git dir.  The default is the current buffer.  Pass a blank
+" string to limit to the global config.
 function! FugitiveConfig(...) abort
   return call('fugitive#Config', a:000)
 endfunction
 
 " FugitiveConfigGet() retrieves a Git configuration value.  An optional second
-" argument provides the Git dir as with FugitiveFind().  Pass a blank string
-" to limit to the global config.
+" argument can be either the object returned by FugitiveConfig(), or a Git
+" dir or buffer number to be passed along to FugitiveConfig().
 function! FugitiveConfigGet(name, ...) abort
   return get(call('FugitiveConfigGetAll', [a:name] + (a:0 ? [a:1] : [])), 0, get(a:, 2, ''))
 endfunction
@@ -152,16 +166,51 @@ function! FugitiveConfigGetRegexp(pattern, ...) abort
   return call('fugitive#ConfigGetRegexp', [a:pattern] + a:000)
 endfunction
 
+" FugitiveRemoteUrl() retrieves the remote URL for the given remote name,
+" defaulting to the current branch's remote or "origin" if no argument is
+" given.  Similar to `git remote get-url`, but also attempts to resolve HTTP
+" redirects and SSH host aliases.
+"
+" An optional second argument provides the Git dir, or the buffer number of a
+" buffer with a Git dir.  The default is the current buffer.
 function! FugitiveRemoteUrl(...) abort
-  return fugitive#RemoteUrl(a:0 ? a:1 : '', FugitiveGitDir(a:0 > 1 ? a:2 : -1), a:0 > 2 ? a:3 : 0)
+  return call('fugitive#RemoteUrl', a:000)
 endfunction
 
+" FugitiveHead() retrieves the name of the current branch. If the current HEAD
+" is detached, FugitiveHead() will return the empty string, unless the
+" optional argument is given, in which case the hash of the current commit
+" will be truncated to the given number of characters.
+"
+" An optional second argument provides the Git dir, or the buffer number of a
+" buffer with a Git dir.  The default is the current buffer.
 function! FugitiveHead(...) abort
-  let dir = FugitiveGitDir(a:0 > 1 ? a:2 : -1)
+  if a:0 && (type(a:1) ==# type({}) || type(a:1) ==# type('') && a:1 !~# '^\d\+$')
+    let dir = FugitiveGitDir(a:1)
+    let arg = get(a:, 2, 0)
+  elseif a:0 > 1
+    let dir = FugitiveGitDir(a:2)
+    let arg = a:1
+  else
+    let dir = FugitiveGitDir()
+    let arg = get(a:, 1, 0)
+  endif
   if empty(dir)
     return ''
   endif
-  return fugitive#Head(a:0 ? a:1 : 0, dir)
+  return fugitive#Head(arg, dir)
+endfunction
+
+function! FugitivePath(...) abort
+  if a:0 > 2 && type(a:1) ==# type({})
+    return fugitive#Path(a:2, a:3, FugitiveGitDir(a:1))
+  elseif a:0 && type(a:1) ==# type({})
+    return FugitiveReal(a:0 > 1 ? a:2 : @%)
+  elseif a:0 > 1
+    return fugitive#Path(a:1, a:2, FugitiveGitDir(a:0 > 2 ? a:3 : -1))
+  else
+    return FugitiveReal(a:0 ? a:1 : @%)
+  endif
 endfunction
 
 function! FugitiveStatusline(...) abort
@@ -188,9 +237,12 @@ function! FugitiveWorkTree(...) abort
   endif
 endfunction
 
-function! FugitiveIsGitDir(path) abort
-  let path = substitute(a:path, '[\/]$', '', '') . '/'
-  return len(a:path) && getfsize(path.'HEAD') > 10 && (
+function! FugitiveIsGitDir(...) abort
+  if !a:0 || type(a:1) !=# type('')
+    return !empty(call('FugitiveGitDir', a:000))
+  endif
+  let path = substitute(a:1, '[\/]$', '', '') . '/'
+  return len(path) && getfsize(path.'HEAD') > 10 && (
         \ isdirectory(path.'objects') && isdirectory(path.'refs') ||
         \ getftype(path.'commondir') ==# 'file')
 endfunction
@@ -254,7 +306,13 @@ function! s:CeilingDirectories() abort
 endfunction
 
 function! FugitiveExtractGitDir(path) abort
-  let path = s:Slash(a:path)
+  if type(a:path) ==# type({})
+    return get(a:path, 'git_dir', '')
+  elseif type(a:path) == type(0)
+    let path = s:Slash(a:path >= 0 ? bufname(a:path) : bufname(''))
+  else
+    let path = s:Slash(a:path)
+  endif
   if path =~# '^fugitive:'
     return matchstr(path, '\C^fugitive:\%(//\)\=\zs.\{-\}\ze\%(//\|::\|$\)')
   elseif empty(path)
@@ -310,15 +368,15 @@ function! FugitiveExtractGitDir(path) abort
   return ''
 endfunction
 
-function! FugitiveDetect(path) abort
-  if v:version < 704
+function! FugitiveDetect(...) abort
+  if v:version < 703
     return ''
   endif
   if exists('b:git_dir') && b:git_dir =~# '^$\|' . s:bad_git_dir
     unlet b:git_dir
   endif
   if !exists('b:git_dir')
-    let b:git_dir = FugitiveExtractGitDir(a:path)
+    let b:git_dir = FugitiveExtractGitDir(a:0 ? a:1 : bufnr(''))
   endif
   if empty(b:git_dir) || !exists('#User#Fugitive')
     return ''
@@ -465,7 +523,7 @@ if exists(':Gbrowse') != 2 && get(g:, 'fugitive_legacy_commands', 1)
         \ '|if <bang>1|redraw!|endif|echohl WarningMSG|echomsg ":Gbrowse is deprecated in favor of :GBrowse"|echohl NONE'
 endif
 
-if v:version < 704
+if v:version < 703
   finish
 endif
 
@@ -501,7 +559,7 @@ augroup fugitive
         \    setlocal foldtext=fugitive#Foldtext() |
         \ endif
   autocmd FileType fugitive
-        \ call fugitive#MapCfile('fugitive#StatusCfile()')
+        \ call fugitive#MapCfile('fugitive#PorcelainCfile()')
   autocmd FileType gitrebase
         \ let &l:include = '^\%(pick\|squash\|edit\|reword\|fixup\|drop\|[pserfd]\)\>' |
         \ if &l:includeexpr !~# 'Fugitive' |

@@ -1435,14 +1435,14 @@ func Test_50()
   let list1 = MruGetFiles()
   let list2 = readfile(g:MRU_File)
   if list1 != list2[1:]
-    call LogResult(test_name, 'FAIL 1')
+    call LogResult(test_name, 'FAIL (1)')
     return
   endif
 
   if MruGetFiles('x1y2z3') == []
     call LogResult(test_name, 'pass')
   else
-    call LogResult(test_name, 'FAIL 2')
+    call LogResult(test_name, 'FAIL (2)')
   endif
 endfunc
 
@@ -1454,15 +1454,143 @@ func Test_51()
   let test_name = 'test51'
   enew | only
   if match(MruGetFiles(), 'sample.txt') == -1
-    call LogResult(test_name, 'FAIL 1')
+    call LogResult(test_name, 'FAIL (1)')
     return
   endif
   MruRefresh
   if match(MruGetFiles(), 'sample.txt') == -1
     call LogResult(test_name, 'pass')
   else
-    call LogResult(test_name, 'FAIL 2')
+    call LogResult(test_name, 'FAIL (2)')
   endif
+endfunc
+
+" ==========================================================================
+" Test52
+" Test for the re-opening a deleted buffer from the MRU list
+" ==========================================================================
+func Test_52()
+  let test_name = 'test52'
+  edit file1.txt
+  edit file2.txt
+  bd
+  " select the file from the MRU window
+  MRU
+  call search('file2.txt')
+  exe "normal \<Enter>"
+  if !&buflisted || fnamemodify(@%, ':p:t') !=# 'file2.txt'
+    call LogResult(test_name, 'FAIL (1)')
+    return
+  endif
+  " open the file directly using the command
+  %bw!
+  edit file2.txt
+  edit file1.txt
+  bd
+  MRU file1.txt
+  if !&buflisted || fnamemodify(@%, ':p:t') !=# 'file1.txt'
+    call LogResult(test_name, 'FAIL (2)')
+    return
+  endif
+  call LogResult(test_name, 'pass')
+endfunc
+
+" ==========================================================================
+" Test53
+" Test for using a command modifier when directly opening a file using the
+" MRU command.
+" ==========================================================================
+func Test_53()
+  if v:version < 800
+    return
+  endif
+  let test_name = 'test53'
+  %bw!
+  topleft MRU file2.txt
+  if winnr('$') == 2 && winnr() == 1 && fnamemodify(@%, ':p:t') ==# 'file2.txt'
+    wincmd j
+    if winnr() != 2
+      call LogResult(test_name, 'FAIL (1)')
+      return
+    endif
+  else
+    call LogResult(test_name, 'FAIL (2)')
+    return
+  endif
+  %bw
+  belowright MRU file2.txt
+  if winnr('$') == 2 && winnr() == 2 && fnamemodify(@%, ':p:t') ==# 'file2.txt'
+    wincmd k
+    if winnr() != 1
+      call LogResult(test_name, 'FAIL (3)')
+      return
+    endif
+  else
+    call LogResult(test_name, 'FAIL (4)')
+    return
+  endif
+  %bw
+  vertical topleft MRU file2.txt
+  if winnr('$') == 2 && winnr() == 1 && fnamemodify(@%, ':p:t') ==# 'file2.txt'
+    wincmd l
+    if winnr() != 2
+      call LogResult(test_name, 'FAIL (5)')
+      return
+    endif
+  else
+    call LogResult(test_name, 'FAIL (6)')
+    return
+  endif
+  %bw
+  vertical belowright MRU file2.txt
+  if winnr('$') == 2 && winnr() == 2 && fnamemodify(@%, ':p:t') ==# 'file2.txt'
+    wincmd h
+    if winnr() != 1
+      call LogResult(test_name, 'FAIL (7)')
+      return
+    endif
+  else
+    call LogResult(test_name, 'FAIL (8)')
+    return
+  endif
+  %bw
+  tab MRU file2.txt
+  if tabpagenr() != 2 || fnamemodify(@%, ':p:t') !=# 'file2.txt'
+    call LogResult(test_name, 'FAIL (9)')
+    return
+  endif
+  %bw
+  call LogResult(test_name, 'pass')
+endfunc
+
+" ==========================================================================
+" Test54
+" Test for the :MRUToggle command.
+" ==========================================================================
+func Test_54()
+  let test_name = 'test54'
+  %bw!
+  " open the MRU window
+  MRUToggle
+  if bufwinnr(g:MRU_buffer_name) != 2 || winnr() != 2
+    call LogResult(test_name, 'FAIL (1)')
+    return
+  endif
+  " close the MRU window
+  MRUToggle
+  if bufwinnr(g:MRU_buffer_name) != -1 || winnr() != 1
+    call LogResult(test_name, 'FAIL (2)')
+    return
+  endif
+  " close the MRU window from some other window
+  MRUToggle
+  wincmd k
+  MRUToggle
+  if bufwinnr(g:MRU_buffer_name) != -1 || winnr() != 1
+    call LogResult(test_name, 'FAIL (3)')
+    return
+  endif
+  call LogResult(test_name, 'pass')
 endfunc
 
 " ==========================================================================
