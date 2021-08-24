@@ -199,8 +199,9 @@ cmap <Esc>[1;2C <S-Right>
 " Allow Shift+Insert to paste
 map <S-Insert> <MiddleMouse>
 map! <S-Insert> <MiddleMouse>
+if !has('nvim')
 set clipboard=unnamed,unnamedplus  "Use system clipboard by default
-" set clipboard=unnamedplus
+endif
 
 " Copy filename
 :nmap yY :let @" = expand("%")<CR>
