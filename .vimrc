@@ -28,7 +28,11 @@ set number                      " always show line numbers
 set ignorecase                  " ignore case when searching
 set smartcase                   " ignore case if search pattern is all lowercase,
 set mouse=a                     "enable mouse automatically entering visual mode
-set ttymouse=xterm2
+
+if !has('nvim')
+    set ttymouse=xterm2
+endif
+
 filetype indent on
 filetype plugin on
 
@@ -138,8 +142,11 @@ set nofoldenable            " don't fold by default
 
 " --- keys ---
 set backspace=indent,eol,start  " allow backspacing over everything.
-set esckeys                     " Allow cursor keys in insert mode.
 set nostartofline               " Make j/k respect the columns
+
+if !has('nvim')
+    set esckeys                     " Allow cursor keys in insert mode.
+endif
 
 " Allow us to use Ctrl-s and Ctrl-q as keybinds
 " Restore default behaviour when leaving Vim.
@@ -536,8 +543,10 @@ let g:session_autoload  = 'yes'
 let g:session_directory = '~/.vim.cache/sessions'
 
 " Restore cursor to file position in previous editing session
-set viminfo='10,\"100,:20,%,n~/.viminfo
-au BufReadPost * if line("'\"") > 0|if line("'\"") <= line("$")|exe("norm '\"")|else|exe "norm $"|endif|endif
+if !has('nvim')
+    set viminfo='10,\"100,:20,%,n~/.vim/viminfo
+    au BufReadPost * if line("'\"") > 0|if line("'\"") <= line("$")|exe("norm '\"")|else|exe "norm $"|endif|endif
+endif
 
 " --- CtrlP settings ---
 if executable('rg')
