@@ -294,7 +294,7 @@ Plug 'neoclide/coc.nvim', {'for':['zig','cmake','rust',
      \'python', 'dart', 'javascript', 'vim'], 'branch': 'release'}
 
 Plug 'Shougo/deoplete.nvim',
-if (!has('nvim-0.5'))
+if (!has('nvim'))
     Plug 'prabirshrestha/asyncomplete.vim'
     Plug 'prabirshrestha/asyncomplete-lsp.vim'
 endif
