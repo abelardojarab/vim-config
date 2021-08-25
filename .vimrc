@@ -376,6 +376,18 @@ Plug 'FooSoft/vim-argwrap'
 Plug 'gerardbm/vim-md-headings'
 Plug 'matze/vim-move'
 
+" Neovim
+if (has('nvim-0.5'))
+" dependencies
+    Plug 'nvim-lua/popup.nvim'
+    Plug 'nvim-lua/plenary.nvim'
+    Plug 'nvim-telescope/telescope.nvim'
+    Plug 'hrsh7th/nvim-compe'
+    Plug 'neovim/nvim-lspconfig'
+    Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+    Plug 'nvim-treesitter/playground'
+endif
+
 " Color schemes
 Plug 'gerardbm/vim-atomic'
 Plug 'rakr/vim-one'
