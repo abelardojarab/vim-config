@@ -148,6 +148,9 @@ if !has('nvim')
     set esckeys                     " Allow cursor keys in insert mode.
 endif
 
+" toggle line numbers, nn (no number)
+nnoremap <silent> <Leader>nn :set number!
+
 " Allow us to use Ctrl-s and Ctrl-q as keybinds
 " Restore default behaviour when leaving Vim.
 silent !stty -ixon
@@ -379,7 +382,6 @@ Plug 'matze/vim-move'
 
 " Neovim
 if (has('nvim-0.5'))
-" dependencies
     Plug 'nvim-lua/popup.nvim'
     Plug 'nvim-lua/plenary.nvim'
     Plug 'nvim-telescope/telescope.nvim'
@@ -783,3 +785,123 @@ augroup beautify
     autocmd FileType css nnoremap <buffer> <Leader>bf :call CSSBeautify()<cr>
     autocmd FileType css vnoremap <buffer> <Leader>bf :call RangeCSSBeautify()<cr>
 augroup end
+
+" ------ adv maps ------
+
+" strip trailing whitespace, ss (strip space)
+nnoremap <silent> <Leader>ss
+    \ :let b:_p = getpos(".") <Bar>
+    \  let b:_s = (@/ != '') ? @/ : '' <Bar>
+    \  %s/\s\+$//e <Bar>
+    \  let @/ = b:_s <Bar>map <Leader> <Plug>
+    \  nohlsearch <Bar>
+    \  unlet b:_s <Bar>
+    \  call setpos('.', b:_p) <Bar>
+    \  unlet b:_p <CR>
+
+" global replacemap <Leader> <Plug>
+vnoremap <Leader>sw "hy
+    \ :let b:sub = input('global replacement: ') <Bar>
+    \ if b:sub !=? '' <Bar>
+    \   let b:rep = substitute(getreg('h'), '/', '\\/', 'g') <Bar>
+    \   execute '%s/'.b:rep."/".b:sub.'/g' <Bar>
+    \   unlet b:sub b:rep <Bar>
+    \ endif <CR>
+nnoremap <Leader>sw
+    \ :let b:sub = input('global replacement: ') <Bar>
+    \ if b:sub !=? '' <Bar>
+    \   execute "%s/<C-r><C-w>/".b:sub.'/g' <Bar>
+    \   unlet b:sub <Bar>
+    \ endif <CR>
+
+" prompt before each replace
+vnoremap <Leader>cw "hy
+    \ :let b:sub = input('interactive replacement: ') <Bar>
+    \ if b:sub !=? '' <Bar>
+    \   let b:rep = substitute(getreg('h'), '/', '\\/', 'g') <Bar>
+    \   execute '%s/'.b:rep.'/'.b:sub.'/gc' <Bar>
+    \   unlet b:sub b:rep <Bar>
+    \ endif <CR>
+
+nnoremap <Leader>cw
+    \ :let b:sub = input('interactive replacement: ') <Bar>
+    \ if b:sub !=? '' <Bar>
+    \   execute "%s/<C-r><C-w>/".b:sub.'/gc' <Bar>
+    \   unlet b:sub <Bar>
+    \ endif <CR>
+
+" highlight long lines, ll (long lines)
+let w:longlines = matchadd('ColorColumn', '\%'.&textwidth.'v', &textwidth)
+nnoremap <silent> <Leader>ll
+    \ :if exists('w:longlines') <Bar>
+    \   silent! call matchdelete(w:longlines) <Bar>
+    \   echo 'Long line highlighting disabled'
+    \   <Bar> unlet w:longlines <Bar>
+    \ elseif &textwidth > 0 <Bar>
+    \   let w:longlines = matchadd('ColorColumn', '\%'.&textwidth.'v', &textwidth) <Bar>
+    \   echo 'Long line highlighting enabled'
+    \ <Bar> else <Bar>
+    \   let w:longlines = matchadd('ColorColumn', '\%80v', 81) <Bar>
+    \   echo 'Long line highlighting enabled'
+    \ <Bar> endif <CR>
+
+" local keyword jump
+nnoremap <Leader>fw
+    \ [I:let b:jump = input('Go To: ') <Bar>
+    \ if b:jump !=? '' <Bar>
+    \   execute "normal! ".b:jump."[\t" <Bar>
+    \   unlet b:jump <Bar>
+    \ endif <CR>
+
+" quit the current buffer and switch to the next
+" without this vim will leave you on an empty buffer after quiting the current
+function! <SID>quitbuffer() abort
+    let l:bf = bufnr('%')
+    let l:pb = bufnr('#')
+    if buflisted(l:pb)
+        buffer #
+    else
+        bnext
+    endif
+    if bufnr('%') == l:bf
+        new
+    endif
+    if buflisted(l:bf)
+        execute('bdelete! ' . l:bf)
+    endif
+endfunction
+
+" switch active buffer based on pattern matching
+" if more than one match is found then list the matches to choose from
+function! <SID>bufferselect(pattern) abort
+    let l:bufcount = bufnr('$')
+    let l:currbufnr = 1
+    let l:nummatches = 0
+    let l:matchingbufnr = 0
+    " walk the buffer count
+    while l:currbufnr <= l:bufcount
+        if (bufexists(l:currbufnr))
+            let l:currbufname = bufname(l:currbufnr)
+            if (match(l:currbufname, a:pattern) > -1)
+                echo l:currbufnr.': '.bufname(l:currbufnr)
+                let l:nummatches += 1
+                let l:matchingbufnr = l:currbufnr
+            endif
+        endif
+        let l:currbufnr += 1
+    endwhile
+
+    " only one match
+    if (l:nummatches == 1)
+        execute ':buffer '.l:matchingbufnr
+    elseif (l:nummatches > 1)
+        " more than one match
+        let l:desiredbufnr = input('Enter buffer number: ')
+        if (strlen(l:desiredbufnr) != 0)
+            execute ':buffer '.l:desiredbufnr
+        endif
+    else
+        echoerr 'No matching buffers'
+    endif
+endfunction
+
