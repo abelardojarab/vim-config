@@ -12,7 +12,6 @@ set go-=L " Removes left hand scroll bar
 set linespace=15
 set t_Co=256
 
-
 " --- editor settings ---
 set showmode                    " always show what mode we're currently editing in
 set nowrap                      " don't wrap lines
@@ -295,8 +294,10 @@ Plug 'neoclide/coc.nvim', {'for':['zig','cmake','rust',
      \'python', 'dart', 'javascript', 'vim'], 'branch': 'release'}
 
 Plug 'Shougo/deoplete.nvim',
-Plug 'prabirshrestha/asyncomplete.vim'
-Plug 'prabirshrestha/asyncomplete-lsp.vim'
+if (!has('nvim'))
+    Plug 'prabirshrestha/asyncomplete.vim'
+    Plug 'prabirshrestha/asyncomplete-lsp.vim'
+endif
 Plug 'lighttiger2505/deoplete-vim-lsp'
 Plug 'liuchengxu/vista.vim'
 Plug 'prabirshrestha/vim-lsp'
@@ -375,6 +376,18 @@ Plug 'terryma/vim-expand-region'
 Plug 'FooSoft/vim-argwrap'
 Plug 'gerardbm/vim-md-headings'
 Plug 'matze/vim-move'
+
+" Neovim
+if (has('nvim-0.5'))
+" dependencies
+    Plug 'nvim-lua/popup.nvim'
+    Plug 'nvim-lua/plenary.nvim'
+    Plug 'nvim-telescope/telescope.nvim'
+    Plug 'hrsh7th/nvim-compe'
+    Plug 'neovim/nvim-lspconfig'
+    Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+    Plug 'nvim-treesitter/playground'
+endif
 
 " Color schemes
 Plug 'gerardbm/vim-atomic'
