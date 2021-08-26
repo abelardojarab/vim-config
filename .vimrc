@@ -1,6 +1,14 @@
 " --- Start with Windows
 source ~/.vim/autoload/win.vim
 behave mswin
+smap <Del> <C-g>"_d
+smap <C-c> <C-g>y
+smap <C-x> <C-g>x
+imap <C-v> <Esc>pi
+smap <C-v> <C-g>p
+smap <Tab> <C-g>1> 
+smap <S-Tab> <C-g>1<
+
 source ~/.vim/autoload/plug.vim
 
 " --- general settings ---
