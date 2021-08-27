@@ -653,6 +653,17 @@ let g:ctrlp_custom_ignore = {
   \ 'file': '\v\.(so|swp|zip)$'
   \ }
 
+let g:ctrlp_mruf_exclude = '*.tar.gz\|bin|.git|*.srt|*.part|*.txt|/tmp/*'
+
+" with the default `:e` I'll have to remember the path of the file (which is hard)
+" So, remap `:e` to run `:CtrlPMRUFiles`
+" Pros : No need to remember the path, CtrlP will find it for you.
+" Cons : Requires CtrlP (dependency) and
+"           commands that start with e will be hard to type.
+"           (You'll have to hit `:` and wait about a half a sec or so
+"           to start typing the command, starting with 'e')
+nnoremap ;e :CtrlPMRUFiles<CR>
+
 " --- Search with ack ---
 if executable('ag')
     let g:ackprg = 'ag --vimgrep'
@@ -742,6 +753,9 @@ let g:ale_linters            = {
     \ 'css'        : ['csslint'],
     \ 'tex'        : ['chktex'],
     \ }
+let g:ale_lint_on_save = 1
+let g:ale_sign_error = '❌'
+let g:ale_sign_warning = '🔹'
 
 " --- Syntastic settings ---
 nmap <silent> <leader>q :SyntasticCheck # <CR> :bp <BAR> bd #<CR>
@@ -948,3 +962,6 @@ function! <SID>bufferselect(pattern) abort
         echoerr 'No matching buffers'
     endif
 endfunction
+
+" vim:foldmethod=marker:foldlevel=0:textwidth=79
+
