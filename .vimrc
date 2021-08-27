@@ -6,7 +6,7 @@ smap <C-c> <C-g>y
 smap <C-x> <C-g>x
 imap <C-v> <Esc>pi
 smap <C-v> <C-g>p
-smap <Tab> <C-g>1> 
+smap <Tab> <C-g>1>
 smap <S-Tab> <C-g>1<
 
 source ~/.vim/autoload/plug.vim
@@ -313,6 +313,18 @@ Plug 'lighttiger2505/deoplete-vim-lsp'
 Plug 'liuchengxu/vista.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'mattn/vim-lsp-settings'
+Plug 'sakhnik/nvim-gdb', { 'do': ':!./install.sh' }
+
+if (has('nvim'))
+   Plug 'RishabhRD/nvim-lsputils'
+   Plug 'kosayoda/nvim-lightbulb'
+   Plug 'gennaro-tedesco/nvim-peekup'
+   Plug 'tversteeg/registers.nvim', { 'branch': 'main' }
+   Plug 'vijaymarupudi/nvim-fzf'
+"   Plug 'rcarriga/vim-ultest'
+   Plug 'numToStr/Navigator.nvim'
+   Plug 'jamestthompson3/nvim-remote-containers'
+endif
 
 " Syntax checker
 Plug 'scrooloose/syntastic'  " Adds syntax checking
@@ -390,6 +402,7 @@ Plug 'matze/vim-move'
 
 " Neovim
 if (has('nvim-0.5'))
+    Plug 'chipsenkbeil/distant.nvim'
     Plug 'nvim-lua/popup.nvim'
     Plug 'nvim-lua/plenary.nvim'
     Plug 'nvim-telescope/telescope.nvim'
@@ -397,6 +410,11 @@ if (has('nvim-0.5'))
     Plug 'neovim/nvim-lspconfig'
     Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
     Plug 'nvim-treesitter/playground'
+    Plug 'ray-x/lsp_signature.nvim'
+    Plug 'simrat39/symbols-outline.nvim'
+    Plug 'kabouzeid/nvim-lspinstall'
+    Plug 'alexaandru/nvim-lspupdate'
+    Plug 'ellisonleao/glow.nvim', {'do': ':GlowInstall', 'branch': 'main'}
 endif
 
 " Color schemes
@@ -912,4 +930,3 @@ function! <SID>bufferselect(pattern) abort
         echoerr 'No matching buffers'
     endif
 endfunction
-
