@@ -1,1 +1,1 @@
-/home/abelardojara/.vim/plugged/gocode/vim/ftplugin/go/gocomplete.vim
+/home/abelardoj/.vim/plugged/gocode/vim/ftplugin/go/gocomplete.vim

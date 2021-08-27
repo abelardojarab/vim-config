@@ -172,6 +172,7 @@ ale-cpp-gcc	ale-cpp.txt	/*ale-cpp-gcc*
 ale-cpp-options	ale-cpp.txt	/*ale-cpp-options*
 ale-cpp-uncrustify	ale-cpp.txt	/*ale-cpp-uncrustify*
 ale-cs-csc	ale-cs.txt	/*ale-cs-csc*
+ale-cs-dotnet-format	ale-cs.txt	/*ale-cs-dotnet-format*
 ale-cs-mcs	ale-cs.txt	/*ale-cs-mcs*
 ale-cs-mcsc	ale-cs.txt	/*ale-cs-mcsc*
 ale-cs-options	ale-cs.txt	/*ale-cs-options*
@@ -751,6 +752,8 @@ b:ale_cs_csc_assemblies	ale-cs.txt	/*b:ale_cs_csc_assemblies*
 b:ale_cs_csc_assembly_path	ale-cs.txt	/*b:ale_cs_csc_assembly_path*
 b:ale_cs_csc_options	ale-cs.txt	/*b:ale_cs_csc_options*
 b:ale_cs_csc_source	ale-cs.txt	/*b:ale_cs_csc_source*
+b:ale_cs_dotnet_format_executable	ale-cs.txt	/*b:ale_cs_dotnet_format_executable*
+b:ale_cs_dotnet_format_options	ale-cs.txt	/*b:ale_cs_dotnet_format_options*
 b:ale_cs_mcs_options	ale-cs.txt	/*b:ale_cs_mcs_options*
 b:ale_cs_mcsc_assemblies	ale-cs.txt	/*b:ale_cs_mcsc_assemblies*
 b:ale_cs_mcsc_assembly_path	ale-cs.txt	/*b:ale_cs_mcsc_assembly_path*
@@ -1493,6 +1496,8 @@ g:ale_cs_csc_assemblies	ale-cs.txt	/*g:ale_cs_csc_assemblies*
 g:ale_cs_csc_assembly_path	ale-cs.txt	/*g:ale_cs_csc_assembly_path*
 g:ale_cs_csc_options	ale-cs.txt	/*g:ale_cs_csc_options*
 g:ale_cs_csc_source	ale-cs.txt	/*g:ale_cs_csc_source*
+g:ale_cs_dotnet_format_executable	ale-cs.txt	/*g:ale_cs_dotnet_format_executable*
+g:ale_cs_dotnet_format_options	ale-cs.txt	/*g:ale_cs_dotnet_format_options*
 g:ale_cs_mcs_options	ale-cs.txt	/*g:ale_cs_mcs_options*
 g:ale_cs_mcsc_assemblies	ale-cs.txt	/*g:ale_cs_mcsc_assemblies*
 g:ale_cs_mcsc_assembly_path	ale-cs.txt	/*g:ale_cs_mcsc_assembly_path*

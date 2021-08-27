@@ -412,9 +412,7 @@ if (has('nvim-0.5'))
     Plug 'nvim-treesitter/playground'
     Plug 'ray-x/lsp_signature.nvim'
     Plug 'simrat39/symbols-outline.nvim'
-    Plug 'kabouzeid/nvim-lspinstall'
-    Plug 'alexaandru/nvim-lspupdate'
-    Plug 'ellisonleao/glow.nvim', {'do': ':GlowInstall', 'branch': 'main'}
+"    Plug 'ellisonleao/glow.nvim', {'do': ':GlowInstall', 'branch': 'main'}
 endif
 
 " Color schemes

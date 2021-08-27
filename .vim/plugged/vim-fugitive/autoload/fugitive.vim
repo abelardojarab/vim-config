@@ -928,6 +928,9 @@ endfunction
 
 function! s:ConfigCallback(r, into) abort
   let dict = a:into[1]
+  if has_key(dict, 'job')
+    call remove(dict, 'job')
+  endif
   let lines = a:r.exit_status ? [] : split(tr(join(a:r.stdout, "\1"), "\1\n", "\n\1"), "\1", 1)[0:-2]
   for line in lines
     let key = matchstr(line, "^[^\n]*")
@@ -940,8 +943,12 @@ function! s:ConfigCallback(r, into) abort
       call add(dict[key], strpart(line, len(key) + 1))
     endif
   endfor
+  let callbacks = remove(dict, 'callbacks')
   lockvar! dict
   let a:into[0] = s:ConfigTimestamps(dict.git_dir, dict)
+  for callback in callbacks
+    call call(callback[0], [dict] + callback[1:-1])
+  endfor
 endfunction
 
 let s:config_prototype = {}
@@ -955,7 +962,11 @@ function! fugitive#Config(...) abort
     let callback = a:000
   elseif a:0 > 1 && type(a:2) == type(function('tr'))
     if type(a:1) == type({}) && has_key(a:1, 'GetAll')
-      call call(a:2, [a:1] + a:000[2:-1])
+      if has_key(a:1, 'callbacks')
+        call add(a:1.callbacks, a:000[1:-1])
+      else
+        call call(a:2, [a:1] + a:000[2:-1])
+      endif
       return a:1
     else
       let dir = s:Dir(a:1)
@@ -980,15 +991,22 @@ function! fugitive#Config(...) abort
   let git_dir = s:GitDir(dir)
   let dir_key = len(git_dir) ? git_dir : '_'
   let [ts, dict] = get(s:config, dir_key, ['new', {}])
-  if ts !=# s:ConfigTimestamps(git_dir, dict)
+  if !has_key(dict, 'job') && ts !=# s:ConfigTimestamps(git_dir, dict)
     let dict = copy(s:config_prototype)
     let dict.git_dir = git_dir
     let into = ['running', dict]
+    let dict.callbacks = []
     let exec = fugitive#Execute([dir, 'config', '--list', '-z', '--'], function('s:ConfigCallback'), into)
-    call fugitive#Wait(exec)
+    if has_key(exec, 'job')
+      let dict.job = exec.job
+    endif
     let s:config[dir_key] = into
   endif
-  if exists('callback')
+  if !exists('l:callback')
+    call fugitive#Wait(dict)
+  elseif has_key(dict, 'callbacks')
+    call add(dict.callbacks, callback)
+  else
     call call(callback[0], [dict] + callback[1:-1])
   endif
   return len(name) ? get(fugitive#ConfigGetAll(name, dict), 0, default) : dict
@@ -1003,6 +1021,7 @@ function! fugitive#ConfigGetAll(name, ...) abort
     let name = a:name
   endif
   let name = substitute(name, '^[^.]\+\|[^.]\+$', '\L&', 'g')
+  call fugitive#Wait(config)
   return name =~# '\.' ? copy(get(config, name, [])) : []
 endfunction
 
@@ -1014,6 +1033,7 @@ function! fugitive#ConfigGetRegexp(pattern, ...) abort
     let config = fugitive#Config(a:0 ? a:1 : s:Dir())
     let pattern = a:pattern
   endif
+  call fugitive#Wait(config)
   let filtered = map(filter(copy(config), 'v:key =~# "\\." && v:key =~# pattern'), 'copy(v:val)')
   if pattern !~# '\\\@<!\%(\\\\\)*\\z[se]'
     return filtered
@@ -1030,6 +1050,7 @@ endfunction
 
 function! s:config_GetAll(name) dict abort
   let name = substitute(a:name, '^[^.]\+\|[^.]\+$', '\L&', 'g')
+  call fugitive#Wait(self)
   return name =~# '\.' ? copy(get(self, name, [])) : []
 endfunction
 
@@ -2579,10 +2600,12 @@ function! fugitive#BufReadStatus() abort
     if push !=# pull
       call s:AddHeader('Push', push)
     endif
-    if get(fugitive#ConfigGetAll('core.bare', config), 0, 'true') !~# '^\%(false\|no|off\|0\|\)$'
-      call s:AddHeader('Bare', 'yes')
-    elseif empty(s:Tree())
-      call s:AddHeader('Error', s:worktree_error)
+    if empty(s:Tree())
+      if get(fugitive#ConfigGetAll('core.bare', config), 0, 'true') !~# '^\%(false\|no|off\|0\|\)$'
+        call s:AddHeader('Bare', 'yes')
+      else
+        call s:AddHeader('Error', s:worktree_error)
+      endif
     endif
     if get(fugitive#ConfigGetAll('advice.statusHints', config), 0, 'true') !~# '^\%(false\|no|off\|0\|\)$'
       call s:AddHeader('Help', 'g?')
@@ -2622,7 +2645,7 @@ function! fugitive#BufReadStatus() abort
     call s:Map('x', 's', ":<C-U>execute <SID>Do('Stage',1)<CR>", '<silent>')
     call s:Map('n', 'u', ":<C-U>execute <SID>Do('Unstage',0)<CR>", '<silent>')
     call s:Map('x', 'u', ":<C-U>execute <SID>Do('Unstage',1)<CR>", '<silent>')
-    call s:Map('n', 'U', ":<C-U>Git --no-pager reset -q<CR>", '<silent>')
+    call s:Map('n', 'U', ":<C-U>Git reset -q<CR>", '<silent>')
     call s:MapMotion('gu', "exe <SID>StageJump(v:count, 'Untracked', 'Unstaged')")
     call s:MapMotion('gU', "exe <SID>StageJump(v:count, 'Unstaged', 'Untracked')")
     call s:MapMotion('gs', "exe <SID>StageJump(v:count, 'Staged')")
@@ -2729,6 +2752,7 @@ function! fugitive#FileWriteCmd(...) abort
       if exists('#' . autype . 'WritePost')
         execute s:DoAutocmd(autype . 'WritePost ' . s:fnameescape(amatch))
       endif
+      exe s:DoAutocmdChanged(dir)
       return ''
     else
       return 'echoerr '.string('fugitive: '.error)
@@ -2937,6 +2961,9 @@ function! s:TempReadPost(file) abort
       call fugitive#MapJumps()
     endif
     if has_key(dict, 'filetype')
+      if dict.filetype ==# 'man' && has('nvim')
+        let b:man_sect = matchstr(getline(1), '^\w\+(\zs\d\+\ze)')
+      endif
       let &l:filetype = dict.filetype
     endif
     setlocal foldmarker=<<<<<<<<,>>>>>>>>
@@ -3408,9 +3435,10 @@ function! fugitive#Command(line1, line2, range, bang, mods, arg) abort
   if pager is# -1
     let pager = fugitive#PagerFor(args, config)
   endif
-  if type(pager) ==# type('') ||
-        \ (s:HasOpt(args, ['add', 'checkout', 'commit', 'stage', 'stash', 'reset'], '-p', '--patch') ||
+  let wants_terminal = type(pager) ==# type('') ||
+        \ (s:HasOpt(args, ['add', 'checkout', 'commit', 'reset', 'restore', 'stage', 'stash'], '-p', '--patch') ||
         \ s:HasOpt(args, ['add', 'clean', 'stage'], '-i', '--interactive')) && pager is# 0
+  if wants_terminal
     let mods = substitute(s:Mods(a:mods), '\<tab\>', '-tab', 'g')
     let assign = len(dir) ? '|let b:git_dir = ' . string(options.git_dir) : ''
     let argv = s:UserCommandList(options) + args
@@ -3464,7 +3492,7 @@ function! fugitive#Command(line1, line2, range, bang, mods, arg) abort
       let args = s:AskPassArgs(dir) + args
     endif
     let tmp = {
-          \ 'no_more': no_pager,
+          \ 'no_more': no_pager || get(overrides, 'no_more'),
           \ 'line_count': 0,
           \ 'err': '',
           \ 'out': '',
@@ -3564,7 +3592,7 @@ function! fugitive#Command(line1, line2, range, bang, mods, arg) abort
     endif
     let cmd = s:BuildEnvPrefix(env) . s:shellesc(s:UserCommandList(options) + args)
     let after = '|call fugitive#ReloadStatus(' . string(dir) . ', 1)' . after
-    if no_pager
+    if !wants_terminal && (no_pager || index(['add', 'clean', 'reset', 'restore', 'stage'], get(args, 0, '')) >= 0 || s:HasOpt(args, ['checkout'], '-q', '--quiet', '--no-progress'))
       let output = substitute(s:SystemError(cmd)[0], "\n$", '', '')
       if len(output)
         try
@@ -3572,7 +3600,7 @@ function! fugitive#Command(line1, line2, range, bang, mods, arg) abort
             let more = 1
             set nomore
           endif
-          echo output
+          echo substitute(output, "\n$", "", "")
         finally
           if exists('l:more')
             set more
@@ -4936,8 +4964,8 @@ endfunction
 
 function! s:MergeSubcommand(line1, line2, range, bang, mods, options) abort
   if empty(a:options.subcommand_args) && (
-        \ filereadable(fugitive#Find('.git/MERGE_MSG', dir)) ||
-        \ isdirectory(fugitive#Find('.git/rebase-apply', dir)) ||
+        \ filereadable(fugitive#Find('.git/MERGE_MSG', a:options)) ||
+        \ isdirectory(fugitive#Find('.git/rebase-apply', a:options)) ||
         \  !empty(s:TreeChomp([a:options.git_dir, 'diff-files', '--diff-filter=U'])))
     return 'echoerr ":Git merge for loading conflicts hase been removed in favor of :Git mergetool"'
   endif
@@ -5950,6 +5978,14 @@ endfunction
 
 function! fugitive#FetchComplete(A, L, P, ...) abort
   return s:CompleteSub('fetch', a:A, a:L, a:P, function('s:CompleteRemote'), a:000)
+endfunction
+
+function! s:PushSubcommand(...) abort
+  return {'no_more': 1}
+endfunction
+
+function! s:FetchSubcommand(...) abort
+  return {'no_more': 1}
 endfunction
 
 " Section: :Gdiff
