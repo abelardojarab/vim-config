@@ -565,11 +565,14 @@ let g:airline_powerline_fonts             = 0
 let g:airline#extensions#tabline#enabled  = 1
 let g:airline#extensions#tabline#fnamemod = ':t'
 let g:airline#extensions#tabline#formatter='unique_tail'
-let g:airline_section_z                   = airline#section#create([
+let g:airline_section_b = '%{getcwd()}' 
+let g:airline_section_d = airline#section#create_left(['hunks'])
+let g:airline_section_x = airline#section#create(['branch', 'ffenc'])
+let g:airline_section_y = airline#section#create(['filetype'])
+let g:airline_section_z = airline#section#create_right([
             \ '%1p%% ',
             \ 'Ξ%l%',
             \ '\⍿%c'])
-call airline#parts#define_accent('mode', 'black')
 
 " --- Default vim file browser :Explore
 let g:netrw_liststyle = 3
