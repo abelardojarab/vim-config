@@ -411,7 +411,7 @@ if (has('nvim-0.5'))
     Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
     Plug 'nvim-treesitter/playground'
     Plug 'ray-x/lsp_signature.nvim'
-    Plug 'simrat39/symbols-outline.nvim'
+"    Plug 'simrat39/symbols-outline.nvim'
 "    Plug 'ellisonleao/glow.nvim', {'do': ':GlowInstall', 'branch': 'main'}
 endif
 
