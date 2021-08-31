@@ -102,7 +102,7 @@ if has('gui_running')
     set guioptions-=L       " left scroll bar
     set guioptions-=r       " right scroll bar
     set guioptions-=b       " bottom scroll bar
-    set guioptions-=h      " only calculate bottom scroll size of current line
+    set guioptions-=h       " only calculate bottom scroll size of current line
     set shortmess=atI       " Don't show the intro message at start and
                             "   truncate msgs (avoid press ENTER msgs).
 endif
@@ -153,7 +153,7 @@ set backspace=indent,eol,start  " allow backspacing over everything.
 set nostartofline               " Make j/k respect the columns
 
 if !has('nvim')
-    set esckeys                     " Allow cursor keys in insert mode.
+    set esckeys                 " Allow cursor keys in insert mode.
 endif
 
 " toggle line numbers, nn (no number)
@@ -246,8 +246,8 @@ nmap <silent> <Leader>es :so $MYVIMRC<CR>
 
 " --- Plugins ---
 call plug#begin('~/.vim/plugged')
-" Other plugins here.
 
+" Other plugins here.
 " Status bar
 Plug 'bling/vim-airline'  " Vim status bar
 Plug 'vim-airline/vim-airline-themes'
@@ -311,21 +311,21 @@ Plug 'mattn/vim-lsp-settings'
 Plug 'sakhnik/nvim-gdb', { 'do': ':!./install.sh' }
 
 if (has('nvim'))
-   Plug 'RishabhRD/nvim-lsputils'
-   Plug 'kosayoda/nvim-lightbulb'
-   Plug 'gennaro-tedesco/nvim-peekup'
-   Plug 'tversteeg/registers.nvim', { 'branch': 'main' }
-   Plug 'vijaymarupudi/nvim-fzf'
-"   Plug 'rcarriga/vim-ultest'
-   Plug 'numToStr/Navigator.nvim'
-   Plug 'jamestthompson3/nvim-remote-containers'
-"   Plug 'glepnir/galaxyline.nvim' , {'branch': 'main'}
-   Plug 'kyazdani42/nvim-web-devicons' " for file icons
-   Plug 'kyazdani42/nvim-tree.lua'
-   Plug 'nvim-lua/plenary.nvim'
-   Plug 'TimUntersberger/neogit'
-   Plug 'kassio/neoterm'
-   Plug 'conweller/findr.vim' " requires Lua
+    Plug 'RishabhRD/nvim-lsputils'
+    Plug 'kosayoda/nvim-lightbulb'
+    Plug 'gennaro-tedesco/nvim-peekup'
+    Plug 'tversteeg/registers.nvim', { 'branch': 'main' }
+    Plug 'vijaymarupudi/nvim-fzf'
+"    Plug 'rcarriga/vim-ultest'
+    Plug 'numToStr/Navigator.nvim'
+    Plug 'jamestthompson3/nvim-remote-containers'
+"    Plug 'glepnir/galaxyline.nvim' , {'branch': 'main'}
+    Plug 'kyazdani42/nvim-web-devicons' " for file icons
+    Plug 'kyazdani42/nvim-tree.lua'
+    Plug 'nvim-lua/plenary.nvim'
+    Plug 'TimUntersberger/neogit'
+    Plug 'kassio/neoterm'
+    Plug 'conweller/findr.vim' " requires Lua
 endif
 
 " Syntax checker
@@ -403,6 +403,7 @@ Plug 'terryma/vim-expand-region'
 Plug 'FooSoft/vim-argwrap'
 Plug 'gerardbm/vim-md-headings'
 Plug 'matze/vim-move'
+Plug 'ntpeters/vim-better-whitespace'
 
 " Neovim
 if (has('nvim-0.5'))
@@ -801,6 +802,11 @@ au BufNewFile, BufRead *.js, *.html, *.css
     \ set tabstop=2 |
     \ set softtabstop=2 |
     \ set shiftwidth=2
+
+" --- whitespace ---
+let g:better_whitespace_enabled=1
+let g:show_spaces_that_precede_tabs=1
+let g:strip_whitelines_at_eof=1
 
 " --- Better copy paste ---
 let g:yoinkIncludeDeleteOperations    = 1
