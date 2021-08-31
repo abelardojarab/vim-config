@@ -355,11 +355,14 @@ Plug 'deoplete-plugins/deoplete-go'
 " Perl
 Plug 'c9s/perlomni.vim'
 
-" JavaScript
+" Javascript
 Plug 'ternjs/tern_for_vim', { 'do': 'npm install' }
 Plug 'carlitux/deoplete-ternjs', { 'do': 'npm install -g tern' }
 Plug 'othree/jspc.vim'
 Plug 'maksimr/vim-jsbeautify'
+Plug 'pangloss/vim-javascript'
+Plug 'peitalin/vim-jsx-typescript'
+Plug 'leafgarland/typescript-vim'
 
 " Rust
 Plug 'racer-rust/vim-racer'
@@ -372,7 +375,6 @@ Plug 'plasticboy/vim-markdown'
 Plug 'othree/html5.vim'
 Plug 'vim-language-dept/css-syntax.vim'
 Plug 'hail2u/vim-css3-syntax'
-Plug 'pangloss/vim-javascript'
 Plug 'aklt/plantuml-syntax'
 Plug 'gerardbm/asy.vim'
 Plug 'gerardbm/eukleides.vim'
@@ -433,6 +435,11 @@ endif
 Plug 'gerardbm/vim-atomic'
 Plug 'rakr/vim-one'
 Plug 'sickill/vim-monokai'
+
+" post install (yarn install | npm install) then load plugin only for editing supported files
+Plug 'prettier/vim-prettier', {
+\ 'do': 'npm install',
+\ 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql', 'markdown', 'vue', 'yaml', 'html'] }
 
 call plug#end()
 
@@ -677,6 +684,8 @@ let g:ctrlp_mruf_exclude = '*.tar.gz\|bin|.git|*.srt|*.part|*.txt|/tmp/*'
 "           (You'll have to hit `:` and wait about a half a sec or so
 "           to start typing the command, starting with 'e')
 nnoremap ;e :CtrlPMRUFiles<CR>
+nnoremap ;g :GFiles<CR>
+nnoremap ;f :Files<CR>
 
 " --- Search with ack ---
 if executable('ag')
