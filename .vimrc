@@ -319,7 +319,7 @@ if (has('nvim'))
 "   Plug 'rcarriga/vim-ultest'
    Plug 'numToStr/Navigator.nvim'
    Plug 'jamestthompson3/nvim-remote-containers'
-   Plug 'glepnir/galaxyline.nvim' , {'branch': 'main'}
+"   Plug 'glepnir/galaxyline.nvim' , {'branch': 'main'}
    Plug 'kyazdani42/nvim-web-devicons' " for file icons
    Plug 'kyazdani42/nvim-tree.lua'
    Plug 'nvim-lua/plenary.nvim'
