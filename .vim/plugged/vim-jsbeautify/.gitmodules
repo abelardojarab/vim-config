@@ -1,3 +1,0 @@
-[submodule "plugin/lib"]
-	path = plugin/lib
-	url = https://github.com/beautify-web/js-beautify.git

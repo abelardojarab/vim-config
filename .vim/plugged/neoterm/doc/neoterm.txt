@@ -1,0 +1,423 @@
+*neoterm.txt*   A neovim's terminal with steroids
+
+===============================================================================
+CONTENTS                                                      *neoterm-contents*
+
+        1. Intro ............................................... |neoterm-intro|
+             1.1 What is neoterm? .................... |neoterm-what-is-neoterm|
+             1.2 Default behavior ................... |neoterm-default-behavior|
+             1.3 Multiple terminal support . |neoterm-multiple-terminal-support|
+             1.4 ID calculation ....................... |neoterm-id-calculation|
+             1.5 Last Active ............................. |neoterm-last-active|
+        2. Commands ......................................... |neoterm-commands|
+             2.1 Dynamic mappings ................... |neoterm-dynamic-mappings|
+        3. Options ........................................... |neoterm-options|
+        4. Callbacks........................................ |neoterm-callbacks|
+        5. Operators........................................ |neoterm-operators|
+
+===============================================================================
+1. Intro                                                         *neoterm-intro*
+
+1.1 What is neoterm?                                   *neoterm-what-is-neoterm*
+
+neoterm is a neovim terminal wrapper. Its main goal is to provide an easier
+way to interact with neovim's terminal.
+
+1.2 Default behavior                                  *neoterm-default-behavior*
+
+neoterm, by default, will create a new neoterm buffer on the current window.
+This can be changed with `g:neoterm_default_mod`.
+
+1.3 Multiple terminal support                *neoterm-multiple-terminal-support*
+
+neoterm is capable of controlling more than one terminal at a time. To open a
+new terminal, use |:Tnew|. Each neoterm terminal has an `ID` (neoterm jobs are
+always named `neoterm-ID`). Each neoterm terminal has its own set of commands
+prefixed by its `ID`. For instance, `:1T` `command` will always send the command
+to neoterm `1`.
+
+Commands lacking a prefix will always be executed in the last active neoterm.
+
+1.4 ID calculation                                      *neoterm-id-calculation*
+
+The ID is a numeric value. It's calculates the minimum available value,
+starting from 1.
+
+1.4 Last Active                                            *neoterm-last-active*
+
+neoterm last active is updated on the following events:
+  - `:Tnew`
+  - `:T`
+  - `:Texec`
+  - `:Topen`
+  - `:Ttoggle` - if it opens a neoterm
+
+===============================================================================
+                                                              *neoterm-commands*
+2. Commands
+
+:[N]T {cmd}                                                                 *:T*
+
+Executes the given command on the neoterm with id [N]. With no [N] the last
+active neoterm will be used (or a new one will be created). If a new neoterm
+window is created, mods are accepted to position the new window. If there is a
+`%` in the given command, this will be expanded to the current file path.
+
+:[N]Texec {cmds}                                                        *:Texec*
+
+Executes the given commands, one by one, on the neoterm with id [N]. With no
+[N] the last active neoterm will be used or a new one will be created. If
+there is a `%` in the given command, this will be expanded to the current file
+path.
+
+:Tnew                                                                    *:Tnew*
+
+Opens a new term buffer. This command accepts |mods| like `:vertical`,
+`:botright`, `:belowright`, etc. By default it'll use the current window. Its
+default behavior can be changed with |g:neoterm_default_mod|.
+
+:[N]Tclear[!]                                                          *:Tclear*
+
+Clear the neoterm with [N] id. With no [N] the last active neoterm will be
+cleared. This command will send a <C-L> to neoterm.
+
+When the [!] is included the buffer 'scrollback' cleaned (it is set to 1 and
+then set back to the original value).
+
+:[N]Tkill                                                               *:Tkill*
+
+Kills the process in the neoterm with [N] id. With no [N] the last active
+neoterm will be killed. This command will send a <C-K> to neoterm.
+
+:[N]Tmap {cmd}                                                           *:Tmap*
+
+Maps the given command to the neoterm with [N] id. With no [N] the last active
+neoterm will be the map target. Each time the mapping is executed the command
+is sent to a neoterm terminal buffer.
+
+When the `Tmap` is executed the "last active" won't be updated, not affecting
+future commands.
+
+The default mapping is `,tt`. It can be changed in |g:neoterm_automap_keys|.
+
+:Tpos {position}                                                         *:Tpos*
+
+DEPRECATED - Commands like |:T| and |:Tnew| accept vim mods (|mods|). If you
+want to choose the default mod use in one of these commands see
+|g:neoterm_default_mod|.
+
+:TREPLSetTerm {term-id}                                          *:TREPLSetTerm*
+
+Chooses, or changes, the current neoterm to run the REPL commands.
+
+:TREPLSendFile                                                  *:TREPLSendFile*
+
+Sends the current file to a REPL.
+
+:TREPLSendLine                                                  *:TREPLSendLine*
+
+Sends the current line to a REPL.
+
+:TREPLSendSelection                                        *:TREPLSendSelection*
+
+Sends the current selection to a REPL.
+
+:[N]Topen [resize=V]                                                    *:Topen*
+
+Opens the neoterm with id [N]. With no [N] the last active neoterm will be
+opened or a new one will be created. This command accepts vim |mods|. The last
+|mods| used will be saved in the neoterm instance.
+
+'resize=V' option can be passed, this will resize the new window to the given
+size. The resize will be used in the direction of the |mods| used. The value
+will also be cached in the neoterm instance.
+
+:[N]Tclose[!]                                                          *:Tclose*
+
+Closes, or hides, the neoterm with id [N]. With no [N] the last active neoterm
+will be closed.
+
+When the [!] is included the |g:neoterm_keep_term_open| is ignored and the
+neoterm buffer is deleted.
+
+:TcloseAll[!]                                                       *:TcloseAll*
+
+Call |:Tclose| for each neoterm instance.
+
+When the [!] is included `:Tclose!`(with the bang) is called.
+
+:[N]Ttoggle [resize=V]                                                *:Ttoggle*
+
+Toggles the neoterm with id [N]. With no [N] the last active neoterm will be
+toggled.  This command accepts vim |mods|. The last |mods| used will be saved
+in the neoterm instance.
+
+'resize=V' option can be passed, this will resize the new window to the given
+size. The resize will be used in the direction of the |mods| used. The value
+will also be cached in the neoterm instance.
+
+:TtoggleAll                                                        *:TtoggleAll*
+
+Toggles all neoterm windows in the current tab.
+
+:Tls                                                                      *:Tls*
+
+List neoterm instances.
+
+:Tnext                                                                  *:Tnext*
+
+Navigate to the next neoterm instance, works like `:bnext`.
+
+:Tprevious                                                          *:Tprevious*
+
+Navigate to the previous neoterm instance, works like `:bprevious`.
+
+===============================================================================
+                                                      *neoterm-dynamic-mappings*
+2.1 Dynamic Mappings
+
+One can map commands to be sent to specific neoterm windows. For example,
+
+    `" 3<leader>tl will clear neoterm-3 window`
+    `nnoremap <leader>tl :<c-u>exec v:count.'Tclear'<cr>`
+
+===============================================================================
+3. Options                  *neoterm-vars* *neoterm-variables* *neoterm-options*
+
+                                                                *g:neoterm_size*
+
+Set the neoterm terminal split size. The default, empty string, will use half
+of the current window. This will be used with the |:new| command, you can read
+more about it on `:help :new`
+Default value: `''`.
+
+                                                            *g:neoterm_position*
+
+DEPRECATED - See |g:neoterm_default_mod|.
+
+                                                    *g:neoterm_direct_open_repl*
+
+When set, the neoterm terminal will open directly to the set REPL rather than
+using the shell as an intermediary.
+Default value: `0`.
+
+                                                        *g:neoterm_automap_keys*
+
+Key combination to be used with |:Tmap|.
+Default value: `,tt`.
+
+                                                        *g:neoterm_term_per_tab*
+
+When set to 1 neoterm will send the commands to the neoterm buffer linked to
+the current tab instead of the last active neoterm.
+Default value: 0
+
+                                                      *g:neoterm_keep_term_open*
+
+When set, neoterm terminal will be kept running in background when the buffer
+is hidden, or when closing via |:Tclose|. When not set, `:bdelete!` is used to
+close neoterm in |:Tclose|.
+Default value: `1`.
+
+                                                          *g:neoterm_autoinsert*
+
+When set, neoterm will open in insert mode.
+Default value: `0`.
+
+                                                            *g:neoterm_autojump*
+
+When set, neoterm will open in normal mode, and will not go back to the
+previous window. When |g:neoterm_autoinsert| is set, this option has no effect.
+Default value: `0`.
+
+                                                       *g:neoterm_split_on_tnew*
+
+DEPRECATED - |:Tnew| now accepts |mods|. |:Tnew| will use current window by
+default, but you can use `:vert Tnew`, for example, to open a new neoterm
+vertical split.
+
+
+                                                            *g:neoterm_tnew_mod*
+
+DEPRECATED - See |g:neoterm_default_mod|.
+
+
+                                                         *g:neoterm_default_mod*
+
+Default vim mod (|mods|) when creating or toggling a neoterm window. To see
+the possible values of this variable check `:help mods` , many users use
+`botright` to open the neoterm in a new window split.
+Default value: ''
+
+
+                                                   *g:neoterm_use_relative_path*
+
+When set, the `%` will always be expanded to the file relative path instead of
+its absolute path.
+Default value: 0
+
+                                                           *g:neoterm_repl_ruby*
+
+Sets what ruby REPL will be used.
+Default value: irb
+
+                                                         *g:neoterm_repl_python*
+
+Sets what python REPL will be used, and any arguments to be passed to it.
+This option accepts either a String or a list of commands. Its default
+value is an empty string, which will try to use `ipython` or `python`,
+in this order, to execute the REPL.
+Default value: (empty)
+
+Example for a valid command list:
+`let g:neoterm_repl_python = ['conda activate venv', 'clear', 'ipython']`
+
+In this example ipython is loaded in a virtual environment.
+The screen output is cleared after activating the venv.
+
+                                      *g:neoterm_repl_enable_ipython_paste_magic*
+
+Allows you to paste & execute a pre-formatted code block from clipboard.
+This command is currently only supported in ipython.
+Default value: 0
+
+                                                              *g:neoterm_repl_r*
+
+Sets what R REPL will be used.
+Default value: R
+
+                                                      *g:neoterm_repl_octave_qt*
+
+When set, the Octave REPL will use Qt widgets for plots, dialogs, etc.
+Internally, this means the REPL is set to `octave` `--no-gui`. Otherwise the
+REPL is set to `octave-cli`. This setting is for Octave 4 and has no effect
+for Octave 3 users.
+Default value: `0`
+
+                                                            *g:neoterm_repl_php*
+
+Sets what php REPL will be used, and any arguments to be passed to it.
+Defaults to an empty string, in which case NeoTerm will fall back to psysh
+followed by php.
+Default value: (empty)
+
+                                                                 *g:neoterm_eof*
+
+Sets how neoterm will send the `EOF` character to terminal.
+Default value: ""
+
+                                                          *g:neoterm_autoscroll*
+
+When set to `1` neoterm will scroll to the end of its buffer after running any
+command or using :TOpen for when the terminal is hidden.
+Default value: `0`
+
+                                                           *g:neoterm_fixedsize*
+
+When set to `1` neoterm will fix the height and width of its window with
+`winfixheight` and `winfixwidth`. This option only works when the
+|g:neoterm_size| is set.
+Default value: `0`
+
+                                                       *g:neoterm_auto_repl_cmd*
+
+When set to `1` neoterm will automatically open a terminal window and start the
+REPL for you. If set to `0` it will leave you in the shell.
+Default value: `1`
+
+                                                               *g:neoterm_shell*
+
+Sets the shell used inside neoterm.
+neovim default: `&shell . ' ' . substitute(&shellcmdflag, '[-/]c', '', '')`
+vim default: `&shell`
+                                                      *g:neoterm_command_prefix*
+
+When set, is used as the prefix to any text sent to the neoterm terminal.
+This can be useful if your shell or REPL is configured to use vi-mode editing
+to ensure the mode is set to insertion mode.   For instance when using a shell
+or REPL in vi-mode, setting this to `"\edda"` will clear the current line then
+leave the prompt in insertion mode.
+Default value: ''
+
+                                                           *g:neoterm_clear_cmd*
+
+Sets how to clear the terminal on `:Tclear`. By default it uses the keybinding
+`ctrl-l`, but it can be replaced by the command `clear`
+Default value: `["\<c-l>"]`
+To use the clear command set to: `["clear", ""]`
+
+                                                      *g:neoterm_bracketed_paste*
+
+When set to `1` neoterm will send text to the neoterm buffer in bracketed
+paste mode. This is useful to enable sending multiline statements when working
+with some interactive REPL environments (such as radian for R and ipython for
+Python). Note that when used with pure python, can give `SyntaxError: multiple
+statements found while compiling a single statement`.
+Default value: `0`
+
+===============================================================================
+4. Callbacks                                                  *neoterm-callbacks*
+
+Callbacks are functions that are called before/after a neoterm event. They can
+be set in the global variable `g:neoterm_callbacks`.
+
+                                               *g:neoterm_callbacks.before_new()*
+
+This callback is called before a neoterm is created with any command, like
+`:Tnew`, `:Topen`, `:Ttoggle`, etc.
+
+- Example of usage:
+
+Open the neoterm in a vertical split if current window width is bigger than
+100, otherwise use a horizontal split.
+>
+    let g:neoterm_callbacks = {}
+    function! g:neoterm_callbacks.before_new()
+      if winwidth('.') > 100
+        let g:neoterm_default_mod = 'botright vertical'
+      else
+        let g:neoterm_default_mod = 'botright'
+      end
+    endfunction
+
+                                               *g:neoterm_callbacks.before_exec()*
+
+This callback is called before neoterm sends a command to its terminal, like
+in `:T`.
+
+- Example of usage:
+
+Save all buffers before executing a command
+>
+    let g:neoterm_callbacks = {}
+    function! g:neoterm_callbacks.before_exec()
+      wall
+    endfunction
+<
+===============================================================================
+5. Operators                                                 *neoterm-operators*
+
+                                                     *<Plug>(neoterm-repl-send)*
+
+Keymap for sending contents to REPL, works with |text-objects|. For example,
+>
+    " Use gx{text-object} in normal mode
+    nmap gx <Plug>(neoterm-repl-send)
+
+    " Send selected contents in visual mode.
+    xmap gx <Plug>(neoterm-repl-send)
+<
+With these mappings, you could use `gxip` to send a paragraph to a REPL, or send
+selected contents with `gx` in visual mode.
+
+                                                *<Plug>(neoterm-repl-send-line)*
+
+Like |<Plug>(neoterm-repl-send)|, but for lines. For example,
+>
+    nmap gxx <Plug>(neoterm-repl-send-line)
+<
+Then you could use `gxx` or `2gxx` to send current or 2 lines to REPL.
+
+===============================================================================
+
+vim:fo=:ts=8:sw=4:et:tw=78:norl:nosta:nosr:ft=help

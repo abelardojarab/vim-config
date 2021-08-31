@@ -1,0 +1,226 @@
+Findr, incremental narrowing engine for noevim    *findr*
+
+===========================================================================
+USAGE                                             *findr_usage*
+
+Open A Findr buffer with one of the commands provided (see |findr_commands|)
+
+Once you are in a findr buffer, you can narrow items by entering the pattern
+in the first line (as of right now regex expressions are not supported)
+
+You can delimit multiple patterns you are searching for with a space.
+
+The first matching item is selected by default, you can select a different
+item using <c-p> for the previous item, or <c-n> for the next item
+
+Use <cr> to Choose the selected item
+
+===========================================================================
+COMMANDS                                          *findr_commands*
+
+                                                  *:Findr*
+:Findr                          launches a file finder buffer in the current
+                                directory
+
+                                                  *:FindrBuffers*
+:FindrBuffers                   launches a buffer selector
+
+                                                  *:FindrLocList*
+:FindrLocList                   launches a location list finder for the
+                                current file
+
+                                                  *:FindrQFList*
+:FindrQFList                    launches a location list finder for the
+                                current file
+
+===========================================================================
+MAPS                                              *findr_maps*
+Findr buffers operate entirely in insert mode, so all mappings are imaps
+local to findr buffers
+
+General maps ~
+                                                  *findr_<tab>*
+                                                  *findr_<cr>*
+                                                  *findr_<c-x>*
+                                                  *findr_<c-v>*
+                                                  *findr_<c-t>*
+<cr>                      Choose selected item
+<tab>
+<c-x>                       in new split
+<c-v>                       in new vsplit
+<c-t>                       in new tab
+
+                                                  *findr_up*
+                                                  *findr_<c-p>*
+                                                  *findr_<c-k>*
+<up>
+<c-p>                     Select the previous item
+<c-k>
+
+                                                  *findr_down*
+                                                  *findr_<c-n>*
+                                                  *findr_<c-j>*
+<down>
+<c-n>                     Select the next item
+<c-j>
+
+                                                  *findr_<c-u>*
+<c-u>                     Clears text in prompt up until the prompt-string
+
+                                                  *findr_<esc>*
+                                                  *findr_<c-c>*
+                                                  *findr_<c-g>*
+<esc>                     Quit findr, return to previous buffer
+<c-c>
+<c-g>
+
+
+File finder specific maps ~
+                                                  *file_findr_/*
+                                                  *file_findr_<tab>*
+                                                  *file_findr_<c-l>*
+/
+<tab>                     Enter the selected directory, or choose file (press
+<c-l>                     twice to choose file)
+
+                                                  *file_findr_<c-h>*
+<c-h>                     Go back to the parent directory of the current
+                          directory
+
+                                                  *file_findr_<bs>*
+<bs>                      If previous char in line is part of the
+                          prompt-string, then go back one directory, else
+                          delete previous char
+
+                                                  *file_findr_<s-up>*
+                                                  *file_findr_<m-p>*
+<c-p>                     Select the previous item in history (only currently
+<s-up>                    supported on neovim)
+
+                                                  *file_findr_<s-down>*
+                                                  *file_findr_<m-n>*
+<c-n>                     Select the next item in history (only currently
+<s-down>                  supported on neovim)
+
+                                                  *file_findr_<c-u>*
+<c-u>                     Clears text in prompt up until the path
+
+                                                  *file_findr_<esc>*
+                                                  *file_findr_<c-c>*
+<esc>                     Quit findr, return to previous buffer
+<c-c>
+
+===========================================================================
+CONFIGURATION                                        *findr_configuration*
+
+                                                  *g:findr_floating_window*
+Enable/disable floating window (default 1). You may also supply a 'dict'
+containing the key "window" with a value that will be evaluated and must
+return the values needed for the config argument in nvim_open_win
+(Floating windows are currently only supported on neovim)
+>
+  let g:findr_floating_window = {
+        \ 'window': 'FindrFloatingWindow()'
+        \ }
+
+  function! FindrFloatingWindow()
+    return {
+         \ 'relative': 'editor',
+         \ 'row': 0,
+         \ 'col': 0,
+         \ 'height': &lines - 2,
+         \ 'style': 'minimal',
+         \ 'width': float2nr(&columns / 3)
+         \ }
+  endfunction
+<
+
+Alternatively you can specify the positioning, max width and max height for
+the floating window as follows:
+>
+  let g:findr_floating_window = {
+        \ 'position': 'center',
+        \ 'max_width': 100,
+        \ 'max_height': 20,
+        \ }
+<
+As of right now only `g:findr_floating_window.position = 'center'` is
+supported
+
+
+                                                  *g:findr_ls_cmd*
+Command used to retrieve files to display (default "ls -A")
+
+                                                  *g:findr_enable_border*
+Enable/disable border around floating window (default 1)
+
+                                                  *g:findr_highlight_matches*
+Enable/disable highlights for matches (default 1)
+
+                                                  *g:findr_border*
+Set characters to use for the 3 sections of the top middle and bottom border.
+Example:
+>
+  let g:findr_border = {
+        \   'top':    ['┌', '─', '┐'],
+        \   'middle': ['│', ' ', '│'],
+        \   'bottom': ['└', '─', '┘'],
+        \ }
+<
+
+                                                  *g:findr_history*
+File to read and write history of previous files chosen from the file finder
+(History is currently only supported on neovim)
+
+                                                  *g:findr_max_hist*
+Maximum number of files stored in history (default 100)
+(History is currently only supported on neovim)
+
+                                                  *g:findr_shorten_path*
+When displaying the file path prompt for the `Findr` command, always
+abbreviate the path (default 1). Must be a value 0, 1, or 2
+>
+  let g:findr_shorten_path = 0 " Never abbreviate
+  let g:findr_shorten_path = 1 " Only abbreviate the path if there is not
+                               "  enough room for full path
+  let g:findr_shorten_path = 2 " Always abbreviate the path
+<
+===========================================================================
+AUTOCMDS                                        *findr_autocmds* 
+                                                *findr_autocommands*
+
+                                                *FindrOpened*
+FindrOpened             Event when a findr window is opened
+>
+  autocmd! User FindrOpened echo "opened"
+<
+                                                *FindrClosed*
+FindrClosed             Event when a findr window is closed
+>
+  autocmd! User FindrClosed echo "closed"
+<
+
+
+===========================================================================
+HIGHLIGHTS                                        *findr_highlights*
+
+                                                  *hl-FindrDir*
+FindrDir                  File path
+
+                                                  *hl-FindrDirPartial*
+FindrDirPartial           Partial file path
+
+                                                  *hl-FindrSelected*
+FindrSelected             Selected item
+
+                                                  *hl-FindrMatch*
+FindrMatch                Matches for current pattern
+
+                                                  *hl-FindrBorder*
+FindrBorder               Border for floating window
+
+                                                  *hl-FindrNormal*
+FindrNormal               Background/Foreground for floating window
+
+
+vim:tw=78:ts=2:sts=2:sw=2:ft=help:norl

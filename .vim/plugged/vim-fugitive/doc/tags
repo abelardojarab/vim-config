@@ -60,6 +60,7 @@ User_FugitiveChanged	fugitive.txt	/*User_FugitiveChanged*
 User_FugitiveCommit	fugitive.txt	/*User_FugitiveCommit*
 User_FugitiveIndex	fugitive.txt	/*User_FugitiveIndex*
 User_FugitiveObject	fugitive.txt	/*User_FugitiveObject*
+User_FugitivePager	fugitive.txt	/*User_FugitivePager*
 User_FugitiveStageBlob	fugitive.txt	/*User_FugitiveStageBlob*
 User_FugitiveTag	fugitive.txt	/*User_FugitiveTag*
 User_FugitiveTree	fugitive.txt	/*User_FugitiveTree*

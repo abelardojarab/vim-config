@@ -1,4 +1,0 @@
-# Ignore unit tests for now
-Makefile
-t/*
-doc/tags

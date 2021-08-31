@@ -248,11 +248,6 @@ nmap <silent> <Leader>es :so $MYVIMRC<CR>
 call plug#begin('~/.vim/plugged')
 " Other plugins here.
 
-" Sessions
-" Plug 'conweller/findr.vim' " requires Lua
-" Plug 'xolox/vim-session'
-" Plug 'xolox/vim-misc'
-
 " Status bar
 Plug 'bling/vim-airline'  " Vim status bar
 Plug 'vim-airline/vim-airline-themes'
@@ -324,6 +319,13 @@ if (has('nvim'))
 "   Plug 'rcarriga/vim-ultest'
    Plug 'numToStr/Navigator.nvim'
    Plug 'jamestthompson3/nvim-remote-containers'
+   Plug 'glepnir/galaxyline.nvim' , {'branch': 'main'}
+   Plug 'kyazdani42/nvim-web-devicons' " for file icons
+   Plug 'kyazdani42/nvim-tree.lua'
+   Plug 'nvim-lua/plenary.nvim'
+   Plug 'TimUntersberger/neogit'
+   Plug 'kassio/neoterm'
+   Plug 'conweller/findr.vim' " requires Lua
 endif
 
 " Syntax checker
@@ -383,6 +385,8 @@ Plug 'mattn/webapi-vim'
 Plug 'diepm/vim-rest-console'
 
 " Edition
+Plug 'Raimondi/delimitMate'
+Plug 'mg979/vim-visual-multi', {'branch': 'master'}
 Plug 'tpope/vim-surround'  " Quoting and parenthesizing made simple
 Plug 'tomtom/tcomment_vim'  " Extensible & universal comment
 Plug 'Shougo/context_filetype.vim'
@@ -411,8 +415,17 @@ if (has('nvim-0.5'))
     Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
     Plug 'nvim-treesitter/playground'
     Plug 'ray-x/lsp_signature.nvim'
-"    Plug 'simrat39/symbols-outline.nvim'
-"    Plug 'ellisonleao/glow.nvim', {'do': ':GlowInstall', 'branch': 'main'}
+    Plug 'ojroques/nvim-lspfuzzy'
+    Plug 'nvim-lua/completion-nvim'
+    Plug 'RishabhRD/popfix'
+    Plug 'RishabhRD/nvim-lsputils'
+    Plug 'glepnir/lspsaga.nvim'
+    Plug 'MunifTanjim/nui.nvim'
+
+    nnoremap <silent> <C-j> :Lspsaga diagnostic_jump_next<CR>
+    nnoremap <silent> gh <Cmd>Lspsaga lsp_finder<CR>
+    inoremap <silent> <C-k> <Cmd>Lspsaga signature_help<CR>
+    nnoremap <silent>K :Lspsaga hover_doc<CR>
 endif
 
 " Color schemes
