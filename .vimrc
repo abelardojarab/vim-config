@@ -812,7 +812,7 @@ au BufNewFile, BufRead *.js, *.html, *.css
     \ set softtabstop=2 |
     \ set shiftwidth=2
 
-" --- whitespace ---
+" --- Whitespace ---
 let g:better_whitespace_enabled=1
 let g:show_spaces_that_precede_tabs=1
 let g:strip_whitelines_at_eof=1
@@ -990,6 +990,25 @@ function! <SID>bufferselect(pattern) abort
         echoerr 'No matching buffers'
     endif
 endfunction
+
+" --- Terminal ---
+
+" turn terminal to normal mode with escape
+tnoremap <Esc> <C-\><C-n>
+
+" start terminal in insert mode
+au BufEnter * if &buftype == 'terminal' | :startinsert | endif
+
+" open terminal on ctrl+n
+function! OpenTerminal()
+split term://bash
+resize 10
+endfunction
+nnoremap ;t :call OpenTerminal()<CR>
+
+if (has('nvim'))
+    autocmd TermOpen * setlocal nonumber norelativenumber
+endif
 
 " vim:foldmethod=marker:foldlevel=0:textwidth=79
 
