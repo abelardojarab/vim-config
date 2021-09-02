@@ -25,6 +25,7 @@ set showmode                    " always show what mode we're currently editing 
 set nowrap                      " don't wrap lines
 set tabstop=4                   " a tab is four spaces
 set smarttab
+set smartindent
 set softtabstop=4               " when hitting <BS>, pretend like a tab is removed, even if spaces
 set expandtab                   " expand tabs by default (overloadable per file type later)
 set shiftwidth=4                " number of spaces to use for autoindenting
@@ -326,6 +327,7 @@ if (has('nvim'))
     Plug 'TimUntersberger/neogit'
     Plug 'kassio/neoterm'
     Plug 'conweller/findr.vim' " requires Lua
+    Plug 'lambdalisue/suda.vim'
 endif
 
 " Syntax checker
@@ -406,6 +408,8 @@ Plug 'FooSoft/vim-argwrap'
 Plug 'gerardbm/vim-md-headings'
 Plug 'matze/vim-move'
 Plug 'ntpeters/vim-better-whitespace'
+Plug 'editorconfig/editorconfig-vim'
+Plug 'tpope/vim-commentary'
 
 " Neovim
 if (has('nvim-0.5'))
@@ -413,9 +417,11 @@ if (has('nvim-0.5'))
     Plug 'nvim-lua/popup.nvim'
     Plug 'nvim-lua/plenary.nvim'
     Plug 'nvim-telescope/telescope.nvim'
+    Plug 'nvim-telescope/telescope-project.nvim'
     Plug 'hrsh7th/nvim-compe'
     Plug 'neovim/nvim-lspconfig'
     Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+    Plug 'romgrk/nvim-treesitter-context'
     Plug 'nvim-treesitter/playground'
     Plug 'ray-x/lsp_signature.nvim'
     Plug 'ojroques/nvim-lspfuzzy'
@@ -424,6 +430,12 @@ if (has('nvim-0.5'))
     Plug 'RishabhRD/nvim-lsputils'
     Plug 'glepnir/lspsaga.nvim'
     Plug 'MunifTanjim/nui.nvim'
+    Plug 'nvim-lua/plenary.nvim'
+    Plug 'akinsho/flutter-tools.nvim'
+    Plug 'karb94/neoscroll.nvim'
+    Plug 'kevinhwang91/nvim-hlslens'
+    Plug 'lukas-reineke/indent-blankline.nvim'
+    Plug 'lewis6991/gitsigns.nvim'
 
     nnoremap <silent> <C-j> :Lspsaga diagnostic_jump_next<CR>
     nnoremap <silent> gh <Cmd>Lspsaga lsp_finder<CR>
@@ -438,10 +450,27 @@ Plug 'sickill/vim-monokai'
 
 " post install (yarn install | npm install) then load plugin only for editing supported files
 Plug 'prettier/vim-prettier', {
-\ 'do': 'npm install',
-\ 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql', 'markdown', 'vue', 'yaml', 'html'] }
+            \ 'do': 'npm install',
+            \ 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql', 'markdown', 'vue', 'yaml', 'html'] }
 
 call plug#end()
+
+if (has('nvim-0.5'))
+    lua require('neoscroll').setup()
+    lua require('gitsigns').setup()
+
+    noremap <silent> n <Cmd>execute('normal! ' . v:count1 . 'n')<CR>
+                \<Cmd>lua require('hlslens').start()<CR>
+    noremap <silent> N <Cmd>execute('normal! ' . v:count1 . 'N')<CR>
+                \<Cmd>lua require('hlslens').start()<CR>
+    noremap * *<Cmd>lua require('hlslens').start()<CR>
+    noremap # #<Cmd>lua require('hlslens').start()<CR>
+    noremap g* g*<Cmd>lua require('hlslens').start()<CR>
+    noremap g# g#<Cmd>lua require('hlslens').start()<CR>
+
+    " use : instead of <Cmd>
+    nnoremap <silent> <leader>l :noh<CR>
+endif
 
 " --- Colors ---
 colorscheme monokai
@@ -452,16 +481,16 @@ set background=dark
 "If you're using tmux version 2.2 or later, you can remove the outermost $TMUX check and use tmux's 24-bit color support
 "(see < http://sunaku.github.io/tmux-24bit-color.html#usage > for more information.)
 if (empty($TMUX))
-  if (has("nvim"))
-    "For Neovim 0.1.3 and 0.1.4 < https://github.com/neovim/neovim/pull/2198 >
-    let $NVIM_TUI_ENABLE_TRUE_COLOR=1
-  endif
-  "For Neovim > 0.1.5 and Vim > patch 7.4.1799 < https://github.com/vim/vim/commit/61be73bb0f965a895bfb064ea3e55476ac175162 >
-  "Based on Vim patch 7.4.1770 (`guicolors` option) < https://github.com/vim/vim/commit/8a633e3427b47286869aa4b96f2bfc1fe65b25cd >
-  " < https://github.com/neovim/neovim/wiki/Following-HEAD#20160511 >
-  if (has("termguicolors"))
-    set termguicolors
-  endif
+    if (has("nvim"))
+        "For Neovim 0.1.3 and 0.1.4 < https://github.com/neovim/neovim/pull/2198 >
+        let $NVIM_TUI_ENABLE_TRUE_COLOR=1
+    endif
+    "For Neovim > 0.1.5 and Vim > patch 7.4.1799 < https://github.com/vim/vim/commit/61be73bb0f965a895bfb064ea3e55476ac175162 >
+    "Based on Vim patch 7.4.1770 (`guicolors` option) < https://github.com/vim/vim/commit/8a633e3427b47286869aa4b96f2bfc1fe65b25cd >
+    " < https://github.com/neovim/neovim/wiki/Following-HEAD#20160511 >
+    if (has("termguicolors"))
+        set termguicolors
+    endif
 endif
 
 " --- netrw settings ---
