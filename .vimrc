@@ -421,7 +421,7 @@ if (has('nvim-0.5'))
     Plug 'hrsh7th/nvim-compe'
     Plug 'neovim/nvim-lspconfig'
     Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-    Plug 'romgrk/nvim-treesitter-context'
+    " Plug 'romgrk/nvim-treesitter-context'
     Plug 'nvim-treesitter/playground'
     Plug 'ray-x/lsp_signature.nvim'
     Plug 'ojroques/nvim-lspfuzzy'
