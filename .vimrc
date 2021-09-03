@@ -422,7 +422,7 @@ if (has('nvim-0.5'))
     Plug 'kevinhwang91/nvim-hlslens'
     Plug 'lukas-reineke/indent-blankline.nvim'
     Plug 'lewis6991/gitsigns.nvim'
-
+    Plug 'folke/which-key.nvim'
     nnoremap <silent> <C-j> :Lspsaga diagnostic_jump_next<CR>
     nnoremap <silent> gh <Cmd>Lspsaga lsp_finder<CR>
     inoremap <silent> <C-k> <Cmd>Lspsaga signature_help<CR>
@@ -444,6 +444,7 @@ call plug#end()
 if (has('nvim-0.5'))
     lua require('neoscroll').setup()
     lua require('gitsigns').setup()
+    lua require('which-key').setup()
 
     noremap <silent> n <Cmd>execute('normal! ' . v:count1 . 'n')<CR>
                 \<Cmd>lua require('hlslens').start()<CR>
