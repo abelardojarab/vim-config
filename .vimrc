@@ -312,15 +312,12 @@ Plug 'mattn/vim-lsp-settings'
 Plug 'sakhnik/nvim-gdb', { 'do': ':!./install.sh' }
 
 if (has('nvim'))
-    Plug 'RishabhRD/nvim-lsputils'
     Plug 'kosayoda/nvim-lightbulb'
     Plug 'gennaro-tedesco/nvim-peekup'
     Plug 'tversteeg/registers.nvim', { 'branch': 'main' }
     Plug 'vijaymarupudi/nvim-fzf'
-"    Plug 'rcarriga/vim-ultest'
     Plug 'numToStr/Navigator.nvim'
     Plug 'jamestthompson3/nvim-remote-containers'
-"    Plug 'glepnir/galaxyline.nvim' , {'branch': 'main'}
     Plug 'kyazdani42/nvim-web-devicons' " for file icons
     Plug 'kyazdani42/nvim-tree.lua'
     Plug 'nvim-lua/plenary.nvim'
@@ -358,7 +355,7 @@ Plug 'deoplete-plugins/deoplete-go'
 Plug 'c9s/perlomni.vim'
 
 " Javascript
-Plug 'ternjs/tern_for_vim', { 'do': 'npm install' }
+Plug 'ternjs/tern_for_vim', { 'do': 'npm install -g tern' }
 Plug 'carlitux/deoplete-ternjs', { 'do': 'npm install -g tern' }
 Plug 'othree/jspc.vim'
 Plug 'maksimr/vim-jsbeautify'
@@ -389,6 +386,7 @@ Plug 'mattn/webapi-vim'
 Plug 'diepm/vim-rest-console'
 
 " Edition
+Plug 'dhruvasagar/vim-table-mode'
 Plug 'Raimondi/delimitMate'
 Plug 'mg979/vim-visual-multi', {'branch': 'master'}
 Plug 'tpope/vim-surround'  " Quoting and parenthesizing made simple
@@ -415,13 +413,11 @@ Plug 'tpope/vim-commentary'
 if (has('nvim-0.5'))
     Plug 'chipsenkbeil/distant.nvim'
     Plug 'nvim-lua/popup.nvim'
-    Plug 'nvim-lua/plenary.nvim'
     Plug 'nvim-telescope/telescope.nvim'
     Plug 'nvim-telescope/telescope-project.nvim'
     Plug 'hrsh7th/nvim-compe'
     Plug 'neovim/nvim-lspconfig'
     Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-    " Plug 'romgrk/nvim-treesitter-context'
     Plug 'nvim-treesitter/playground'
     Plug 'ray-x/lsp_signature.nvim'
     Plug 'ojroques/nvim-lspfuzzy'
@@ -430,7 +426,6 @@ if (has('nvim-0.5'))
     Plug 'RishabhRD/nvim-lsputils'
     Plug 'glepnir/lspsaga.nvim'
     Plug 'MunifTanjim/nui.nvim'
-    Plug 'nvim-lua/plenary.nvim'
     Plug 'akinsho/flutter-tools.nvim'
     Plug 'karb94/neoscroll.nvim'
     Plug 'kevinhwang91/nvim-hlslens'
