@@ -268,11 +268,11 @@ Plug 'liuchengxu/vim-which-key'
 " Copy paste
 Plug 'svermeulen/vim-cutlass'
 if !has('nvim')
-Plug 'svermeulen/vim-yoink'
+    Plug 'svermeulen/vim-yoink'
 endif
 Plug 'svermeulen/vim-subversive'
 if has('nvim')
-Plug 'bfredl/nvim-miniyank'
+    Plug 'bfredl/nvim-miniyank'
 endif
 
 " Snippets
