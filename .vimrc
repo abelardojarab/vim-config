@@ -137,7 +137,7 @@ endif
 set wildmenu                " Hitting TAB in command mode will
 set wildchar=<TAB>          "   show possible completions.
 set wildmode=list:longest
-set wildignore+=*.DS_STORE,*.db,node_modules/**,*.jpg,*.png,*.gif
+set wildignore+=*.DS_STORE,.git,*.db,node_modules/**,*.jpg,*.png,*.gif,*.o,*.pyc
 
 " --- diff ---
 set diffopt=filler          " Add vertical spaces to keep right
@@ -165,8 +165,6 @@ nnoremap <silent> <Leader>nn :set number!
 silent !stty -ixon
 autocmd VimLeave * silent !stty ixon
 
-" Use leader l to rapidly toggle `set list`
-nmap <leader>l :set list!<CR>
 
 " Use a bar-shaped cursor for insert mode, even through tmux.
 if exists('$TMUX')
@@ -226,15 +224,6 @@ set pastetoggle=<F2>
 " Toggle paste mode
 nmap <leader>o :set paste!<CR>
 
-" --- Whitespace ---
-
-" Remove trailing whitespace
-nnoremap <leader>w :%s/\s\+$//<cr>:let @/=''<CR>
-
-" Toggle whitespace visibility with ,s
-nmap <Leader>s :set list!<CR>
-set listchars=tab:>\ ,trail:·,extends:»,precedes:«,nbsp:×
-
 " --- Leader based key bindings ---
 
 " Auto change directory to match current file ,cd
@@ -286,11 +275,11 @@ Plug 'liuchengxu/vim-which-key'
 " Copy paste
 Plug 'svermeulen/vim-cutlass'
 if !has('nvim')
-Plug 'svermeulen/vim-yoink'
+    Plug 'svermeulen/vim-yoink'
 endif
 Plug 'svermeulen/vim-subversive'
 if has('nvim')
-Plug 'bfredl/nvim-miniyank'
+    Plug 'bfredl/nvim-miniyank'
 endif
 
 " Snippets
@@ -324,7 +313,6 @@ Plug 'mattn/vim-lsp-settings'
 Plug 'sakhnik/nvim-gdb', { 'do': ':!./install.sh' }
 
 if (has('nvim'))
-    Plug 'RishabhRD/nvim-lsputils'
     Plug 'kosayoda/nvim-lightbulb'
     Plug 'gennaro-tedesco/nvim-peekup'
     Plug 'tversteeg/registers.nvim', { 'branch': 'main' }
@@ -383,7 +371,7 @@ Plug 'deoplete-plugins/deoplete-go'
 Plug 'c9s/perlomni.vim'
 
 " Javascript
-Plug 'ternjs/tern_for_vim', { 'do': 'npm install' }
+Plug 'ternjs/tern_for_vim', { 'do': 'npm install -g tern' }
 Plug 'carlitux/deoplete-ternjs', { 'do': 'npm install -g tern' }
 Plug 'othree/jspc.vim'
 Plug 'maksimr/vim-jsbeautify'
@@ -415,6 +403,7 @@ Plug 'mattn/webapi-vim'
 Plug 'diepm/vim-rest-console'
 
 " Edition
+Plug 'dhruvasagar/vim-table-mode'
 Plug 'Raimondi/delimitMate'
 Plug 'mg979/vim-visual-multi', {'branch': 'master'}
 Plug 'tpope/vim-surround'  " Quoting and parenthesizing made simple
@@ -435,6 +424,7 @@ Plug 'matze/vim-move'
 Plug 'ntpeters/vim-better-whitespace'
 Plug 'editorconfig/editorconfig-vim'
 Plug 'tpope/vim-commentary'
+Plug 'tpope/vim-sleuth'
 
 if (has('nvim-0.5'))
     Plug 'karb94/neoscroll.nvim'
@@ -445,7 +435,6 @@ endif
 " Treesitter
 if (has('nvim-0.5'))
     Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-    " Plug 'romgrk/nvim-treesitter-context'
     Plug 'nvim-treesitter/playground'
 endif
 
@@ -495,10 +484,13 @@ if (empty($TMUX))
     endif
 endif
 
-" --- netrw settings ---
-nmap <leader>f :Explore<CR>
-nmap <leader><s-f> :edit.<CR>
+" --- dashboard
+let g:dashboard_default_executive ='fzf'
 
+" --- Findr ---
+nmap <leader>f :Findr<CR>
+
+" --- netrw settings ---
 let g:netrw_altv = 1
 let g:netrw_dirhistmax = 0
 
@@ -590,16 +582,12 @@ let g:lightline.component_type   = {'buffers': 'tabsel'}
 let NERDTreeIgnore=['\.pyc$', '\.pyo$', '__pycache__$']     " Ignore files in NERDTree
 let NERDTreeMinimalUI=1
 
+" Toggle NERDTree drawer
 map <C-t> :NERDTreeToggle<CR>
+map <leader>d <plug>NERDTreeToggle<CR>
 
 " Open files in new tabs in Nerdtree
 let NERDTreeMapOpenInTab='\r'
-
-" Toggle NERDTree drawer
-map <leader>d <plug>NERDTreeToggle<CR>
-
-" Find files
-nnoremap <C-f><C-l> :NERDTreeFind<CR>
 
 " --- Move between buffers ---
 map <C-Left> <Esc>:bprev<CR>
@@ -781,12 +769,6 @@ nnoremap <silent> <C-w>o :wincmd o<CR>:echo "Only one window."<CR>
 set splitbelow
 set splitright
 
-" split navigations
-nnoremap <Leader>h <C-w>h
-nnoremap <Leader>l <C-w>l
-nnoremap <Leader>j <C-w>j
-nnoremap <Leader>k <C-w>k
-
 "  --- Folding ---
 " Enable folding
 set foldmethod=indent
@@ -863,6 +845,9 @@ au BufNewFile, BufRead *.js, *.html, *.css
 let g:better_whitespace_enabled=1
 let g:show_spaces_that_precede_tabs=1
 let g:strip_whitelines_at_eof=1
+
+" Remove trailing whitespace
+nnoremap <leader>w :%s/\s\+$//<cr>:let @/=''<CR>
 
 " --- Better copy paste ---
 let g:yoinkIncludeDeleteOperations    = 1
