@@ -36,7 +36,7 @@ set copyindent                  " copy the previous indentation on autoindenting
 set number                      " always show line numbers
 set ignorecase                  " ignore case when searching
 set smartcase                   " ignore case if search pattern is all lowercase,
-set mouse=a                     "enable mouse automatically entering visual mode
+set mouse=a                     " enable mouse automatically entering visual mode
 
 if !has('nvim')
     set ttymouse=xterm2
@@ -256,7 +256,14 @@ Plug 'ton/vim-bufsurf'
 
 " Git tools
 Plug 'airblade/vim-gitgutter'
-Plug 'tpope/vim-fugitive' " Git integration
+if !has('nvim')
+    Plug 'tpope/vim-fugitive' " Git integration
+endif
+if has('nvim-0.5')
+    Plug 'tpope/vim-fugitive' " Git integration
+    Plug 'lewis6991/gitsigns.nvim'
+    Plug 'TimUntersberger/neogit'
+endif
 Plug 'junegunn/gv.vim'
 
 " Perforce
@@ -293,6 +300,11 @@ Plug 'Shougo/neosnippet-snippets'
 " Search
 Plug 'jremmen/vim-ripgrep'
 Plug 'mileszs/ack.vim'
+if (has('nvim-0.5'))
+    " Plug 'kevinhwang91/nvim-hlslens'
+    Plug 'nvim-telescope/telescope.nvim'
+    Plug 'nvim-telescope/telescope-project.nvim'
+endif
 
 " Completion
 Plug 'neoclide/coc.nvim', {'for':['zig','cmake','rust',
@@ -317,17 +329,30 @@ if (has('nvim'))
     Plug 'gennaro-tedesco/nvim-peekup'
     Plug 'tversteeg/registers.nvim', { 'branch': 'main' }
     Plug 'vijaymarupudi/nvim-fzf'
-"    Plug 'rcarriga/vim-ultest'
+    " Plug 'rcarriga/vim-ultest'
     Plug 'numToStr/Navigator.nvim'
     Plug 'jamestthompson3/nvim-remote-containers'
-"    Plug 'glepnir/galaxyline.nvim' , {'branch': 'main'}
+    " Plug 'glepnir/galaxyline.nvim' , {'branch': 'main'}
     Plug 'kyazdani42/nvim-web-devicons' " for file icons
     Plug 'kyazdani42/nvim-tree.lua'
-    Plug 'nvim-lua/plenary.nvim'
-    Plug 'TimUntersberger/neogit'
     Plug 'kassio/neoterm'
     Plug 'conweller/findr.vim' " requires Lua
     Plug 'lambdalisue/suda.vim'
+endif
+
+if (has('nvim-0.5'))
+    Plug 'neovim/nvim-lspconfig'
+    Plug 'ray-x/lsp_signature.nvim'
+    Plug 'ojroques/nvim-lspfuzzy'
+    Plug 'RishabhRD/nvim-lsputils'
+    Plug 'glepnir/lspsaga.nvim'
+    Plug 'nvim-lua/completion-nvim'
+    " Plug 'hrsh7th/nvim-compe' " deprecated, use nvim-cmp
+
+    nnoremap <silent> <C-j> :Lspsaga diagnostic_jump_next<CR>
+    nnoremap <silent> gh <Cmd>Lspsaga lsp_finder<CR>
+    inoremap <silent> <C-k> <Cmd>Lspsaga signature_help<CR>
+    nnoremap <silent>K :Lspsaga hover_doc<CR>
 endif
 
 " Syntax checker
@@ -372,6 +397,7 @@ Plug 'racer-rust/vim-racer'
 " Markdown
 Plug 'godlygeek/tabular'
 Plug 'plasticboy/vim-markdown'
+Plug 'gerardbm/vim-md-headings'
 
 " Additional syntax files
 Plug 'othree/html5.vim'
@@ -405,42 +431,31 @@ Plug 'wellle/targets.vim'
 Plug 'christoomey/vim-sort-motion'
 Plug 'terryma/vim-expand-region'
 Plug 'FooSoft/vim-argwrap'
-Plug 'gerardbm/vim-md-headings'
 Plug 'matze/vim-move'
 Plug 'ntpeters/vim-better-whitespace'
 Plug 'editorconfig/editorconfig-vim'
 Plug 'tpope/vim-commentary'
 
-" Neovim
 if (has('nvim-0.5'))
+    Plug 'karb94/neoscroll.nvim'
     Plug 'chipsenkbeil/distant.nvim'
-    Plug 'nvim-lua/popup.nvim'
-    Plug 'nvim-lua/plenary.nvim'
-    Plug 'nvim-telescope/telescope.nvim'
-    Plug 'nvim-telescope/telescope-project.nvim'
-    Plug 'hrsh7th/nvim-compe'
-    Plug 'neovim/nvim-lspconfig'
+    Plug 'lukas-reineke/indent-blankline.nvim'
+endif
+
+" Treesitter
+if (has('nvim-0.5'))
     Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
     " Plug 'romgrk/nvim-treesitter-context'
     Plug 'nvim-treesitter/playground'
-    Plug 'ray-x/lsp_signature.nvim'
-    Plug 'ojroques/nvim-lspfuzzy'
-    Plug 'nvim-lua/completion-nvim'
-    Plug 'RishabhRD/popfix'
-    Plug 'RishabhRD/nvim-lsputils'
-    Plug 'glepnir/lspsaga.nvim'
-    Plug 'MunifTanjim/nui.nvim'
-    Plug 'nvim-lua/plenary.nvim'
-    Plug 'akinsho/flutter-tools.nvim'
-    Plug 'karb94/neoscroll.nvim'
-    Plug 'kevinhwang91/nvim-hlslens'
-    Plug 'lukas-reineke/indent-blankline.nvim'
-    Plug 'lewis6991/gitsigns.nvim'
+endif
 
-    nnoremap <silent> <C-j> :Lspsaga diagnostic_jump_next<CR>
-    nnoremap <silent> gh <Cmd>Lspsaga lsp_finder<CR>
-    inoremap <silent> <C-k> <Cmd>Lspsaga signature_help<CR>
-    nnoremap <silent>K :Lspsaga hover_doc<CR>
+" Neovim
+if (has('nvim-0.5'))
+    Plug 'nvim-lua/popup.nvim'
+    Plug 'RishabhRD/popfix'
+    Plug 'MunifTanjim/nui.nvim'
+    Plug 'nvim-lua/plenary.nvim' " Lua module for async programming
+    Plug 'akinsho/flutter-tools.nvim'
 endif
 
 " Color schemes
@@ -458,35 +473,22 @@ call plug#end()
 if (has('nvim-0.5'))
     lua require('neoscroll').setup()
     lua require('gitsigns').setup()
-
-    noremap <silent> n <Cmd>execute('normal! ' . v:count1 . 'n')<CR>
-                \<Cmd>lua require('hlslens').start()<CR>
-    noremap <silent> N <Cmd>execute('normal! ' . v:count1 . 'N')<CR>
-                \<Cmd>lua require('hlslens').start()<CR>
-    noremap * *<Cmd>lua require('hlslens').start()<CR>
-    noremap # #<Cmd>lua require('hlslens').start()<CR>
-    noremap g* g*<Cmd>lua require('hlslens').start()<CR>
-    noremap g# g#<Cmd>lua require('hlslens').start()<CR>
-
-    " use : instead of <Cmd>
-    nnoremap <silent> <leader>l :noh<CR>
 endif
 
 " --- Colors ---
 colorscheme monokai
 set background=dark
 
-"Credit joshdick
-"Use 24-bit (true-color) mode in Vim/Neovim when outside tmux.
-"If you're using tmux version 2.2 or later, you can remove the outermost $TMUX check and use tmux's 24-bit color support
-"(see < http://sunaku.github.io/tmux-24bit-color.html#usage > for more information.)
+" Use 24-bit (true-color) mode in Vim/Neovim when outside tmux.
+" If you're using tmux version 2.2 or later, you can remove the outermost $TMUX check and use tmux's 24-bit color support
+" (see < http://sunaku.github.io/tmux-24bit-color.html#usage > for more information.)
 if (empty($TMUX))
     if (has("nvim"))
         "For Neovim 0.1.3 and 0.1.4 < https://github.com/neovim/neovim/pull/2198 >
         let $NVIM_TUI_ENABLE_TRUE_COLOR=1
     endif
-    "For Neovim > 0.1.5 and Vim > patch 7.4.1799 < https://github.com/vim/vim/commit/61be73bb0f965a895bfb064ea3e55476ac175162 >
-    "Based on Vim patch 7.4.1770 (`guicolors` option) < https://github.com/vim/vim/commit/8a633e3427b47286869aa4b96f2bfc1fe65b25cd >
+    " For Neovim > 0.1.5 and Vim > patch 7.4.1799 < https://github.com/vim/vim/commit/61be73bb0f965a895bfb064ea3e55476ac175162 >
+    " Based on Vim patch 7.4.1770 (`guicolors` option) < https://github.com/vim/vim/commit/8a633e3427b47286869aa4b96f2bfc1fe65b25cd >
     " < https://github.com/neovim/neovim/wiki/Following-HEAD#20160511 >
     if (has("termguicolors"))
         set termguicolors
@@ -716,7 +718,23 @@ nnoremap ;e :CtrlPMRUFiles<CR>
 nnoremap ;g :GFiles<CR>
 nnoremap ;f :Files<CR>
 
-" --- Search with ack ---
+" --- Search ---
+" Searching
+if (has('nvim-0.5'))
+    " noremap <silent> n <Cmd>execute('normal! ' . v:count1 . 'n')<CR>
+    "            \<Cmd>lua require('hlslens').start()<CR>
+    " noremap <silent> N <Cmd>execute('normal! ' . v:count1 . 'N')<CR>
+    "            \<Cmd>lua require('hlslens').start()<CR>
+    " noremap * *<Cmd>lua require('hlslens').start()<CR>
+    " noremap # #<Cmd>lua require('hlslens').start()<CR>
+    " noremap g* g*<Cmd>lua require('hlslens').start()<CR>
+    " noremap g# g#<Cmd>lua require('hlslens').start()<CR>
+
+    " use : instead of <Cmd>
+    " nnoremap <silent> <leader>l :noh<CR>
+endif
+
+" Search with ack
 if executable('ag')
     let g:ackprg = 'ag --vimgrep'
 endif
@@ -902,7 +920,6 @@ augroup beautify
 augroup end
 
 " ------ adv maps ------
-
 " strip trailing whitespace, ss (strip space)
 nnoremap <silent> <Leader>ss
     \ :let b:_p = getpos(".") <Bar>
