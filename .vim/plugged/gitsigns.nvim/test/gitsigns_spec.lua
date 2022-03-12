@@ -53,11 +53,13 @@ describe('gitsigns', function()
       [7] = {bold = true},
       [8] = {foreground = Screen.colors.White, background = Screen.colors.Red};
       [9] = {foreground = Screen.colors.SeaGreen, bold = true};
+      [10] = {foreground = Screen.colors.Red};
     })
 
     -- Make gitisigns available
     exec_lua('package.path = ...', package.path)
     config = helpers.deepcopy(test_config)
+    command('cd '..system{"dirname", os.tmpname()})
   end)
 
   after_each(function()
@@ -70,10 +72,10 @@ describe('gitsigns', function()
     check { status = {}, signs = {} }
   end)
 
-  it('index watcher works on a fresh repo', function()
+  it('gitdir watcher works on a fresh repo', function()
     screen:try_resize(20,6)
-    setup_test_repo(true)
-    config.watch_index = {interval = 5}
+    setup_test_repo{no_add=true}
+    config.watch_gitdir = {interval = 5}
     setup_gitsigns(config)
     edit(test_file)
 
@@ -83,38 +85,38 @@ describe('gitsigns', function()
         'attach(1): Attaching (trigger=BufRead)',
         p'run_job: git .* config user.name',
         'run_job: git --no-pager rev-parse --show-toplevel --absolute-git-dir --abbrev-ref HEAD',
-        p('run_job: git .* ls%-files %-%-stage %-%-others %-%-exclude%-standard '..test_file),
-        'watch_index(1): Watching index',
-        'watcher_cb(1): Index update error: ENOENT',
+        p('run_job: git .* ls%-files %-%-stage %-%-others %-%-exclude%-standard %-%-eol '..test_file),
+        'watch_gitdir(1): Watching git dir',
         p'run_job: git .* show :0:dummy.txt',
-        'update(1): updates: 1, jobs: 5'
+        'update(1): updates: 1, jobs: 7'
       })
     end)
 
     check {
-      status = {head='HEAD', added=18, changed=0, removed=0},
+      status = {head='', added=18, changed=0, removed=0},
       signs = {added=8}
     }
 
     git{"add", test_file}
 
     check {
-      status = {head='HEAD', added=0, changed=0, removed=0},
+      status = {head='', added=0, changed=0, removed=0},
       signs = {}
     }
   end)
 
   it('can open files not in a git repo', function()
     setup_gitsigns(config)
+    command('Gitsigns clear_debug')
     local tmpfile = os.tmpname()
     edit(tmpfile)
 
     match_debug_messages {
-      'run_job: git --no-pager --version',
       'attach(1): Attaching (trigger=BufRead)',
       p'run_job: git .* config user.name',
       'run_job: git --no-pager rev-parse --show-toplevel --absolute-git-dir --abbrev-ref HEAD',
-      'attach(1): Not in git repo',
+      'new: Not in git repo',
+      'attach(1): Empty git obj',
     }
     command('Gitsigns clear_debug')
 
@@ -125,7 +127,8 @@ describe('gitsigns', function()
       'attach(1): Attaching (trigger=BufWritePost)',
       'run_job: git --no-pager config user.name',
       'run_job: git --no-pager rev-parse --show-toplevel --absolute-git-dir --abbrev-ref HEAD',
-      'attach(1): Not in git repo'
+      'new: Not in git repo',
+      'attach(1): Empty git obj'
     }
   end)
 
@@ -154,16 +157,18 @@ describe('gitsigns', function()
     end)
 
     it('does not attach inside .git', function()
+      command("Gitsigns clear_debug")
       edit(scratch..'/.git/index')
 
       match_debug_messages {
-        'run_job: git --no-pager --version',
         'attach(1): Attaching (trigger=BufRead)',
-        'attach(1): In git dir'
+        'new: In git dir',
+        'attach(1): Empty git obj'
       }
     end)
 
     it('doesn\'t attach to ignored files', function()
+      command("Gitsigns clear_debug")
       write_to_file(scratch..'/.gitignore', {'dummy_ignored.txt'})
 
       local ignored_file = scratch.."/dummy_ignored.txt"
@@ -172,7 +177,6 @@ describe('gitsigns', function()
       edit(ignored_file)
 
       match_debug_messages {
-        'run_job: git --no-pager --version',
         'attach(1): Attaching (trigger=BufRead)',
         p'run_job: git .* config user.name',
         'run_job: git --no-pager rev-parse --show-toplevel --absolute-git-dir --abbrev-ref HEAD',
@@ -184,14 +188,14 @@ describe('gitsigns', function()
     end)
 
     it('doesn\'t attach to non-existent files', function()
+      command("Gitsigns clear_debug")
       edit(newfile)
 
       match_debug_messages {
-        'run_job: git --no-pager --version',
         'attach(1): Attaching (trigger=BufNewFile)',
         p'run_job: git .* config user.name',
         'run_job: git --no-pager rev-parse --show-toplevel --absolute-git-dir --abbrev-ref HEAD',
-        p('run_job: git .* ls%-files %-%-stage %-%-others %-%-exclude%-standard '..newfile),
+        p('run_job: git .* ls%-files %-%-stage %-%-others %-%-exclude%-standard %-%-eol '..newfile),
         'attach(1): Not a file',
       }
 
@@ -199,10 +203,10 @@ describe('gitsigns', function()
     end)
 
     it('doesn\'t attach to non-existent files with non-existent sub-dirs', function()
+      command("Gitsigns clear_debug")
       edit(scratch..'/does/not/exist')
 
       match_debug_messages {
-        'run_job: git --no-pager --version',
         'attach(1): Attaching (trigger=BufNewFile)',
         'attach(1): Not a path',
       }
@@ -212,9 +216,9 @@ describe('gitsigns', function()
     end)
 
     it('can run copen', function()
+      command("Gitsigns clear_debug")
       command("copen")
       match_debug_messages {
-        'run_job: git --no-pager --version',
         'attach(2): Attaching (trigger=BufRead)',
         'attach(2): Non-normal buffer',
       }
@@ -230,8 +234,8 @@ describe('gitsigns', function()
             head = '@@ -1,1 +1,2 @@',
             type = 'change',
             lines = { '-This', '+line1This', '+line2' },
-            added   = { count = 2, start = 1 },
-            removed = { count = 1, start = 1 },
+            added   = { count = 2, start = 1, lines = { 'line1This', 'line2' } },
+            removed = { count = 1, start = 1, lines = { 'This'} },
           }},
           exec_lua[[return require'gitsigns'.get_hunks()]]
         )
@@ -240,20 +244,86 @@ describe('gitsigns', function()
   end)
 
   describe('current line blame', function()
-    it('doesn\'t error on untracked files', function()
-      setup_test_repo(true)
+    before_each(function()
       config.current_line_blame = true
+      config.current_line_blame_formatter = ' <author>, <author_time:%R> - <summary>'
       setup_gitsigns(config)
+    end)
+
+    local function blame_line_ui_test(autocrlf, file_ending)
+      setup_test_repo()
+
+      git{'config', 'core.autocrlf', autocrlf}
+      if file_ending == 'dos' then
+        system("printf 'This\r\nis\r\na\r\nwindows\r\nfile\r\n' > "..newfile)
+      else
+        system("printf 'This\nis\na\nwindows\nfile\n' > "..newfile)
+      end
+      git{'add', newfile}
+      git{"commit", "-m", "commit on main"}
+
+      edit(newfile)
+      feed('gg')
+      command("Gitsigns clear_debug")
+      check { signs  = {} }
+
+      -- Wait until the virtual blame line appears
+      screen:sleep(1000)
+      screen:expect{grid=[[
+        ^{MATCH:This {6: tester, %d seco}}|
+        is                  |
+        a                   |
+        windows             |
+        file                |
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+        {6:~                   }|
+      ]]}
+    end
+
+    it('doesn\'t error on untracked files', function()
+      setup_test_repo{no_add=true}
       edit(newfile)
       insert("line")
       command("write")
       screen:expect{messages = { { content = { { "<" } }, kind = "" } } }
     end)
+    --
+    it('does handle dos fileformats', function()
+      -- Add a file with windows line ending into the repo
+      -- Disable autocrlf, so that the file keeps the \r\n file endings.
+        blame_line_ui_test('false', 'dos')
+    end)
+
+    it('does handle autocrlf', function()
+        blame_line_ui_test('true', 'dos')
+    end)
+
+    it('does handle unix', function()
+        blame_line_ui_test('false', 'unix')
+    end)
+  end)
+
+  describe('configuration', function()
+    it('handled deprecated fields', function()
+      config.current_line_blame_delay = 100
+      setup_gitsigns(config)
+      eq(100, exec_lua([[return package.loaded['gitsigns.config'].config.current_line_blame_opts.delay]]))
+    end)
   end)
 
   describe('on_attach()', function()
     it('can prevent attaching to a buffer', function()
-      setup_test_repo(true)
+      setup_test_repo{no_add=true}
 
       -- Functions can't be serialized over rpc so need to setup config
       -- remotely
@@ -262,14 +332,15 @@ describe('gitsigns', function()
           return false
         end
       ]])
+      command("Gitsigns clear_debug")
 
       edit(test_file)
       match_debug_messages {
-        'run_job: git --no-pager --version',
         'attach(1): Attaching (trigger=BufRead)',
         p'run_job: git .* config user.name',
         'run_job: git --no-pager rev-parse --show-toplevel --absolute-git-dir --abbrev-ref HEAD',
-        p'run_job: git %-%-no%-pager %-%-git%-dir=.* %-%-stage %-%-others %-%-exclude%-standard .*',
+        'run_job: git --no-pager rev-parse --short HEAD',
+        p'run_job: git %-%-no%-pager %-%-git%-dir=.* %-%-stage %-%-others %-%-exclude%-standard %-%-eol.*',
         'attach(1): User on_attach() returned false',
       }
     end)
@@ -306,7 +377,9 @@ describe('gitsigns', function()
   local function testsuite(internal_diff)
     return function()
       before_each(function()
-        config.use_internal_diff = internal_diff
+        config.diff_opts = {
+          internal = internal_diff
+        }
         setup_test_repo()
       end)
 
@@ -330,71 +403,6 @@ describe('gitsigns', function()
           signs  = {topdelete=1, changedelete=1, added=1, delete=1, changed=1}
         }
 
-      end)
-
-      it('perform actions', function()
-        setup_gitsigns(config)
-        edit(test_file)
-        command("set signcolumn=yes")
-
-        feed("jjj")
-        feed("cc")
-        feed("EDIT<esc>")
-
-        check {
-          status = {head='master', added=0, changed=1, removed=0},
-          signs  = {changed=1}
-        }
-
-        -- Stage
-        feed("mhs")
-
-        check {
-          status = {head='master', added=0, changed=0, removed=0},
-          signs  = {}
-        }
-
-        -- Undo stage
-        feed("mhu")
-
-        check {
-          status = {head='master', added=0, changed=1, removed=0},
-          signs  = {changed=1}
-        }
-
-        -- Add multiple edits
-        feed('gg')
-        feed('cc')
-        feed('That<esc>')
-
-        check {
-          status = {head='master', added=0, changed=2, removed=0},
-          signs  = {changed=2}
-        }
-
-        -- Stage buffer
-        feed("mhS")
-
-        check {
-          status = {head='master', added=0, changed=0, removed=0},
-          signs  = {}
-        }
-
-        -- Unstage buffer
-        feed("mhU")
-
-        check {
-          status = {head='master', added=0, changed=2, removed=0},
-          signs  = {changed=2}
-        }
-
-        -- Reset
-        feed("mhr")
-
-        check {
-          status = {head='master', added=0, changed=1, removed=0},
-          signs  = {changed=1}
-        }
       end)
 
       it('can enable numhl', function()
@@ -438,9 +446,9 @@ describe('gitsigns', function()
 
       it('attaches to newly created files', function()
         setup_gitsigns(config)
+        command('Gitsigns clear_debug')
         edit(newfile)
         match_debug_messages{
-          'run_job: git --no-pager --version',
           'attach(1): Attaching (trigger=BufNewFile)',
           'run_job: git --no-pager config user.name',
           'run_job: git --no-pager rev-parse --show-toplevel --absolute-git-dir --abbrev-ref HEAD',
@@ -455,7 +463,7 @@ describe('gitsigns', function()
           p"run_job: git .* config user.name",
           'run_job: git --no-pager rev-parse --show-toplevel --absolute-git-dir --abbrev-ref HEAD',
           p'run_job: git .* ls%-files .*',
-          'watch_index(1): Watching index',
+          'watch_gitdir(1): Watching git dir',
           p'run_job: git .* show :0:newfile.txt'
         }
 
@@ -463,7 +471,7 @@ describe('gitsigns', function()
           table.insert(messages, p'run_job: git .* diff .* /tmp/lua_.* /tmp/lua_.*')
         end
 
-        local jobs = internal_diff and 8 or 9
+        local jobs = internal_diff and 9 or 10
         table.insert(messages, "update(1): updates: 1, jobs: "..jobs)
 
         match_debug_messages(messages)
@@ -638,6 +646,7 @@ describe('gitsigns', function()
     write_to_file(scratch..'/t3.txt', {'hello lewis'})
 
     setup_gitsigns(config)
+    command('Gitsigns clear_debug')
 
     helpers.exc_exec("vimgrep ben "..scratch..'/*')
 
@@ -646,7 +655,6 @@ describe('gitsigns', function()
     }}}
 
     eq({
-      'run_job: git --no-pager --version',
       'attach(2): attaching is disabled',
       'attach(3): attaching is disabled',
       'attach(4): attaching is disabled',
@@ -681,6 +689,31 @@ describe('gitsigns', function()
       feed("u")
       check { signs = {} }
     end
+  end)
+
+  it('handles filenames with unicode characters', function()
+    screen:try_resize(20,2)
+    setup_test_repo()
+    setup_gitsigns(config)
+    local uni_filename = scratch..'/föobær'
+
+    write_to_file(uni_filename, {'Lorem ipsum'})
+    git{"add", uni_filename}
+    git{"commit", "-m", "another commit"}
+
+    edit(uni_filename)
+
+    screen:expect{grid=[[
+      ^Lorem ipsum         |
+      {6:~                   }|
+    ]]}
+
+    feed 'x'
+
+    screen:expect{grid=[[
+      {2:~ }^orem ipsum        |
+      {6:~                   }|
+    ]]}
   end)
 
 end)

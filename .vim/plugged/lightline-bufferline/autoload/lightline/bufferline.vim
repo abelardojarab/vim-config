@@ -48,7 +48,15 @@ else
   let s:more_buffers_width = len(s:more_buffers) + 2
 endif
 
+if s:clickable
+  function! s:pre_click_handler()
+  endfunction
+
+  autocmd User LightlineBufferlinePreClick call s:pre_click_handler()
+endif
+
 function! lightline#bufferline#_click_handler(minwid, clicks, btn, modifiers)
+  doautocmd User LightlineBufferlinePreClick
   call s:goto_nth_buffer(a:minwid)
 endfunction
 
@@ -210,7 +218,7 @@ function! s:get_buffer_paths(buffers)
       let l:smart_buffer.path = fnamemodify(l:name, ':p:~:.')
 
       let sep = strridx(l:smart_buffer.path, s:dirsep)
-      if sep != -1 && l:smart_buffer.path[sep:] ==# s:dirsep
+      if sep != -1 && l:smart_buffer.path[sep :] ==# s:dirsep
         let sep = strridx(l:smart_buffer.path, s:dirsep, sep - 1)
       endif
 
@@ -219,7 +227,7 @@ function! s:get_buffer_paths(buffers)
 
       if sep == -1 && has('win32')
         let sep = strridx(l:smart_buffer.path, '/')
-        if sep != -1 && l:smart_buffer.path[sep:] ==# '/'
+        if sep != -1 && l:smart_buffer.path[sep :] ==# '/'
           let sep = strridx(l:smart_buffer.path, sep - 1)
         endif
       endif

@@ -18,6 +18,9 @@ if s:do_profile
   profile! file */mru.vim
 endif
 
+" Tests assume that 'hidden' option is not set
+set nohidden
+
 source ../plugin/mru.vim
 
 " Function to log test results
@@ -1483,7 +1486,7 @@ func Test_52()
     return
   endif
   " open the file directly using the command
-  %bw!
+  bw file1.txt file2.txt
   edit file2.txt
   edit file1.txt
   bd
@@ -1569,7 +1572,7 @@ endfunc
 " ==========================================================================
 func Test_54()
   let test_name = 'test54'
-  %bw!
+  only
   " open the MRU window
   MRUToggle
   if bufwinnr(g:MRU_buffer_name) != 2 || winnr() != 2
@@ -1591,6 +1594,189 @@ func Test_54()
     return
   endif
   call LogResult(test_name, 'pass')
+endfunc
+
+" ==========================================================================
+" Test55
+" Editing a file selected from the MRU window should set the current file to
+" be the alternate file.
+" ==========================================================================
+func Test_55()
+  let test_name = 'test55'
+  silent! bw file1.txt file2.txt file3.txt
+  new
+  edit file1.txt
+  edit file2.txt
+  MRU
+  call search('file3.txt')
+  exe "normal \<Enter>"
+  if fnamemodify(@%, ':p:t') !=# 'file3.txt'
+        \ || fnamemodify(@#, ':p:t') !=# 'file2.txt'
+    call LogResult(test_name, 'FAIL')
+    return
+  endif
+  call LogResult(test_name, 'pass')
+endfunc
+
+" ==========================================================================
+" Test56
+" With MRU_Use_Current_Window set to 1, editing a file from the MRU list
+" should not change the alternate file.
+" ==========================================================================
+func Test_56()
+  let test_name = 'test56'
+  let g:MRU_Use_Current_Window = 1
+  bw file1.txt file2.txt file3.txt
+  new
+  edit file3.txt
+  edit file1.txt
+  edit file2.txt
+  MRU
+  call search('file3.txt')
+  exe "normal \<Enter>"
+  if fnamemodify(@%, ':p:t') !=# 'file3.txt'
+        \ || fnamemodify(@#, ':p:t') !=# 'file2.txt'
+    call LogResult(test_name, 'FAIL (1)')
+    return
+  endif
+  " try viewing a file
+  MRU
+  call search('file1.txt')
+  normal v
+  if fnamemodify(@%, ':p:t') !=# 'file1.txt'
+        \ || fnamemodify(@#, ':p:t') !=# 'file3.txt'
+        \ || !&readonly
+    call LogResult(test_name, 'FAIL (2)')
+    return
+  endif
+  " try opening a wiped out buffer
+  bw file2.txt
+  MRU
+  call search('file2.txt')
+  exe "normal \<Enter>"
+  if fnamemodify(@%, ':p:t') !=# 'file2.txt'
+        \ || fnamemodify(@#, ':p:t') !=# 'file1.txt'
+        \ || &readonly
+    call LogResult(test_name, 'FAIL (3)')
+    return
+  endif
+  let g:MRU_Use_Current_Window = 0
+  bw!
+  call LogResult(test_name, 'pass')
+endfunc
+
+" ==========================================================================
+" Test57
+" When the MRU window is closed, the MRU buffer should be unloaded.
+" If 'MRU_Use_Current_Window' is set, then the MRU buffer should be wiped out.
+" ==========================================================================
+func Test_57()
+  let test_name = 'test57'
+  MRU
+  let mrubnum = bufnr('')
+  close
+  if bufloaded(mrubnum)
+    call LogResult(test_name, 'FAIL (1)')
+    return
+  endif
+  let g:MRU_Use_Current_Window = 1
+  new
+  edit Xfile
+  MRU
+  let mrubnum = bufnr('')
+  edit #
+  if bufexists(mrubnum) || @% != 'Xfile'
+    call LogResult(test_name, 'FAIL (2)')
+    return
+  endif
+  let g:MRU_Use_Current_Window = 0
+  bw!
+  call LogResult(test_name, 'pass')
+endfunc
+
+" ==========================================================================
+" Test58
+" When the MRU window is toggled with MRU_Use_Current_Window set to 1, the
+" previous buffer should be loaded.
+" ==========================================================================
+func Test_58()
+  let test_name = 'test58'
+  let g:MRU_Use_Current_Window = 1
+  new
+  edit Xfile
+  MRUToggle
+  if @% != g:MRU_buffer_name || winnr('$') != 2
+    call LogResult(test_name, 'FAIL (1)')
+    return
+  endif
+  MRUToggle
+  if @% != 'Xfile' || winnr('$') != 2
+    call LogResult(test_name, 'FAIL (2)')
+    return
+  endif
+  let g:MRU_Use_Current_Window = 0
+  bw!
+  call LogResult(test_name, 'pass')
+endfunc
+
+" ==========================================================================
+" Test59
+" When the MRU_Set_Alternate_File is set to 1, on plugin startup, the
+" alternate file should be set to the first file in the MRU list.
+" ==========================================================================
+func Test_59()
+  if v:version < 802
+    return
+  endif
+  let test_name = 'test59'
+  call writefile([], 'Xfirstfile')
+  edit Xfirstfile
+  call writefile([
+        \ "let MRU_File='vim_mru_file'",
+        \ "let MRU_Set_Alternate_File=1",
+        \ "source ../plugin/mru.vim",
+        \ "call writefile([@#], 'Xoutput')"
+        \ ], 'Xscript')
+  silent! !vim -u NONE --noplugin i NONE -N -S Xscript -c "qa"
+  if !filereadable('Xoutput')
+    call LogResult(test_name, 'FAIL (1)')
+  else
+    let lines = readfile('Xoutput')
+    if len(lines) == 1 && lines[0] =~ 'Xfirstfile$'
+      call LogResult(test_name, 'pass')
+    else
+      call LogResult(test_name, 'FAIL (2)')
+    endif
+  endif
+  call delete('Xscript')
+  call delete('Xoutput')
+  call delete('Xfirstfile')
+endfunc
+
+" ==========================================================================
+" Test60
+" With MRU_Use_Current_Window set to 1, MRU opens a selected file in the
+" current window, even when the file is already open in another window
+" ==========================================================================
+func Test_60()
+  let test_name = 'test60'
+  let g:MRU_Use_Current_Window = 1
+
+  edit file1.txt
+  let bnum = bufnr()
+  only
+  below split file2.txt
+
+  MRU
+  call search('file1.txt')
+  exe "normal \<Enter>"
+
+  if winnr() == 2 && winbufnr(1) == bnum && winbufnr(2) == bnum
+    call LogResult(test_name, "pass")
+  else
+    call LogResult(test_name, "FAIL")
+  endif
+  let g:MRU_Use_Current_Window = 0
 endfunc
 
 " ==========================================================================

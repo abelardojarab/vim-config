@@ -486,7 +486,6 @@ syntastic-json-jsonlint	syntastic-checkers.txt	/*syntastic-json-jsonlint*
 syntastic-json-jsonval	syntastic-checkers.txt	/*syntastic-json-jsonval*
 syntastic-less-lessc	syntastic-checkers.txt	/*syntastic-less-lessc*
 syntastic-less-recess	syntastic-checkers.txt	/*syntastic-less-recess*
-syntastic-less-stylelint	syntastic-checkers.txt	/*syntastic-less-stylelint*
 syntastic-lex-flex	syntastic-checkers.txt	/*syntastic-lex-flex*
 syntastic-license	syntastic.txt	/*syntastic-license*
 syntastic-limbo-limbo	syntastic-checkers.txt	/*syntastic-limbo-limbo*
@@ -577,7 +576,6 @@ syntastic-scss-sass	syntastic-checkers.txt	/*syntastic-scss-sass*
 syntastic-scss-sass_lint	syntastic-checkers.txt	/*syntastic-scss-sass_lint*
 syntastic-scss-sassc	syntastic-checkers.txt	/*syntastic-scss-sassc*
 syntastic-scss-scss_lint	syntastic-checkers.txt	/*syntastic-scss-scss_lint*
-syntastic-scss-stylelint	syntastic-checkers.txt	/*syntastic-scss-stylelint*
 syntastic-sessions	syntastic.txt	/*syntastic-sessions*
 syntastic-sh-bashate	syntastic-checkers.txt	/*syntastic-sh-bashate*
 syntastic-sh-checkbashisms	syntastic-checkers.txt	/*syntastic-sh-checkbashisms*

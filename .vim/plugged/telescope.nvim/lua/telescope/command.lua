@@ -64,6 +64,7 @@ local split_keywords = {
   ["sections"] = true,
   ["search_dirs"] = true,
   ["symbols"] = true,
+  ["ignore_symbols"] = true,
 }
 
 -- convert command line string arguments to
@@ -166,7 +167,8 @@ local function run_command(args)
   end
 
   if string.len(theme) > 0 then
-    opts = themes[theme](opts)
+    local func = themes[theme] or themes["get_" .. theme]
+    opts = func(opts)
   end
 
   if string.len(extension_type) > 0 and extension_type ~= '"' then
@@ -181,7 +183,10 @@ local function run_command(args)
 
   if rawget(extensions, cmd) then
     extensions[cmd][cmd](opts)
+    return
   end
+
+  print "[Telescope] unknown command"
 end
 
 -- @Summary get extensions sub command

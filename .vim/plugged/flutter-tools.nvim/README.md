@@ -104,6 +104,10 @@ require("flutter-tools").setup{} -- use defaults
 
 ![flutter-devices](https://user-images.githubusercontent.com/22454918/112320203-b5f31a80-8ca6-11eb-90b8-9ac934a842da.png)
 
+#### Visualise colours from LSP
+
+![lsp-colours](https://user-images.githubusercontent.com/22454918/153088850-a14f9e67-4d28-47ad-a768-c6c318524951.png)
+
 #### Visualise logs
 
 ![dev log](./.github/dev_log.png)
@@ -134,11 +138,13 @@ require("flutter-tools").setup{} -- use defaults
 - `FlutterReload` - Reload the running project.
 - `FlutterRestart` - Restart the current project.
 - `FlutterQuit` - Ends a running session.
+- `FlutterDetach` - Ends a running session locally but keeps the process running on the device.
 - `FlutterOutlineToggle` - Toggle the outline window showing the widget tree for the given file.
 - `FlutterOutlineOpen` - Opens an outline window showing the widget tree for the given file.
 - `FlutterDevTools` - Starts a Dart Dev Tools server.
 - `FlutterCopyProfilerUrl` - Copies the profiler url to your system clipboard (+ register). Note that commands `FlutterRun` and
   `FlutterDevTools` must be executed first.
+- `FlutterLspRestart` - This command restarts the dart language server, and is intended for situations where it begins to work incorrectly.
 
 <hr/>
 
@@ -174,6 +180,10 @@ require("flutter-tools").setup {
     -- the border type to use for all floating windows, the same options/formats
     -- used for ":h nvim_open_win" e.g. "single" | "shadow" | {<table-of-eight-chars>}
     border = "rounded",
+    -- This determines whether notifications are show with `vim.notify` or with the plugin's custom UI
+    -- please note that this option is eventually going to be deprecated and users will need to
+    -- depend on plugins like `nvim-notify` instead.
+    notification_style = 'native' | 'plugin'
   },
   decorations = {
     statusline = {
@@ -185,12 +195,19 @@ require("flutter-tools").setup {
       -- device
       device = false,
     }
-  }
+  },
   debugger = { -- integrate with nvim dap + install dart code debugger
     enabled = false,
+    run_via_dap = false, -- use dap instead of a plenary job to run flutter apps 
+    register_configurations = function(paths)
+      require("dap").configurations.dart = {
+        <put here config that you would find in .vscode/launch.json>
+      }
+    end,
   },
   flutter_path = "<full/path/if/needed>", -- <-- this takes priority over the lookup
   flutter_lookup_cmd = nil, -- example "dirname $(which flutter)" or "asdf where flutter"
+  fvm = false, -- takes priority over path, uses <workspace>/.fvm/flutter_sdk if enabled
   widget_guides = {
     enabled = false,
   },
@@ -200,6 +217,7 @@ require("flutter-tools").setup {
     enabled = true -- set to false to disable
   },
   dev_log = {
+    enabled = true,
     open_cmd = "tabedit", -- command to use to open the log buffer
   },
   dev_tools = {
@@ -211,6 +229,13 @@ require("flutter-tools").setup {
     auto_open = false -- if true this will open the outline automatically when it is first populated
   },
   lsp = {
+    color = { -- show the derived colours for dart variables
+      enabled = false, -- whether or not to highlight color variables at all, only supported on flutter >= 2.10
+      background = false, -- highlight the background
+      foreground = false, -- highlight the foreground
+      virtual_text = true, -- show the highlight using virtual text
+      virtual_text_str = "■", -- the virtual text character to highlight
+    },
     on_attach = my_custom_on_attach,
     capabilities = my_custom_capabilities -- e.g. lsp_status capabilities
     --- OR you can specify a function to deactivate or change or control how the config is created
@@ -303,6 +328,14 @@ Or alternatively telescope can lazy load extension but the `Telescope` command w
 
 This can be accessed using `Telescope flutter commands` or `require('telescope').extensions.flutter.commands()`
 
+#### FVM
+
+![telescope fvm](https://user-images.githubusercontent.com/35163478/137667084-98c00c4b-ff8c-4d1e-869e-d2d51cf86f7e.png)
+
+If you have [fvm](https://fvm.app/) installed and enabled in your config, you can change your Flutter SDK via a Telescope picker.
+
+This can be accessed using `Telescope flutter fvm` or `require('telescope').extensions.flutter.fvm()`
+
 ## Debugging
 
 _Requires nvim-dap_
@@ -313,12 +346,30 @@ use 'mfussenegger/nvim-dap'
 ```
 
 This plugin integrates with [nvim-dap](https://github.com/mfussenegger/nvim-dap) to provide debug capabilities.
-Currently if `debugger` is set to `true` in the user's config **it will expect `nvim-dap` to be installed**.
+Currently if `debugger.enabled` is set to `true` in the user's config **it will expect `nvim-dap` to be installed**.
 If `dap` is installed the plugin will attempt to install the debugger (Dart-Code's debugger).
 
 To use the debugger you need to run `:lua require('dap').continue()<CR>`. This will start your app. You should then be able
 to use `dap` commands to begin to debug it. For more information on how to use `nvim-dap` please read the project's README
-or see `:h dap`.
+or see `:h dap`. Note that running the app this way will prevent commands such as `:FlutterRestart`, `:FlutterReload` from working.
+
+Alternatively, if you prefer always running your app via dap, you can set `debugger.run_via_dap = true` in your config.
+This way you benefit from the debugging abilities of DAP, AND you can still use `:FlutterRestart`, `:FlutterReload`, etc.
+
+You can use the `debugger.register_configurations` to register custom runner configuration (for example for different targets or flavor).
+If your flutter repo contains launch configurations in `.vscode/launch.json` you can use them via this config : 
+```lua
+  debugger = {
+    enabled = true,
+    register_configurations = function(_)
+      require("dap").configurations.dart = {}
+      require("dap.ext.vscode").load_launchjs()
+    end,
+  },
+```
+
+Since there is an overlap between this plugin's log buffer and the repl buffer when running via dap, you may use the `dev_log.enabled` configuration option if you want.
+
 
 Also see:
 

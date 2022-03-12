@@ -1,6 +1,7 @@
 local buf_storage = require("nui.utils.buf_storage")
 local defaults = require("nui.utils").defaults
 local is_type = require("nui.utils").is_type
+local feature = require("nui.utils")._.feature
 
 local autocmd = {
   event = {
@@ -50,16 +51,16 @@ local autocmd = {
     ChanOpen = "ChanOpen",
     -- command undefined
     CmdUndefined = "CmdUndefined",
-    -- after entering the cmdline window
-    CmdWinEnter = "CmdWinEnter",
-    -- before leaving the cmdline window
-    CmdWinLeave = "CmdWinLeave",
     -- command line was modified
     CmdlineChanged = "CmdlineChanged",
     -- after entering cmdline mode
     CmdlineEnter = "CmdlineEnter",
     -- before leaving cmdline mode
     CmdlineLeave = "CmdlineLeave",
+    -- after entering the cmdline window
+    CmdWinEnter = "CmdwinEnter",
+    -- before leaving the cmdline window
+    CmdWinLeave = "CmdwinLeave",
     -- after loading a colorscheme
     ColorScheme = "ColorScheme",
     -- before loading a colorscheme
@@ -118,8 +119,8 @@ local autocmd = {
     FilterReadPre = "FilterReadPre",
     -- after writing to a filter
     FilterWritePost = "FilterWritePost",
-    "FilterWritePre",
-    "FilterWritePre", -- before writing to a filter
+    -- before writing to a filter
+    FilterWritePre = "FilterWritePre",
     -- got the focus
     FocusGained = "FocusGained",
     -- lost the focus to another app
@@ -142,6 +143,8 @@ local autocmd = {
     InsertLeavePre = "InsertLeavePre",
     -- just before popup menu is displayed
     MenuPopup = "MenuPopup",
+    -- after changing the mode
+    ModeChanged = "ModeChanged",
     -- after setting any option
     OptionSet = "OptionSet",
     -- after :make, :grep etc.
@@ -152,6 +155,8 @@ local autocmd = {
     QuitPre = "QuitPre",
     -- upon string reception from a remote vim
     RemoteReply = "RemoteReply",
+    -- when the search wraps around the document
+    SearchWrapped = "SearchWrapped",
     -- after loading a session file
     SessionLoadPost = "SessionLoadPost",
     -- after ":!cmd"
@@ -212,6 +217,8 @@ local autocmd = {
     UILeave = "UILeave",
     -- user defined autocommand
     User = "User",
+    -- whenthe user presses the same key 42 times
+    UserGettingBored = "UserGettingBored",
     -- after starting Vim
     VimEnter = "VimEnter",
     -- before exiting Vim
@@ -253,7 +260,7 @@ local autocmd = {
 ---@param auto_clear boolean
 ---@param statements string[]
 ---@return string
-function autocmd.statements_grouped(group_name, auto_clear, statements)
+local function autocmd_statements_grouped(group_name, auto_clear, statements)
   if not is_type("boolean", auto_clear) then
     error("invalid param type: auto_clear, expected boolean")
   end
@@ -278,7 +285,7 @@ end
 ---@param cmd string
 ---@param options nil | table<"'once'" | "'nested'", boolean>
 ---@return string
-function autocmd.statement(event, pattern, cmd, options)
+local function autocmd_statement(event, pattern, cmd, options)
   event = is_type("table", event) and table.concat(event, ",") or event
   pattern = is_type("table", pattern) and table.concat(pattern, ",") or pattern
   options = defaults(options, {})
@@ -303,7 +310,7 @@ end
 ---@param cmd string
 ---@param options nil | table<"'once'" | "'nested'", boolean>
 function autocmd.define(event, pattern, cmd, options)
-  vim.api.nvim_exec(autocmd.statement(event, pattern, cmd, options), false)
+  vim.api.nvim_exec(autocmd_statement(event, pattern, cmd, options), false)
 end
 
 ---@param group_name string
@@ -319,11 +326,11 @@ function autocmd.define_grouped(group_name, auto_clear, definitions)
   for _, definition in ipairs(definitions) do
     table.insert(
       statements,
-      autocmd.statement(definition.event, definition.pattern, definition.cmd, definition.options)
+      autocmd_statement(definition.event, definition.pattern, definition.cmd, definition.options)
     )
   end
 
-  vim.api.nvim_exec(autocmd.statements_grouped(group_name, auto_clear, statements), false)
+  vim.api.nvim_exec(autocmd_statements_grouped(group_name, auto_clear, statements), false)
 end
 
 ---@param group_name nil | string
@@ -354,39 +361,58 @@ end
 ---@param event string | string[]
 ---@param handler string | function
 ---@param options nil | table<"'once'" | "'nested'", boolean>
----@return string
-function autocmd.buf.statement(bufnr, event, handler, options)
-  local pattern = string.format("<buffer=%s>", bufnr)
+function autocmd.buf.define(bufnr, event, handler, options)
+  if not feature.lua_autocmd then
+    local pattern = string.format("<buffer=%s>", bufnr)
 
-  local cmd = handler
+    local cmd = handler
 
-  if is_type("function", cmd) then
-    local handler_id = autocmd.buf.storage[bufnr]._next_handler_id
-    autocmd.buf.storage[bufnr]._next_handler_id = handler_id + 1
+    if is_type("function", cmd) then
+      local handler_id = autocmd.buf.storage[bufnr]._next_handler_id
+      autocmd.buf.storage[bufnr]._next_handler_id = handler_id + 1
 
-    autocmd.buf.storage[bufnr][handler_id] = handler
+      autocmd.buf.storage[bufnr][handler_id] = handler
 
-    cmd = string.format(":lua require('nui.utils.autocmd').buf.execute(%s, %s)", bufnr, handler_id)
+      cmd = string.format(":lua require('nui.utils.autocmd').buf.execute(%s, %s)", bufnr, handler_id)
+    end
+
+    autocmd.define(event, pattern, cmd, options)
+    return
   end
 
-  return autocmd.statement(event, pattern, cmd, options)
-end
+  local opts = options or {}
 
----@param bufnr number
----@param event string | string[]
----@param handler string | function
----@param options nil | table<"'once'" | "'nested'", boolean>
-function autocmd.buf.define(bufnr, event, handler, options)
-  vim.api.nvim_exec(autocmd.buf.statement(bufnr, event, handler, options), false)
+  opts.buffer = bufnr
+
+  if is_type("function", handler) then
+    opts.callback = handler
+  else
+    opts.command = handler
+  end
+
+  vim.api.nvim_create_autocmd(event, opts)
 end
 
 ---@param bufnr number
 ---@param group_name nil | string
 ---@param event nil | string | string[]
 function autocmd.buf.remove(bufnr, group_name, event)
-  event = defaults(event, "*")
-  local pattern = string.format("<buffer=%s>", bufnr)
-  autocmd.remove(group_name, event, pattern)
+  if not feature.lua_autocmd then
+    event = defaults(event, "*")
+    local pattern = string.format("<buffer=%s>", bufnr)
+    autocmd.remove(group_name, event, pattern)
+    return
+  end
+
+  for _, item in ipairs(vim.api.nvim_get_autocmds({
+    buffer = bufnr,
+    event = event,
+    group = group_name,
+  })) do
+    if item.id then
+      vim.api.nvim_del_autocmd(item.id)
+    end
+  end
 end
 
 ---@param bufnr number

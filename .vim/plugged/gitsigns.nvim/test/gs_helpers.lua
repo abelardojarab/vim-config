@@ -56,7 +56,7 @@ end
 
 
 function M.setup_git()
-  M.git{"init"}
+  M.git{"init", '-b', 'master'}
 
   -- Always force color to test settings don't interfere with gitsigns systems
   -- commands (addresses #23)
@@ -76,13 +76,14 @@ function M.setup_git()
   M.git{'config', 'init.defaultBranch', 'master'}
 end
 
-function M.setup_test_repo(no_add)
+function M.setup_test_repo(opts)
+  local text = opts and opts.test_file_text or test_file_text
   M.cleanup()
   system{"mkdir", M.scratch}
   M.setup_git()
   system{"touch", M.test_file}
-  M.write_to_file(M.test_file, test_file_text)
-  if not no_add then
+  M.write_to_file(M.test_file, text)
+  if not (opts and opts.no_add) then
     M.git{"add", M.test_file}
     M.git{"commit", "-m", "init commit"}
   end
@@ -176,7 +177,6 @@ local function match_lines2(lines, spec)
     for j = i, #spec do
       table.insert(unmatched, spec[j].text or spec[j])
     end
-    -- print(table.concat(lines, '\n'))
     error(('Did not match patterns:\n    - %s'):format(table.concat(unmatched, '\n    - ')))
   end
 end

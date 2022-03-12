@@ -2,8 +2,8 @@ local M = {}
 
 local dv = require 'diffview'
 local dv_config = require 'diffview.config'
-local Rev = require'diffview.rev'.Rev
-local RevType = require'diffview.rev'.RevType
+local Rev = require'diffview.git.rev'.Rev
+local RevType = require'diffview.git.rev'.RevType
 local CDiffView = require'diffview.api.views.diff.diff_view'.CDiffView
 local dv_lib = require'diffview.lib'
 
@@ -56,7 +56,7 @@ function M.open(selected_file_name)
     }
     for kind, section in pairs(sections) do
       files[kind] = {}
-      for _, item in ipairs(section.files) do
+      for _, item in ipairs(section.items) do
         local file = {
           path = item.name,
           status = item.mode,

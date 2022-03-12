@@ -21,5 +21,7 @@ undotree_SetFocusWhenToggle	undotree.txt	/*undotree_SetFocusWhenToggle*
 undotree_ShortIndicators	undotree.txt	/*undotree_ShortIndicators*
 undotree_SplitWidth	undotree.txt	/*undotree_SplitWidth*
 undotree_TreeNodeShape	undotree.txt	/*undotree_TreeNodeShape*
+undotree_TreeReturnShape	undotree.txt	/*undotree_TreeReturnShape*
+undotree_TreeSplitShape	undotree.txt	/*undotree_TreeSplitShape*
 undotree_TreeVertShape	undotree.txt	/*undotree_TreeVertShape*
 undotree_WindowLayout	undotree.txt	/*undotree_WindowLayout*

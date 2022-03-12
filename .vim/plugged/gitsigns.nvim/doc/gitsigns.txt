@@ -2,7 +2,7 @@
 *gitsigns.nvim*
 
 Author:   Lewis Russell <lewis6991@gmail.com>
-Version:  0.1-dev
+Version:  0.3-dev
 Homepage: <https://github.com/lewis6991/gitsigns.nvim>
 License:  MIT license
 
@@ -41,36 +41,38 @@ of the default settings:
         topdelete    = {hl = 'GitSignsDelete', text = '‾', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn'},
         changedelete = {hl = 'GitSignsChange', text = '~', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn'},
       },
-      numhl = false,
-      linehl = false,
-      keymaps = {
-        -- Default keymap options
-        noremap = true,
-
-        ['n ]c'] = { expr = true, "&diff ? ']c' : '<cmd>lua require\"gitsigns\".next_hunk()<CR>'"},
-        ['n [c'] = { expr = true, "&diff ? '[c' : '<cmd>lua require\"gitsigns\".prev_hunk()<CR>'"},
-
-        ['n <leader>hs'] = '<cmd>lua require"gitsigns".stage_hunk()<CR>',
-        ['v <leader>hs'] = '<cmd>lua require"gitsigns".stage_hunk({vim.fn.line("."), vim.fn.line("v")})<CR>',
-        ['n <leader>hu'] = '<cmd>lua require"gitsigns".undo_stage_hunk()<CR>',
-        ['n <leader>hr'] = '<cmd>lua require"gitsigns".reset_hunk()<CR>',
-        ['v <leader>hr'] = '<cmd>lua require"gitsigns".reset_hunk({vim.fn.line("."), vim.fn.line("v")})<CR>',
-        ['n <leader>hR'] = '<cmd>lua require"gitsigns".reset_buffer()<CR>',
-        ['n <leader>hp'] = '<cmd>lua require"gitsigns".preview_hunk()<CR>',
-        ['n <leader>hb'] = '<cmd>lua require"gitsigns".blame_line(true)<CR>',
-
-        -- Text objects
-        ['o ih'] = ':<C-U>lua require"gitsigns".select_hunk()<CR>',
-        ['x ih'] = ':<C-U>lua require"gitsigns".select_hunk()<CR>'
+      signcolumn = true,  -- Toggle with `:Gitsigns toggle_signs`
+      numhl      = false, -- Toggle with `:Gitsigns toggle_numhl`
+      linehl     = false, -- Toggle with `:Gitsigns toggle_linehl`
+      word_diff  = false, -- Toggle with `:Gitsigns toggle_word_diff`
+      watch_gitdir = {
+        interval = 1000,
+        follow_files = true
       },
-      watch_index = {
-        interval = 1000
+      attach_to_untracked = true,
+      current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
+      current_line_blame_opts = {
+        virt_text = true,
+        virt_text_pos = 'eol', -- 'eol' | 'overlay' | 'right_align'
+        delay = 1000,
+        ignore_whitespace = false,
       },
-      current_line_blame = false,
+      current_line_blame_formatter = '<author>, <author_time:%Y-%m-%d> - <summary>',
       sign_priority = 6,
       update_debounce = 100,
       status_formatter = nil, -- Use default
-      use_internal_diff = true,  -- If luajit is present
+      max_file_length = 40000,
+      preview_config = {
+        -- Options passed to nvim_open_win
+        border = 'single',
+        style = 'minimal',
+        relative = 'cursor',
+        row = 0,
+        col = 1
+      },
+      yadm = {
+        enable = false
+      },
     }
 <
 
@@ -95,83 +97,133 @@ passed to |gitsigns-setup()|. See |gitsigns-config-keymaps|.
 ==============================================================================
 FUNCTIONS                                                 *gitsigns-functions*
 
-setup({config})                                             *gitsigns.setup()*
+Note functions with the {async} attribute are run asynchronously and are
+non-blocking (return immediately).
+
+
+setup({cfg})                                                *gitsigns.setup()*
                 Setup and start Gitsigns.
 
+                Attributes: ~
+                    {async}
+
                 Parameters: ~
-                    {config} Table object containing configuration for
+                    {cfg} Table object containing configuration for
                     Gitsigns. See |gitsigns-usage| for more details.
 
-next_hunk({opts})                                           *gitsigns.next_hunk()*
-                Jump to the next hunk in the current buffer. Respects
-                |wrapscan|.
+attach({bufnr})                                            *gitsigns.attach()*
+                Attach Gitsigns to the buffer.
+
+                Attributes: ~
+                    {async}
 
                 Parameters: ~
-                    {opts}  table|nil Configuration table. Keys:
-                            • {wrap}: (boolean)
-                              Whether to loop around file or not. Defaults
-                              to the value 'wrapscan'
-                            • {navigation_message}: (boolean)
-                              Whether to show navigation messages or not.
-                              Looks at 'shortmess' for default behaviour.
+                    {bufnr}  (number): Buffer number
 
-
-prev_hunk({opts})                                       *gitsigns.prev_hunk()*
-                Jump to the previous hunk in the current buffer. Respects
-                |wrapscan|.
+detach({bufnr})                                            *gitsigns.detach()*
+                Detach Gitsigns from the buffer {bufnr}. If {bufnr} is not
+                provided then the current buffer is used.
 
                 Parameters: ~
-                    {opts}  table|nil Configuration table. Keys:
-                            • {wrap}: (boolean)
-                              Whether to loop around file or not. Defaults
-                              to the value 'wrapscan'
+                    {bufnr}  (number): Buffer number
 
-stage_hunk({range})                                    *gitsigns.stage_hunk()*
-                Stage the hunk at the cursor position, or all hunks in the
-                given range. If {range} is provided, all hunks that intersect
-                with the given range are staged.
+detach_all()                                           *gitsigns.detach_all()*
+                Detach Gitsigns from all buffers it is attached to.
 
-                Parameters:~
-                    {range} table|nil List-like table of two integers making
-                    up the line range from which you want to stage the hunks.
+refresh()                                                 *gitsigns.refresh()*
+                Refresh all buffers.
 
-undo_stage_hunk()                                 *gitsigns.undo_stage_hunk()*
-                Undo the last call of stage_hunk(). Note: only the calls to
-                stage_hunk() performed in the current session can be undone.
+                Attributes: ~
+                    {async}
 
-stage_buffer()                                       *gitsigns.stage_buffer()*
-                Stage all hunks in current buffer.
+get_actions()                                         *gitsigns.get_actions()*
+                Get all the available line specific actions for the current
+                buffer at the cursor position.
 
-reset_buffer_index()                           *gitsigns.reset_buffer_index()*
-                Unstage all hunks for current buffer in the index. Note:
-                Unlike |gitsigns.undo_stage_hunk()| this doesn't simply undo
-                stages, this runs an `git reset` on current buffers file.
+                Return: ~
+                    Dictionary of action name to function which when called
+                    performs action.
 
-reset_hunk({range})                                    *gitsigns.reset_hunk()*
-                Reset the lines of the hunk at the cursor position, or all
-                hunks in the given range, to what it is in Git's index. If
-                {range} is provided, all hunks that intersect with the given
-                range are reset.
+setloclist({nr}, {target})                             *gitsigns.setloclist()*
+                Populate the location list with hunks. Automatically opens the
+                location list window.
 
-                Parameters:~
-                    {range} table|nil List-like table of two integers making
-                    up the line range from which you want to reset the hunks.
+                Alias for: `setqflist({target}, { use_location_list = true, nr = {nr} }`
 
-reset_buffer()                                       *gitsigns.reset_buffer()*
-                Reset the lines of all hunks in the buffer.
+                Attributes: ~
+                    {async}
 
-preview_hunk()                                       *gitsigns.preview_hunk()*
-                Preview the hunk at the cursor position in a floating
-                window.
+                Parameters: ~
+                    {nr}     (integer): Window number or the |window-ID|.
+                             `0` for the current window (default).
+                    {target} (integer or string): See |gitsigns.setqflist()|.
 
-blame_line({full})                                     *gitsigns.blame_line()*
-                Run git blame on the current line and show the results in a
-                floating window. If {full} is true then the full commit
-                message is displayed along with the corresponding hunk.
+setqflist({target}, {opts})                             *gitsigns.setqflist()*
+                Populate the quickfix list with hunks. Automatically opens the
+                quickfix window.
 
-change_base({base})                                   *gitsigns.change_base()*
+                Attributes: ~
+                    {async}
+
+                Parameters: ~
+                    {target} (integer or string):
+                             Specifies which files hunks are collected from.
+                             Possible values.
+                             • [integer]: The buffer with the matching buffer
+                               number. `0` for current buffer (default).
+                             • `"attached"`: All attached buffers.
+                             • `"all"`: All modified files for each git
+                               directory of all attached buffers in addition
+                               to the current working directory.
+                    {opts}   (table|nil):
+                             Additional options:
+                             • {use_location_list}: (boolean)
+                               Populate the location list instead of the
+                               quickfix list. Default to `false`.
+                             • {nr}: (integer)
+                               Window number or ID when using location list.
+                               Expand folds when navigating to a hunk which is
+                               inside a fold. Defaults to `0`.
+                             • {open}: (boolean)
+                               Open the quickfix/location list viewer.
+                               Defaults to `true`.
+
+diffthis({base})                                         *gitsigns.diffthis()*
+                Perform a |vimdiff| on the given file with {base} if it is
+                given, or with the currently set base (index by default).
+
+                Examples: >
+                  " Diff against the index
+                  :Gitsigns diffthis
+
+                  " Diff against the last commit
+                  :Gitsigns diffthis ~1
+<
+
+                For a more complete list of ways to specify bases, see
+                |gitsigns-revision|.
+
+                Attributes: ~
+                    {async}
+
+reset_base({global})                                   *gitsigns.reset_base()*
+                Reset the base revision to diff against back to the
+                index.
+
+                Alias for `change_base(nil, {global})` .
+
+change_base({base}, {global})                         *gitsigns.change_base()*
                 Change the base revision to diff against. If {base} is not
-                given, then the original base is used.
+                given, then the original base is used. If {global} is given
+                and true, then change the base revision of all buffers,
+                including any new buffers.
+
+                Attributes: ~
+                    {async}
+
+                Parameters:~
+                    {base} string|nil The object/revision to diff against.
+                    {global} boolean|nil Change the base of all buffers.
 
                 Examples: >
                   " Change base to 1 commit behind head
@@ -195,44 +247,20 @@ change_base({base})                                   *gitsigns.change_base()*
                 For a more complete list of ways to specify bases, see
                 |gitsigns-revision|.
 
-diffthis({base})                                         *gitsigns.diffthis()*
-                Perform a |vimdiff| on the given file with {base} if it is
-                given, or with the currently set base (index by default).
-
-                Examples: >
-                  " Diff against the index
-                  :Gitsigns diffthis
-
-                  " Diff against the last commit
-                  :Gitsigns diffthis ~1
-<
-
-                For a more complete list of ways to specify bases, see
-                |gitsigns-revision|.
->
-get_actions()                                         *gitsigns.get_actions()*
-                Get all the available line specific actions for the current
-                buffer at the cursor position. Returns a map of action name to
-                function.
-
-attach()                                                   *gitsigns.attach()*
-                Attach Gitsigns to the current buffer.
-
-detach({bufnr})                                            *gitsigns.detach()*
-                Detach Gitsigns from the buffer {bufnr}. If {bufnr} is not
-                provided then the current buffer is used.
+blame_line({opts})                                     *gitsigns.blame_line()*
+                Run git blame on the current line and show the results in a
+                floating window.
 
                 Parameters: ~
-                    {bufnr}  (number): Buffer number
+                    {opts}   (table|nil):
+                             Additional options:
+                             • {full}: (boolean)
+                               Display full commit message
+                             • {ignore_whitespace}: (boolean)
+                               Ignore whitespace when running blame.
 
-detach_all()                                           *gitsigns.detach_all()*
-                Detach Gitsigns from all buffers it is attached to.
-
-refresh()                                                 *gitsigns.refresh()*
-                Refresh all buffers.
-
-select_hunk()                                         *gitsigns.select_hunk()*
-                Select the hunk under the cursor.
+                Attributes: ~
+                    {async}
 
 get_hunks({bufnr})                                      *gitsigns.get_hunks()*
                 Get hunk array for specified buffer.
@@ -256,41 +284,104 @@ get_hunks({bufnr})                                      *gitsigns.get_hunks()*
                        • `"start"`: Line number (1-based)
                        • `"count"`: Line count
 
-setqflist({target})                                      *gitsigns.setqflist()*
-                Populate the quickfix list with hunks.
+select_hunk()                                         *gitsigns.select_hunk()*
+                Select the hunk under the cursor.
+
+preview_hunk()                                       *gitsigns.preview_hunk()*
+                Preview the hunk at the cursor position in a floating
+                window.
+
+prev_hunk({opts})                                       *gitsigns.prev_hunk()*
+                Jump to the previous hunk in the current buffer.
 
                 Parameters: ~
-                    {target} (integer or string):
-                             Specifies which files hunks are collected from.
-                             Possible values.
-                             • [integer]: The buffer with the matching buffer
-                               number. `0` for current buffer (default).
-                             • `"attached"`: All attached buffers.
-                             • `"all"`: All modified files for each git
-                               directory of all attached buffers.
+                    See |gitsigns.next_hunk()|.
 
-setloclist({nr}, {target})                             *gitsigns.setloclist()*
-                Populate the location list with hunks.
+next_hunk({opts})                                       *gitsigns.next_hunk()*
+                Jump to the next hunk in the current buffer.
 
                 Parameters: ~
-                    {nr}     (integer): Window number or the |window-ID|.
-                             `0` for the current window (default).
-                    {target} (integer or string): See |gitsigns.setqflist()|.
+                    {opts}  table|nil Configuration table. Keys:
+                            • {wrap}: (boolean)
+                              Whether to loop around file or not. Defaults
+                              to the value 'wrapscan'
+                            • {navigation_message}: (boolean)
+                              Whether to show navigation messages or not.
+                              Looks at 'shortmess' for default behaviour.
+                            • {foldopen}: (boolean)
+                              Expand folds when navigating to a hunk which is
+                              inside a fold. Defaults to `true` if 'foldopen'
+                              contains `search`.
 
-toggle_signs()                                       *gitsigns.toggle_signs()*
-                Toggle |gitsigns-config-signcolumn|
+reset_buffer_index()                           *gitsigns.reset_buffer_index()*
+                Unstage all hunks for current buffer in the index. Note:
+                Unlike |gitsigns.undo_stage_hunk()| this doesn't simply undo
+                stages, this runs an `git reset` on current buffers file.
 
-toggle_numhl()                                       *gitsigns.toggle_numhl()*
-                Toggle |gitsigns-config-numhl|
+                Attributes: ~
+                    {async}
 
-toggle_linehl()                                     *gitsigns.toggle_linehl()*
-                Toggle |gitsigns-config-linehl|
+stage_buffer()                                       *gitsigns.stage_buffer()*
+                Stage all hunks in current buffer.
+
+                Attributes: ~
+                    {async}
+
+undo_stage_hunk()                                 *gitsigns.undo_stage_hunk()*
+                Undo the last call of stage_hunk().
+
+                Note: only the calls to stage_hunk() performed in the current
+                session can be undone.
+
+                Attributes: ~
+                    {async}
+
+reset_buffer()                                       *gitsigns.reset_buffer()*
+                Reset the lines of all hunks in the buffer.
+
+reset_hunk({range})                                    *gitsigns.reset_hunk()*
+                Reset the lines of the hunk at the cursor position, or all
+                lines in the given range. If {range} is provided, all lines in
+                the given range are reset. This supports partial-hunks,
+                meaning if a range only includes a portion of a particular
+                hunk, only the lines within the range will be reset.
+
+                Parameters:~
+                    {range} table|nil List-like table of two integers making
+                    up the line range from which you want to reset the hunks.
+
+stage_hunk({range})                                    *gitsigns.stage_hunk()*
+                Stage the hunk at the cursor position, or all lines in the
+                given range. If {range} is provided, all lines in the given
+                range are staged. This supports partial-hunks, meaning if a
+                range only includes a portion of a particular hunk, only the
+                lines within the range will be staged.
+
+                Attributes: ~
+                    {async}
+
+                Parameters:~
+                    {range} table|nil List-like table of two integers making
+                    up the line range from which you want to stage the hunks.
+
+toggle_deleted()                                   *gitsigns.toggle_deleted()*
+                Toggle |gitsigns-config-show_deleted|
+
+toggle_current_line_blame()             *gitsigns.toggle_current_line_blame()*
+                Toggle |gitsigns-config-current_line_blame|
 
 toggle_word_diff()                               *gitsigns.toggle_word_diff()*
                 Toggle |gitsigns-config-word_diff|
 
-toggle_current_line_blame()             *gitsigns.toggle_current_line_blame()*
-                Toggle |gitsigns-config-current_line_blame|
+toggle_linehl()                                     *gitsigns.toggle_linehl()*
+                Toggle |gitsigns-config-linehl|
+
+toggle_numhl()                                       *gitsigns.toggle_numhl()*
+                Toggle |gitsigns-config-numhl|
+
+toggle_signs()                                       *gitsigns.toggle_signs()*
+                Toggle |gitsigns-config-signcolumn|
+
 
 ==============================================================================
 CONFIGURATION                                                *gitsigns-config*
@@ -322,52 +413,31 @@ signs                                                  *gitsigns-config-signs*
         • `show_count` to enable showing count of hunk, e.g. number of deleted
           lines.
 
-      Note if `hl`, `numhl` or `linehl` use a `GitSigns*` highlight and it is
-      not defined, it will be automatically derived by searching for other
-      defined highlights in the following order:
+      Note if a highlight is not defined, it will be automatically derived by
+      searching for other defined highlights in the following order:
         • `GitGutter*`
         • `Signify*`
         • `Diff*Gutter`
         • `diff*`
         • `Diff*`
 
-      For example if `signs.add.hl = GitSignsAdd` and `GitSignsAdd` is not
-      defined but `GitGutterAdd` is defined, then `GitSignsAdd` will be linked
-      to `GitGutterAdd`.
+      For example if `GitSignsAdd` is not defined but `GitGutterAdd` is defined,
+      then `GitSignsAdd` will be linked to `GitGutterAdd`.
 
 keymaps                                              *gitsigns-config-keymaps*
-      Type: `table`
-      Default: >
-        {
-          -- Default keymap options
-          noremap = true,
+   DEPRECATED
+      config.keymaps is now deprecated. Please define mappings in config.on_attach() instead.
 
-          ['n ]c'] = { expr = true, "&diff ? ']c' : '<cmd>lua require\"gitsigns\".next_hunk()<CR>'"},
-          ['n [c'] = { expr = true, "&diff ? '[c' : '<cmd>lua require\"gitsigns\".prev_hunk()<CR>'"},
+      Type: `table`, Default: `{}`
 
-          ['n <leader>hs'] = '<cmd>lua require"gitsigns".stage_hunk()<CR>',
-          ['v <leader>hs'] = '<cmd>lua require"gitsigns".stage_hunk({vim.fn.line("."), vim.fn.line("v")})<CR>',
-          ['n <leader>hu'] = '<cmd>lua require"gitsigns".undo_stage_hunk()<CR>',
-          ['n <leader>hr'] = '<cmd>lua require"gitsigns".reset_hunk()<CR>',
-          ['v <leader>hr'] = '<cmd>lua require"gitsigns".reset_hunk({vim.fn.line("."), vim.fn.line("v")})<CR>',
-          ['n <leader>hR'] = '<cmd>lua require"gitsigns".reset_buffer()<CR>',
-          ['n <leader>hp'] = '<cmd>lua require"gitsigns".preview_hunk()<CR>',
-          ['n <leader>hb'] = '<cmd>lua require"gitsigns".blame_line(true)<CR>',
-          ['n <leader>hS'] = '<cmd>lua require"gitsigns".stage_buffer()<CR>',
-          ['n <leader>hU'] = '<cmd>lua require"gitsigns".reset_buffer_index()<CR>',
-
-          ['o ih'] = ':<C-U>lua require"gitsigns".select_hunk()<CR>',
-          ['x ih'] = ':<C-U>lua require"gitsigns".select_hunk()<CR>'
-        }
-<
       Keymaps to set up when attaching to a buffer.
 
       Each key in the table defines the mode and key (whitespace delimited)
       for the mapping and the value defines what the key maps to. The value
       can be a table which can contain keys matching the options defined in
-      |map-arguments| which are: `expr`, `noremap`, `nowait`, `script`,
-      `silent`, `unique` and `buffer`.  These options can also be used in
-      the top level of the table to define default options for all mappings.
+      |map-arguments| which are: `expr`, `noremap`, `nowait`, `script`, `silent`
+      and `unique`.  These options can also be used in the top level of the
+      table to define default options for all mappings.
 
       Since this field is not extended (unlike |gitsigns-config-signs|),
       mappings defined in this field can be disabled by setting the whole field
@@ -396,7 +466,7 @@ on_attach                                          *gitsigns-config-on_attach*
         end
 <
 
-watch_index                                      *gitsigns-config-watch_index*
+watch_gitdir                                    *gitsigns-config-watch_gitdir*
       Type: `table`
       Default: >
         {
@@ -405,12 +475,12 @@ watch_index                                      *gitsigns-config-watch_index*
         }
 <
       When opening a file, a libuv watcher is placed on the respective
-      `.git/index` file to detect when changes happen to use as a trigger to
+      `.git` directory to detect when changes happen to use as a trigger to
       update signs.
 
       Fields: ~
         • `interval`:
-            Interval the watcher waits between polls of `.git/index` is milliseconds.
+            Interval the watcher waits between polls of the gitdir in milliseconds.
 
         • `follow_files`:
             If a file is moved with `git mv`, switch the buffer to the new location.
@@ -446,10 +516,42 @@ linehl                                                *gitsigns-config-linehl*
       the highlight group does not exist, then it is automatically defined
       and linked to the corresponding highlight group in `signs.*.hl`.
 
-diff_algorithm                                *gitsigns-config-diff_algorithm*
-      Type: `string`, Default: taken from 'diffopt'
+show_deleted                                    *gitsigns-config-show_deleted*
+      Type: `boolean`, Default: `false`
 
-      Diff algorithm to pass to `git diff` .
+      Show the old version of hunks inline in the buffer (via virtual lines).
+
+      Note: Virtual lines currently use the highlight `GitSignsDeleteLn`.
+
+diff_opts                                          *gitsigns-config-diff_opts*
+      Type: `table[extended]`, Default: derived from 'diffopt'
+
+      Diff options.
+
+      Fields: ~
+        • algorithm: string
+            Diff algorithm to use. Values:
+            • "myers"      the default algorithm
+            • "minimal"    spend extra time to generate the
+                           smallest possible diff
+            • "patience"   patience diff algorithm
+            • "histogram"  histogram diff algorithm
+        • internal: boolean
+            Use Neovim's built in xdiff library for running diffs.
+
+            Note Neovim v0.5 uses LuaJIT's FFI interface, whereas v0.5+ uses
+            `vim.diff`.
+        • indent_heuristic: string
+            Use the indent heuristic for the internal
+            diff library.
+        • vertical: boolean
+            Start diff mode with vertical splits.
+
+base                                                    *gitsigns-config-base*
+      Type: `string`, Default: index
+
+      The object/revision to diff against.
+      See |gitsigns-revision|.
 
 count_chars                                      *gitsigns-config-count_chars*
       Type: `table`
@@ -518,14 +620,6 @@ update_debounce                              *gitsigns-config-update_debounce*
 
       Debounce time for updates (in milliseconds).
 
-use_internal_diff                          *gitsigns-config-use_internal_diff*
-      Type: `boolean`, Default: `true` if `vim.diff` or luajit is present. Windows unsupported on v0.5
-
-      Use Neovim's built in xdiff library for running diffs.
-
-      Note Neovim v0.5 uses LuaJIT's FFI interface, whereas v0.5+ uses
-      `vim.diff`.
-
 current_line_blame                        *gitsigns-config-current_line_blame*
       Type: `boolean`, Default: `false`
 
@@ -557,9 +651,13 @@ current_line_blame_opts              *gitsigns-config-current_line_blame_opts*
         • delay: integer
           Sets the delay (in milliseconds) before blame virtual text is
           displayed.
+        • ignore_whitespace: boolean
+          Ignore whitespace when running blame.
 
 current_line_blame_formatter_opts
                            *gitsigns-config-current_line_blame_formatter_opts*
+   DEPRECATED
+
       Type: `table[extended]`
       Default: >
         {
@@ -572,61 +670,87 @@ current_line_blame_formatter_opts
         • relative_time: boolean
 
 current_line_blame_formatter    *gitsigns-config-current_line_blame_formatter*
-      Type: `function`
-      Default: >
-        function(name, blame_info, opts)
-          if blame_info.author == name then
-            blame_info.author = 'You'
-          end
+      Type: `string|function`, Default: `' <author>, <author_time> - <summary>'`
 
-          local text
-          if blame_info.author == 'Not Committed Yet' then
-            text = blame_info.author
-          else
-            local date_time
-
-            if opts.relative_time then
-              date_time = require('gitsigns.util').get_relative_time(tonumber(blame_info['author_time']))
-            else
-              date_time = os.date('%Y-%m-%d', tonumber(blame_info['author_time']))
-            end
-
-            text = string.format('%s, %s - %s', blame_info.author, date_time, blame_info.summary)
-          end
-
-          return {{' '..text, 'GitSignsCurrentLineBlame'}}
-        end
-<
-      Function used to format the virtual text of
+      String or function used to format the virtual text of
       |gitsigns-config-current_line_blame|.
 
-      Parameters: ~
-        {name}       Git user name returned from `git config user.name` .
-        {blame_info} Table with the following keys:
-                       • `abbrev_sha`: string
-                       • `orig_lnum`: integer
-                       • `final_lnum`: integer
-                       • `author`: string
-                       • `author_mail`: string
-                       • `author_time`: integer
-                       • `author_tz`: string
-                       • `committer`: string
-                       • `committer_mail`: string
-                       • `committer_time`: integer
-                       • `committer_tz`: string
-                       • `summary`: string
-                       • `previous`: string
-                       • `filename`: string
+      When a string, accepts the following format specifiers:
 
-                     Note that the keys map onto the output of:
-                       `git blame --line-porcelain`
+          • `<abbrev_sha>`
+          • `<orig_lnum>`
+          • `<final_lnum>`
+          • `<author>`
+          • `<author_mail>`
+          • `<author_time>` or `<author_time:FORMAT>`
+          • `<author_tz>`
+          • `<committer>`
+          • `<committer_mail>`
+          • `<committer_time>` or `<committer_time:FORMAT>`
+          • `<committer_tz>`
+          • `<summary>`
+          • `<previous>`
+          • `<filename>`
 
-        {opts}       Passed directly from
-                     |gitsigns-config-current_line_blame_formatter_opts|.
+        For `<author_time:FORMAT>` and `<committer_time:FORMAT>`, `FORMAT` can
+        be any valid date format that is accepted by `os.date()` with the
+        addition of `%R` (defaults to `%Y-%m-%d`):
 
-      Return: ~
-        The result of this function is passed directly to the `opts.virt_text`
-        field of |nvim_buf_set_extmark|.
+          • `%a`  abbreviated weekday name (e.g., Wed)
+          • `%A`  full weekday name (e.g., Wednesday)
+          • `%b`  abbreviated month name (e.g., Sep)
+          • `%B`  full month name (e.g., September)
+          • `%c`  date and time (e.g., 09/16/98 23:48:10)
+          • `%d`  day of the month (16) [01-31]
+          • `%H`  hour, using a 24-hour clock (23) [00-23]
+          • `%I`  hour, using a 12-hour clock (11) [01-12]
+          • `%M`  minute (48) [00-59]
+          • `%m`  month (09) [01-12]
+          • `%p`  either "am" or "pm" (pm)
+          • `%S`  second (10) [00-61]
+          • `%w`  weekday (3) [0-6 = Sunday-Saturday]
+          • `%x`  date (e.g., 09/16/98)
+          • `%X`  time (e.g., 23:48:10)
+          • `%Y`  full year (1998)
+          • `%y`  two-digit year (98) [00-99]
+          • `%%`  the character `%´
+          • `%R`  relative (e.g., 4 months ago)
+
+      When a function:
+        Parameters: ~
+          {name}       Git user name returned from `git config user.name` .
+          {blame_info} Table with the following keys:
+                         • `abbrev_sha`: string
+                         • `orig_lnum`: integer
+                         • `final_lnum`: integer
+                         • `author`: string
+                         • `author_mail`: string
+                         • `author_time`: integer
+                         • `author_tz`: string
+                         • `committer`: string
+                         • `committer_mail`: string
+                         • `committer_time`: integer
+                         • `committer_tz`: string
+                         • `summary`: string
+                         • `previous`: string
+                         • `filename`: string
+
+                       Note that the keys map onto the output of:
+                         `git blame --line-porcelain`
+
+          {opts}       Passed directly from
+                       |gitsigns-config-current_line_blame_formatter_opts|.
+
+        Return: ~
+          The result of this function is passed directly to the `opts.virt_text`
+          field of |nvim_buf_set_extmark| and thus must be a list of
+          [text, highlight] tuples.
+
+trouble                                              *gitsigns-config-trouble*
+      Type: `boolean`, Default: true if installed
+
+      When using setqflist() or setloclist(), open Trouble instead of the
+      quickfix/location list window.
 
 yadm                                                    *gitsigns-config-yadm*
       Type: `table`, Default: `{ enable = false }`
@@ -637,12 +761,21 @@ word_diff                                          *gitsigns-config-word_diff*
       Type: `boolean`, Default: `false`
 
       Highlight intra-line word differences in the buffer.
-      Requires `config.use_internal_diff = true` .
+      Requires `config.diff_opts.internal = true` .
 
       Uses the highlights:
-        • GitSignsAddLn
-        • GitSignsChangeLn
-        • GitSignsDeleteLn
+        • For word diff in previews:
+          • `GitSignsAddInline`
+          • `GitSignsChangeInline`
+          • `GitSignsDeleteInline`
+        • For word diff in buffer:
+          • `GitSignsAddLnInline`
+          • `GitSignsChangeLnInline`
+          • `GitSignsDeleteLnInline`
+        • For word diff in virtual lines (e.g. show_deleted):
+          • `GitSignsAddVirtLnInline`
+          • `GitSignsChangeVirtLnInline`
+          • `GitSignsDeleteVirtLnInline`
 
 debug_mode                                        *gitsigns-config-debug_mode*
       Type: `boolean`, Default: `false`
@@ -650,13 +783,45 @@ debug_mode                                        *gitsigns-config-debug_mode*
       Enables debug logging and makes the following functions
       available: `dump_cache`, `debug_messages`, `clear_debug`.
 
+watch_index                                      *gitsigns-config-watch_index*
+   HARD-DEPRECATED
+
+   Please instead use |gitsigns-config-watch_gitdir|.
+
+current_line_blame_delay            *gitsigns-config-current_line_blame_delay*
+   HARD-DEPRECATED
+
+   Please instead use the field `delay` in |gitsigns-config-current_line_blame_opts|.
+
+current_line_blame_position      *gitsigns-config-current_line_blame_position*
+   HARD-DEPRECATED
+
+   Please instead use the field `virt_text_pos` in |gitsigns-config-current_line_blame_opts|.
+
+diff_algorithm                                *gitsigns-config-diff_algorithm*
+   HARD-DEPRECATED
+
+   Please instead use the field `algorithm` in |gitsigns-config-diff_opts|.
+
+use_decoration_api                        *gitsigns-config-use_decoration_api*
+   HARD-DEPRECATED
+
+use_internal_diff                          *gitsigns-config-use_internal_diff*
+   HARD-DEPRECATED
+
+   Please instead use the field `internal` in |gitsigns-config-diff_opts|.
+
+
 ==============================================================================
 COMMAND                                                      *gitsigns-command*
 
                                                                     *:Gitsigns*
-:Gitsigns {subcmd} {args}  Run a Gitsigns commands. {subcmd} can be any
+:Gitsigns {subcmd} {args}  Run a Gitsigns command. {subcmd} can be any
                            function documented in |gitsigns-functions|.
-                           {args} are processed as |<f-args>|.
+                           Each argument in {args} will be attempted to be
+                           parsed as a Lua value using `loadstring`, however
+                           if this fails the argument will remain as the
+                           string given by |<f-args>|.
 
                            Note this command is equivalent to:
                              `:lua require('gitsigns').{subcmd}({args})`
@@ -668,6 +833,7 @@ COMMAND                                                      *gitsigns-command*
                              :Gitsigns toggle_current_line_blame
                              :Gitsigns change_base ~
                              :Gitsigns reset_buffer
+                             :Gitsigns change_base nil true
 
 ==============================================================================
 SPECIFYING OBJECTS                          *gitsigns-object* *gitsigns-revision*
@@ -708,9 +874,12 @@ Example:
 >
     set statusline+=%{get(b:,'gitsigns_status','')}
 <
-                                                             *b:gitsigns_head*
-Use `b:gitsigns_head` to return the name of the current HEAD (usually branch
-name). If the current HEAD is detached then this will be a short commit hash.
+                                            *b:gitsigns_head* *g:gitsigns_head*
+Use `g:gitsigns_head` and `b:gitsigns_head` to return the name of the current
+HEAD (usually branch name). If the current HEAD is detached then this will be
+a short commit hash. `g:gitsigns_head` returns the current HEAD for the
+current working directory, whereas `b:gitsigns_head` returns the current HEAD
+for each buffer.
 
                                                   *b:gitsigns_blame_line_dict*
 If |gitsigns-config-current_line_blame| is enabled, then contains dictionary
@@ -726,5 +895,3 @@ exposed through |gitsigns.select_hunk()|.
 
 ------------------------------------------------------------------------------
 vim:tw=78:ts=8:ft=help:norl:
-
-

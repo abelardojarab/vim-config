@@ -4,6 +4,7 @@ local scheduler = require('plenary.async.util').scheduler
 local Status = require("gitsigns.status")
 local git = require('gitsigns.git')
 local manager = require('gitsigns.manager')
+local nvim = require('gitsigns.nvim')
 local signs = require('gitsigns.signs')
 local util = require('gitsigns.util')
 
@@ -34,9 +35,6 @@ local M = {}
 
 
 
-
-
-
 local namespace
 
 local handle_moved = function(bufnr, bcache, old_relpath)
@@ -52,8 +50,8 @@ local handle_moved = function(bufnr, bcache, old_relpath)
       end
       do_update = true
    elseif git_obj.orig_relpath then
-      local orig_file = git_obj.toplevel .. util.path_sep .. git_obj.orig_relpath
-      if git_obj:file_info(orig_file) then
+      local orig_file = git_obj.repo.toplevel .. util.path_sep .. git_obj.orig_relpath
+      if git_obj:file_info(orig_file).relpath then
          dprintf('Moved file reset')
          git_obj.relpath = git_obj.orig_relpath
          git_obj.orig_relpath = nil
@@ -64,25 +62,24 @@ local handle_moved = function(bufnr, bcache, old_relpath)
    end
 
    if do_update then
-      git_obj.file = git_obj.toplevel .. util.path_sep .. git_obj.relpath
+      git_obj.file = git_obj.repo.toplevel .. util.path_sep .. git_obj.relpath
       bcache.file = git_obj.file
-      bcache.git_obj:update_file_info()
+      git_obj:update_file_info()
       scheduler()
       api.nvim_buf_set_name(bufnr, bcache.file)
    end
 end
 
-local watch_index = function(bufnr, gitdir)
-   dprintf('Watching index')
-   local index = gitdir .. util.path_sep .. 'index'
+local watch_gitdir = function(bufnr, gitdir)
+   dprintf('Watching git dir')
    local w = uv.new_fs_poll()
-   w:start(index, config.watch_index.interval, void(function(err)
+   w:start(gitdir, config.watch_gitdir.interval, void(function(err)
       local __FUNC__ = 'watcher_cb'
       if err then
-         dprintf('Index update error: %s', err)
+         dprintf('Git dir update error: %s', err)
          return
       end
-      dprint('Index update')
+      dprint('Git dir update')
 
       local bcache = cache[bufnr]
 
@@ -96,10 +93,10 @@ local watch_index = function(bufnr, gitdir)
 
       local git_obj = bcache.git_obj
 
-      git_obj:update_abbrev_head()
+      git_obj.repo:update_abbrev_head()
 
       scheduler()
-      Status:update(bufnr, { head = git_obj.abbrev_head })
+      Status:update(bufnr, { head = git_obj.repo.abbrev_head })
 
       local was_tracked = git_obj.object_name ~= nil
       local old_relpath = git_obj.relpath
@@ -109,7 +106,7 @@ local watch_index = function(bufnr, gitdir)
          return
       end
 
-      if config.watch_index.follow_files and was_tracked and not git_obj.object_name then
+      if config.watch_gitdir.follow_files and was_tracked and not git_obj.object_name then
 
 
          handle_moved(bufnr, bcache, old_relpath)
@@ -123,12 +120,24 @@ local watch_index = function(bufnr, gitdir)
 end
 
 
+M.detach_all = function()
+   for k, _ in pairs(cache) do
+      M.detach(k)
+   end
+end
 
 
 
 
 
-M.detach = function(bufnr, keep_signs)
+
+M.detach = function(bufnr, _keep_signs)
+
+
+
+
+
+
    bufnr = bufnr or current_buf()
    dprint('Detached')
    local bcache = cache[bufnr]
@@ -137,7 +146,7 @@ M.detach = function(bufnr, keep_signs)
       return
    end
 
-   if not keep_signs then
+   if not _keep_signs then
       signs.remove(bufnr)
    end
 
@@ -147,10 +156,25 @@ M.detach = function(bufnr, keep_signs)
    cache:destroy(bufnr)
 end
 
-M.detach_all = function()
-   for k, _ in pairs(cache) do
-      M.detach(k)
+local function parse_fugitive_uri(name)
+   local _, _, root_path, sub_module_path, commit, real_path = 
+   name:find([[^fugitive://(.*)/%.git(.*/)/(%x-)/(.*)]])
+   if commit == '0' then
+
+      commit = nil
    end
+   if root_path then
+      sub_module_path = sub_module_path:gsub("^/modules", "")
+      name = root_path .. sub_module_path .. real_path
+   end
+   return name, commit
+end
+
+if _TEST then
+   local path, commit = parse_fugitive_uri(
+   'fugitive:///home/path/to/project/.git//1b441b947c4bc9a59db428f229456619051dd133/subfolder/to/a/file.txt')
+   assert(path == '/home/path/to/project/subfolder/to/a/file.txt', string.format('GOT %s', path))
+   assert(commit == '1b441b947c4bc9a59db428f229456619051dd133', string.format('GOT %s', commit))
 end
 
 local function get_buf_path(bufnr)
@@ -162,32 +186,15 @@ local function get_buf_path(bufnr)
    end)
 
    if vim.startswith(file, 'fugitive://') and vim.wo.diff == false then
-      local orig_path = file
-      local _, _, root_path, sub_module_path, commit, real_path = 
-      file:find([[^fugitive://(.*)/%.git(.*)/(%x-)/(.*)]])
-      if root_path then
-         sub_module_path = sub_module_path:gsub("^/modules", "")
-         file = root_path .. sub_module_path .. real_path
-         file = uv.fs_realpath(file)
-         dprintf("Fugitive buffer for file '%s' from path '%s'", file, orig_path)
-         if file then
-            return file, commit
-         else
-            file = orig_path
-         end
+      local path, commit = parse_fugitive_uri(file)
+      dprintf("Fugitive buffer for file '%s' from path '%s'", path, file)
+      path = uv.fs_realpath(path)
+      if path then
+         return path, commit
       end
    end
 
    return file
-end
-
-local function in_git_dir(file)
-   for _, p in ipairs(vim.split(file, util.path_sep)) do
-      if p == '.git' then
-         return true
-      end
-   end
-   return false
 end
 
 local attach_disabled = false
@@ -226,11 +233,6 @@ local attach0 = function(cbuf, aucmd)
 
    local file, commit = get_buf_path(cbuf)
 
-   if in_git_dir(file) then
-      dprint('In git dir')
-      return
-   end
-
    local file_dir = util.dirname(file)
 
    if not file_dir or not util.path_exists(file_dir) then
@@ -239,20 +241,20 @@ local attach0 = function(cbuf, aucmd)
    end
 
    local git_obj = git.Obj.new(file)
-
-   if not git_obj.gitdir then
-      dprint('Not in git repo')
+   if not git_obj then
+      dprint('Empty git obj')
       return
    end
+   local repo = git_obj.repo
 
    scheduler()
    Status:update(cbuf, {
-      head = git_obj.abbrev_head,
-      root = git_obj.toplevel,
-      gitdir = git_obj.gitdir,
+      head = repo.abbrev_head,
+      root = repo.toplevel,
+      gitdir = repo.gitdir,
    })
 
-   if vim.startswith(file, git_obj.gitdir .. util.path_sep) then
+   if vim.startswith(file, repo.gitdir .. util.path_sep) then
       dprint('In non-standard git dir')
       return
    end
@@ -282,9 +284,10 @@ local attach0 = function(cbuf, aucmd)
    end
 
    cache[cbuf] = CacheEntry.new({
+      base = config.base,
       file = file,
       commit = commit,
-      index_watcher = watch_index(cbuf, git_obj.gitdir),
+      gitdir_watcher = watch_gitdir(cbuf, repo.gitdir),
       git_obj = git_obj,
    })
 
@@ -317,11 +320,11 @@ local attach0 = function(cbuf, aucmd)
    end
 end
 
-M._attach_enable = function()
+local function _attach_enable()
    attach_disabled = false
 end
 
-M._attach_disable = function()
+local function _attach_disable()
    attach_disabled = true
 end
 
@@ -340,6 +343,15 @@ local attach = function(cbuf, trigger)
    attach0(cbuf, trigger)
    attach_running[cbuf] = nil
 end
+
+
+
+
+
+
+
+
+M.attach = void(attach)
 
 local M0 = M
 
@@ -362,35 +374,132 @@ M._complete = function(arglead, line)
    return matches
 end
 
+
+
+
+
+
+
+
+local function parse_args_to_lua(...)
+   local args = {}
+   for i, a in ipairs({ ... }) do
+      if tonumber(a) then
+         args[i] = tonumber(a)
+      elseif a == 'false' or a == 'true' then
+         args[i] = a == 'true'
+      elseif a == 'nil' then
+         args[i] = nil
+      else
+         args[i] = a
+      end
+   end
+   return args
+end
+
 M._run_func = function(range, func, ...)
    local actions = require('gitsigns.actions')
    local actions0 = actions
+
+   local args = parse_args_to_lua(...)
+
    if type(actions0[func]) == 'function' then
-      if range and range[1] ~= range[2] then
-         actions.user_range = range
+      if range and range[1] > 0 then
+         actions.user_range = { range[2], range[3] }
       else
          actions.user_range = nil
       end
-      actions0[func](...)
+      actions0[func](unpack(args))
       actions.user_range = nil
       return
    end
    if type(M0[func]) == 'function' then
-      M0[func](...)
+      M0[func](unpack(args))
       return
    end
 end
 
-local function setup_command()
-   vim.cmd(table.concat({
-      'command!',
-      '-range',
-      '-nargs=+',
-      '-complete=customlist,v:lua.package.loaded.gitsigns._complete',
-      'Gitsigns',
-      'lua require("gitsigns")._run_func({<line1>, <line2>}, <f-args>)',
-   }, ' '))
+local _update_cwd_head = function()
+   local cwd = vim.loop.cwd()
+   local head
+   for _, bcache in pairs(cache) do
+      local repo = bcache.git_obj.repo
+      if repo.toplevel == cwd then
+         head = repo.abbrev_head
+         break
+      end
+   end
+   if not head then
+      _, _, head = git.get_repo_info(cwd)
+      scheduler()
+   end
+   if head then
+      api.nvim_set_var('gitsigns_head', head)
+   else
+      pcall(api.nvim_del_var, 'gitsigns_head')
+   end
 end
+
+local function setup_command()
+   if api.nvim_add_user_command then
+      api.nvim_add_user_command('Gitsigns', function(params)
+         local fargs = vim.split(params.args, '%s+')
+         M._run_func({ params.range, params.line1, params.line2 }, unpack(fargs))
+      end, {
+         force = true,
+         nargs = '+',
+         range = true,
+         complete = M._complete,
+      })
+   else
+      vim.cmd(table.concat({
+         'command!',
+         '-range',
+         '-nargs=+',
+         '-complete=customlist,v:lua.package.loaded.gitsigns._complete',
+         'Gitsigns',
+         'lua require("gitsigns")._run_func({<range>, <line1>, <line2>}, <f-args>)',
+      }, ' '))
+   end
+end
+
+local function wrap_func(fn, ...)
+   local args = { ... }
+   local nargs = select('#', ...)
+   return function()
+      fn(unpack(args, 1, nargs))
+   end
+end
+
+local function autocmd(event, opts)
+   local opts0 = {}
+   if type(opts) == "function" then
+      opts0.callback = wrap_func(opts)
+   else
+      opts0 = opts
+   end
+   opts0.group = 'gitsigns'
+   nvim.autocmd(event, opts0)
+end
+
+local function on_or_after_vimenter(fn)
+   if vim.v.vim_did_enter == 1 then
+      fn()
+   else
+      nvim.autocmd('VimEnter', {
+         callback = wrap_func(fn),
+         once = true,
+      })
+   end
+end
+
+
+
+
+
+
+
+
 
 M.setup = void(function(cfg)
    gs_config.build(cfg)
@@ -423,11 +532,7 @@ M.setup = void(function(cfg)
 
 
 
-   if vim.v.vim_did_enter == 1 then
-      manager.setup_signs_and_highlights()
-   else
-      vim.cmd([[autocmd VimEnter * ++once lua require('gitsigns.manager').setup_signs_and_highlights()]])
-   end
+   on_or_after_vimenter(manager.setup_signs_and_highlights)
 
    setup_command()
 
@@ -436,16 +541,16 @@ M.setup = void(function(cfg)
    api.nvim_set_decoration_provider(namespace, {
       on_win = function(_, _, bufnr, top, bot)
          local bcache = cache[bufnr]
-         if not bcache or not bcache.pending_signs then
+         if not bcache or not bcache.hunks then
             return false
          end
-         manager.apply_win_signs(bufnr, bcache.pending_signs, top + 1, bot + 1)
+         manager.apply_win_signs(bufnr, bcache.hunks, top + 1, bot + 1)
 
-
-         return config.word_diff and config.use_internal_diff
-      end,
-      on_line = function(_, _, bufnr, row)
-         manager.apply_word_diff(bufnr, row)
+         if config.word_diff and config.diff_opts.internal then
+            for i = top, bot do
+               manager.apply_word_diff(bufnr, i)
+            end
+         end
       end,
    })
 
@@ -462,31 +567,32 @@ M.setup = void(function(cfg)
       end
    end
 
-   vim.cmd([[
-    augroup gitsigns
-      autocmd!
-      autocmd VimLeavePre  * lua _G.package.loaded.gitsigns.detach_all()
-      autocmd ColorScheme  * lua _G.package.loaded.gitsigns._update_highlights()
-      autocmd BufRead      * lua _G.package.loaded.gitsigns.attach(nil, 'BufRead')
-      autocmd BufNewFile   * lua _G.package.loaded.gitsigns.attach(nil, 'BufNewFile')
-      autocmd BufWritePost * lua _G.package.loaded.gitsigns.attach(nil, 'BufWritePost')
+   nvim.augroup('gitsigns')
 
-      " vimpgrep creates and deletes lots of buffers so attaching to each one will
-      " waste lots of resource and even slow down vimgrep.
-      autocmd QuickFixCmdPre  *vimgrep* lua _G.package.loaded.gitsigns._attach_disable()
-      autocmd QuickFixCmdPost *vimgrep* lua _G.package.loaded.gitsigns._attach_enable()
-    augroup END
-  ]])
+   autocmd('VimLeavePre', M.detach_all)
+   autocmd('ColorScheme', manager.setup_signs_and_highlights)
+   autocmd('BufRead', wrap_func(M.attach, nil, 'BufRead'))
+   autocmd('BufNewFile', wrap_func(M.attach, nil, 'BufNewFile'))
+   autocmd('BufWritePost', wrap_func(M.attach, nil, 'BufWritePost'))
+
+   autocmd('OptionSet', {
+      pattern = 'fileformat',
+      callback = function()
+         require('gitsigns.actions').refresh()
+      end, })
+
+
+
+
+   autocmd('QuickFixCmdPre', { pattern = '*vimgrep*', callback = _attach_disable })
+   autocmd('QuickFixCmdPost', { pattern = '*vimgrep*', callback = _attach_enable })
 
    require('gitsigns.current_line_blame').setup()
+
+   scheduler()
+   _update_cwd_head()
+   autocmd('DirChanged', void(_update_cwd_head))
 end)
-
-M.attach = void(attach)
-
-
-M._update_highlights = function()
-   manager.setup_signs_and_highlights()
-end
 
 setmetatable(M, {
    __index = function(_, f)

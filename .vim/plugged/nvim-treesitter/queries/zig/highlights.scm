@@ -4,6 +4,10 @@
   (line_comment)
 ] @comment
 
+((line_comment) @text.note
+  (#match? @text.note "^// *zig fmt: (on|off) *$")
+)
+
 [
   variable: (IDENTIFIER)
   variable_type_function: (IDENTIFIER)
@@ -23,7 +27,7 @@ parameter: (IDENTIFIER) @parameter
     field_access: (IDENTIFIER)
     parameter: (IDENTIFIER)
   ] @type
-  (#match? @type "^[A-Z]([a-z0-9]+[A-Za-z0-9]*)*$")
+  (#match? @type "^[A-Z]")
 )
 ;; assume camelCase is a function
 (
@@ -32,7 +36,7 @@ parameter: (IDENTIFIER) @parameter
     field_access: (IDENTIFIER)
     parameter: (IDENTIFIER)
   ] @function
-  (#match? @function "^[a-z]+([A-Z][a-z0-9]*)+$")
+  (#match? @function "^[a-z]+[A-Z]+")
 )
 
 ;; assume all CAPS_1 is a constant
@@ -52,16 +56,19 @@ parameter: (IDENTIFIER) @parameter
 exception: "!" @exception
 
 (
-  (ContainerDeclType
-    [
-      (ErrorUnionExpr)
-      "enum"
-    ]
-  )
-  (ContainerMembers
-    (ContainerField (IDENTIFIER) @constant)
-  )
+  (IDENTIFIER) @variable.builtin
+  (#eq? @variable.builtin "_")
 )
+
+; (PtrTypeStart "c" @variable.builtin)
+
+; (
+;   (ContainerDeclType
+;       (ErrorUnionExpr)
+;       ; "enum"
+;   )
+;   (ContainerField (IDENTIFIER) @constant)
+; )
 
 field_constant: (IDENTIFIER) @constant
 
@@ -190,6 +197,7 @@ field_constant: (IDENTIFIER) @constant
   (BitwiseOp)
   (BitShiftOp)
   (AdditionOp)
+  (AssignOp)
   (MultiplyOp)
   (PrefixOp)
   "*"
@@ -198,7 +206,7 @@ field_constant: (IDENTIFIER) @constant
   "=>"
   ".?"
   ".*"
-  "="
+  "?"
 ] @operator
 
 [

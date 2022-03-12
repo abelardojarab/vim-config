@@ -50,6 +50,10 @@ To disable the plugin
 let g:loaded_nvimgdb = 1
 ```
 
+`:GdbStart` and `:GdbStartLLDB` use `find` and the cmake file API to try to
+tab-complete the command with the executable for the current file. To disable
+this set `g:nvimgdb_use_find_executables` or `g:nvimgdb_use_cmake_to_find_executables` to `0`.
+
 The behaviour of the plugin can be tuned by defining specific variables.
 For instance, you could overload some command keymaps:
 ```vim
@@ -113,6 +117,10 @@ To ease reproduction of an issue, set the environment variable `CI`, and
 launch NeoVim with the auxiliary script `test/nvim`. The screen cast will
 be written to the log file `spy_ui.log`. Alternatively, consider recording
 the terminal script with the ubiquitous command `script`.
+
+To support development, consider donating:
+
+  * ₿ [1E5Sny3tC5qdr1owAQqbzfyq1SFjaNBQW4](https://bitref.com/1E5Sny3tC5qdr1owAQqbzfyq1SFjaNBQW4)
 
 ## References
 

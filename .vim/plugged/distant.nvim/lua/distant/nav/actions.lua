@@ -1,7 +1,8 @@
 local editor = require('distant.editor')
+local log = require('distant.log')
 local fn = require('distant.fn')
-local u = require('distant.internal.utils')
-local v = require('distant.internal.vars')
+local u = require('distant.utils')
+local v = require('distant.vars')
 
 local actions = {}
 
@@ -19,40 +20,41 @@ local function full_path_under_cursor()
     end
 end
 
---- Wraps an action such that it is performed if the buffer is remote,
---- otherwise the else condition is performed
-actions.if_remote = function(if_f, else_f)
-    return function(...)
-        if v.buf.remote_path() then
-            if type(if_f) == 'function' then
-                if_f(...)
-            end
-        else
-            if type(else_f) == 'function' then
-                else_f(...)
-            end
-        end
-    end
-end
-
 --- Opens the selected item to be edited
 ---
 --- 1. In the case of a file, it is loaded into a buffer
 --- 2. In the case of a directory, the navigator enters it
-actions.edit = function()
+---
+--- @param opts table
+actions.edit = function(opts)
+    opts = opts or {}
+
     local path = full_path_under_cursor()
     if path ~= nil then
-        editor.open(path)
+        editor.open(vim.tbl_deep_extend('keep', {path = path}, opts))
     end
 end
 
 --- Moves up to the parent directory of the current file or directory
-actions.up = function()
+---
+--- ### Options
+---
+--- * reload: If provided, overrides the default (default: true)
+---
+--- @param opts table
+actions.up = function(opts)
+    opts = opts or {}
+
     local base_path = v.buf.remote_path()
+    local reload = true
+    if opts.reload ~= nil then
+        reload = opts.reload
+    end
+
     if base_path ~= nil then
         local parent = u.parent_path(base_path)
         if parent ~= nil then
-            editor.open(parent)
+            editor.open({path = parent, reload = reload})
         end
     end
 end
@@ -97,17 +99,12 @@ actions.mkdir = function(opts)
         end
 
         local path = u.join_path(base_path, name)
-        local err, success = fn.mkdir(path, {all = true})
+        local err = fn.create_dir({path = path, all = true})
 
-        if success then
-            editor.open(base_path, {reload = true})
+        if not err then
+            editor.open({path = base_path, reload = true})
         else
-            local msg = 'Failed to create ' .. path
-            if err then
-                msg = msg .. ': ' .. err
-            end
-
-            u.log_err(msg)
+            log.error(string.format('Failed to create %s: %s', path, err))
         end
     end
 end
@@ -131,17 +128,12 @@ actions.rename = function(opts)
                 return
             end
 
-            local err, success = fn.rename(old_path, new_path)
+            local err = fn.rename({src = old_path, dst = new_path})
 
-            if success then
-                editor.open(base_path, {reload = true})
+            if not err then
+                editor.open({path = base_path, reload = true})
             else
-                local msg = 'Failed to rename ' .. old_path .. ' to ' .. new_path
-                if err then
-                    msg = msg .. ': ' .. err
-                end
-
-                u.log_err(msg)
+                log.error(string.format('Failed to rename %s to %s: %s', old_path, new_path, err))
             end
         end
     end
@@ -169,17 +161,12 @@ actions.remove = function(opts)
                 end
             end
 
-            local err, success = fn.remove(path, opts)
+            local err = fn.remove(vim.tbl_extend('keep', {path = path}, opts))
 
-            if success then
-                editor.open(base_path, {reload = true})
+            if not err then
+                editor.open({path = base_path, reload = true})
             else
-                local msg = 'Failed to remove ' .. path
-                if err then
-                    msg = msg .. ': ' .. err
-                end
-
-                u.log_err(msg)
+                log.error(string.format('Failed to remove %s: %s', path, err))
             end
         end
     end

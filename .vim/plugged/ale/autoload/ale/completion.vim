@@ -16,7 +16,7 @@ onoremap <silent> <Plug>(ale_show_completion_menu) <Nop>
 let g:ale_completion_delay = get(g:, 'ale_completion_delay', 100)
 let g:ale_completion_excluded_words = get(g:, 'ale_completion_excluded_words', [])
 let g:ale_completion_max_suggestions = get(g:, 'ale_completion_max_suggestions', 50)
-let g:ale_completion_autoimport = get(g:, 'ale_completion_autoimport', 0)
+let g:ale_completion_autoimport = get(g:, 'ale_completion_autoimport', 1)
 let g:ale_completion_tsserver_remove_warnings = get(g:, 'ale_completion_tsserver_remove_warnings', 0)
 
 let s:timer_id = -1
@@ -1001,12 +1001,11 @@ endfunction
 
 function! ale#completion#HandleUserData(completed_item) abort
     let l:user_data_json = get(a:completed_item, 'user_data', '')
-    let l:user_data = !empty(l:user_data_json)
-    \   ? ale#util#FuzzyJSONDecode(l:user_data_json, v:null)
-    \   : v:null
+    let l:user_data = type(l:user_data_json) is v:t_dict
+    \   ? l:user_data_json
+    \   : ale#util#FuzzyJSONDecode(l:user_data_json, {})
 
-    if type(l:user_data) isnot v:t_dict
-    \|| get(l:user_data, '_ale_completion_item', 0) isnot 1
+    if !has_key(l:user_data, '_ale_completion_item')
         return
     endif
 

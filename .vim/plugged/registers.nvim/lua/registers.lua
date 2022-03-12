@@ -1,50 +1,7 @@
 local config = require "registers.config"
 
-local register_map = {
-	{
-		type = "selection",
-		registers = {"*", "+"},
-	},
-	{
-		type = "unnamed",
-		registers = {"\""},
-	},
-	{
-		type = "delete",
-		registers = {"-"},
-	},
-	{
-		type = "read-only",
-		registers = {":", ".", "%"},
-	},
-	{
-		type = "last search pattern",
-		registers = {"/"},
-	},
-	{
-		type = "numbered",
-		registers = {"0", "1", "2", "3", "4", "5", "7", "8", "9"},
-	},
-	{
-		type = "named",
-		registers = {
-			"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m",
-			"n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z",
-		},
-	},
-	{
-		type = "alternate buffer",
-		registers = {"#"},
-	},
-	{
-		type = "expression",
-		registers = {"="},
-	},
-	{
-		type = "black hole",
-		registers = {"_"},
-	},
-}
+-- All available registers
+local ALL_REGISTERS = { "*", "+", "\"", "-", "/", "_", "=", "#", "%", ".", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z" }
 
 local buf, win, register_lines, invocation_mode, operator_count, cursor_is_last
 
@@ -73,47 +30,47 @@ local function read_registers()
 	-- Reset the filled data
 	register_lines = {}
 
-	-- Loop through all the types
-	for _, reg_type in ipairs(register_map) do
-		-- Loop through the separate registers of the type
-		for _, reg in ipairs(reg_type.registers) do
-			-- The contents of a register
-			local raw = register_contents(reg)
+	-- Loop through all the registers to show
+	for i = 1, #cfg.show do
+        -- Get the register character
+        local reg = cfg.show:sub(i, i)
 
-			-- Skip empty registers
-			local is_empty = #raw > 0
+        -- The contents of a register
+        local raw = register_contents(reg)
 
-			-- Mark the register as empty if there's only whitespace
-			if is_empty and cfg.hide_only_whitespace == 1 then
-				is_empty = #(raw:match("^%s*(.-)%s*$")) > 0
-			end
+        -- Skip empty registers
+        local is_empty = #raw > 0
 
-			if is_empty then
-				if cfg.trim_whitespace == 1 then
-					-- Trim the whitespace at the start and end
-					raw = raw:match("^%s*(.-)%s*$")
-				end
+        -- Mark the register as empty if there's only whitespace
+        if is_empty and cfg.hide_only_whitespace == 1 then
+            is_empty = #(raw:match("^%s*(.-)%s*$")) > 0
+        end
 
-				-- Display the whitespace of the line as whitespace
-				local contents = raw:gsub("\t", cfg.tab_symbol)
-					-- Replace spaces
-					:gsub(" ", cfg.space_symbol)
-					-- Replace newlines
-					:gsub("[\n\r]", cfg.return_symbol)
+        if is_empty then
+            if cfg.trim_whitespace == 1 then
+                -- Trim the whitespace at the start and end
+                raw = raw:match("^%s*(.-)%s*$")
+            end
 
-				-- Get the line with all the information
-				local line = string.format("%s: %s", reg, contents)
+            -- Display the whitespace of the line as whitespace
+            local contents = raw:gsub("\t", cfg.tab_symbol)
+                -- Replace spaces
+                :gsub(" ", cfg.space_symbol)
+                -- Replace newlines
+                :gsub("[\n\r]", cfg.return_symbol)
 
-				register_lines[#register_lines + 1] = {
-					register = reg,
-					line = line,
-					data = raw,
-				}
-			elseif cfg.show_empty_registers == 1 then
-				-- Keep track of the empty registers
-				empty_registers[#empty_registers + 1] = reg
-			end
-		end
+            -- Get the line with all the information
+            local line = string.format("%s: %s", reg, contents)
+
+            register_lines[#register_lines + 1] = {
+                register = reg,
+                line = line,
+                data = raw,
+            }
+        elseif cfg.show_empty_registers == 1 then
+            -- Keep track of the empty registers
+            empty_registers[#empty_registers + 1] = reg
+        end
 	end
 
 	-- Add another line with the empty registers if the option is set
@@ -248,6 +205,9 @@ end
 local function apply_register(register)
 	local sleep = true
 
+    -- Keep track of how we select the register
+    local register_selected_with_return = register == nil
+
 	-- Try to find the line of the register
 	local line
 	if not register then
@@ -323,9 +283,12 @@ local function apply_register(register)
 			end
 		end
 	else
+        local paste_in_normal_mode = config().paste_in_normal_mode
+        local should_paste_in_normal_mode = paste_in_normal_mode == 1 or (paste_in_normal_mode == 2 and register_selected_with_return)
+
 		-- Define the keys pressed based on the mode
 		local keys
-		if invocation_mode == "n" then
+		if invocation_mode == "n" and not should_paste_in_normal_mode then
 			-- When the popup is opened with the " key in normal mode
 			if operator_count > 0 then
 				-- Allow 10".. using the stored operator count
@@ -341,8 +304,7 @@ local function apply_register(register)
 			keys = "gv\"" .. register
 		else
 			-- When the popup is opened without any mode passed, i.e. directly from the
-			-- function call
-			-- Automatically paste it
+			-- function call, or if "registers_paste_in_normal_mode" is set, automatically paste it
 			keys = "\"" .. register .. "p"
 		end
 
@@ -363,17 +325,15 @@ local function set_mappings()
 	}
 
 	-- Create a mapping for all the registers
-	for _, reg_type in ipairs(register_map) do
-		for _, reg in ipairs(reg_type.registers) do
-			mappings[reg] = ("apply_register(%q)"):format(reg)
+    for _, reg in ipairs(ALL_REGISTERS) do
+        mappings[reg] = ("apply_register(%q)"):format(reg)
 
-			-- Also map upper case characters if applicable
-			local reg_upper_case = reg:upper()
-			if reg_upper_case ~= reg then
-				mappings[reg_upper_case] = ("apply_register(%q)"):format(reg_upper_case)
-			end
-		end
-	end
+        -- Also map upper case characters if applicable
+        local reg_upper_case = reg:upper()
+        if reg_upper_case ~= reg then
+            mappings[reg_upper_case] = ("apply_register(%q)"):format(reg_upper_case)
+        end
+    end
 
 	-- Map all the keys
 	local map_options = {
@@ -409,35 +369,16 @@ local function registers(mode)
 	-- Keep track of the mode that's used to open the popup
 	invocation_mode = mode
 
-	-- Start the timer to open the window with the delay from the configuration or until a key is pressed before that
-	local status = vim.api.nvim_call_function("wait", {config().delay, "getchar(1)"})
-	if status < 0 then
-		-- No character pressed, open the window
-		
-		-- Close the old window if it's still open
-		close_window()
+    -- Close the old window if it's still open
+    close_window()
 
-		open_window()
-		set_mappings()
-		update_view()
-	else
-		-- Get the key pressed
-		local number_key_pressed = vim.api.nvim_call_function("getchar", {})
-		local key_pressed = vim.api.nvim_call_function("nr2char", {number_key_pressed})
-
-		-- Get the key used to open the registers
-		local register_key
-		if invocation_mode == "i" then
-			-- Get the proper keycode for <C-R>
-			register_key = vim.api.nvim_replace_termcodes("<c-r>", true, true, true)
-		else
-			register_key = "\""
-		end
-
-		-- Press the previously pressed keys
-		-- TODO: is there a nicer way to do this?
-		vim.api.nvim_feedkeys(register_key .. key_pressed, "n", true)
-	end
+    -- Check if the current buffer is modifiable, otherwise don't open it
+    local current_buf = vim.api.nvim_get_current_buf()
+    if vim.api.nvim_buf_get_option(current_buf, "modifiable") then
+        open_window()
+        set_mappings()
+        update_view()
+    end
 end
 
 -- Public functions

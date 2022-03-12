@@ -1,5 +1,6 @@
 local utils = require("flutter-tools.utils")
 local path = require("flutter-tools.utils.path")
+local color = require("flutter-tools.lsp.color")
 
 local api = vim.api
 local lsp = vim.lsp
@@ -7,6 +8,7 @@ local fn = vim.fn
 local fmt = string.format
 
 local FILETYPE = "dart"
+local SERVER_NAME = "dartls"
 
 local M = {
   lsps = {},
@@ -36,8 +38,25 @@ local function create_debug_log(level)
   return function(msg)
     local levels = require("flutter-tools.config").debug_levels
     if level <= levels.DEBUG then
-      utils.notify(msg)
+      require("flutter-tools.ui").notify({ msg }, { level = level })
     end
+  end
+end
+
+---Handle progress notifications from the server
+---@param err table
+---@param result table
+---@param ctx table
+local function handle_progress(err, result, ctx)
+  -- Call the existing handler for progress so plugins can also handle the event
+  -- but only whilst not editing the buffer as dartls can be spammy
+  if api.nvim_get_mode().mode ~= "i" then
+    vim.lsp.handlers["$/progress"](err, result, ctx)
+  end
+  -- NOTE: this event gets called whenever the analysis server has completed some work
+  -- rather than just when the server has started.
+  if result and result.value and result.value.kind == "end" then
+    vim.cmd("doautocmd User FlutterToolsLspAnalysisComplete")
   end
 end
 
@@ -65,14 +84,33 @@ local function get_defaults(opts)
       },
     },
     handlers = {
-      ["dart/textDocument/publishClosingLabels"] = require("flutter-tools.labels").closing_tags,
-      ["dart/textDocument/publishOutline"] = require("flutter-tools.outline").document_outline,
-      ["dart/textDocument/publishFlutterOutline"] = require("flutter-tools.guides").widget_guides,
+      -- TODO: can this be replaced with the initialized capability
+      ["$/progress"] = handle_progress,
+      ["dart/textDocument/publishClosingLabels"] = utils.lsp_handler(
+        require("flutter-tools.labels").closing_tags
+      ),
+      ["dart/textDocument/publishOutline"] = utils.lsp_handler(
+        require("flutter-tools.outline").document_outline
+      ),
+      ["dart/textDocument/publishFlutterOutline"] = utils.lsp_handler(
+        require("flutter-tools.guides").widget_guides
+      ),
+      ["textDocument/documentColor"] = require("flutter-tools.lsp.color").on_document_color,
+    },
+    commands = {
+      ["refactor.perform"] = require("flutter-tools.lsp.commands").refactor_perform,
     },
     capabilities = (function()
       local capabilities = lsp.protocol.make_client_capabilities()
       capabilities.workspace.configuration = true
+      -- This setting allows document changes to be made via the lsp e.g. renaming a file when
+      -- the containing class is renamed also
+      -- @see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workspaceEdit
+      capabilities.workspace.workspaceEdit.documentChanges = true
       capabilities.textDocument.completion.completionItem.snippetSupport = true
+      capabilities.textDocument.documentColor = {
+        dynamicRegistration = true,
+      }
       -- @see: https://github.com/hrsh7th/nvim-compe#how-to-use-lsp-snippet
       capabilities.textDocument.completion.completionItem.resolveSupport = {
         properties = {
@@ -87,6 +125,56 @@ local function get_defaults(opts)
   return config
 end
 
+function M.restart()
+  local client = utils.find(vim.lsp.get_active_clients(), function(client)
+    return client.name == SERVER_NAME
+  end)
+  if client then
+    local bufs = lsp.get_buffers_by_client_id(client.id)
+    client.stop()
+    local client_id = lsp.start_client(client.config)
+    for _, buf in pairs(bufs) do
+      lsp.buf_attach_client(buf, client_id)
+    end
+  end
+end
+
+local function get_dartls_client(server_name)
+  server_name = server_name or SERVER_NAME
+  for _, buf in pairs(vim.fn.getbufinfo({ bufloaded = true })) do
+    if vim.bo[buf.bufnr].filetype == FILETYPE then
+      local clients = lsp.buf_get_clients(buf.bufnr)
+      for _, client in ipairs(clients) do
+        if client.config.name == server_name then
+          return client
+        end
+      end
+    end
+  end
+end
+
+function M.get_lsp_root_dir()
+  local client = get_dartls_client()
+  return client and client.config.root_dir or nil
+end
+
+-- FIXME: I'm not sure how to correctly wait till a server is ready before
+-- sending this request. Ideally we would wait till the server is ready.
+M.document_color = function()
+  local active_clients = vim.tbl_map(function(c)
+    return c.id
+  end, vim.lsp.get_active_clients())
+  local dartls = get_dartls_client()
+  if
+    dartls
+    and vim.tbl_contains(active_clients, dartls.id)
+    and dartls.server_capabilities.colorProvider
+  then
+    color.document_color()
+  end
+end
+M.on_document_color = color.on_document_color
+
 ---This was heavily inspired by nvim-metals implementation of the attach functionality
 ---@return boolean
 function M.attach()
@@ -96,27 +184,21 @@ function M.attach()
 
   debug_log("attaching LSP")
 
-  local config = utils.merge({ name = "dartls" }, user_config)
+  local config = utils.merge({ name = SERVER_NAME }, user_config, { "color" })
 
   local bufnr = api.nvim_get_current_buf()
 
   -- Check to see if dartls is already attached, and if so attatch
-  for _, buf in pairs(vim.fn.getbufinfo({ bufloaded = true })) do
-    if api.nvim_buf_get_option(buf.bufnr, "filetype") == FILETYPE then
-      local clients = lsp.buf_get_clients(buf.bufnr)
-      for _, client in ipairs(clients) do
-        if client.config.name == config.name then
-          lsp.buf_attach_client(bufnr, client.id)
-          return true
-        end
-      end
-    end
+  local existing_client = get_dartls_client(config.name)
+  if existing_client then
+    lsp.buf_attach_client(bufnr, existing_client.id)
+    return true
   end
 
   config.filetypes = { FILETYPE }
 
   local executable = require("flutter-tools.executable")
-  --- TODO if a user specifies a command we do not need to call
+  --- TODO: if a user specifies a command we do not need to call
   --- executable.dart_sdk_root_path
   executable.get(function(paths)
     local defaults = get_defaults({ flutter_sdk = paths.flutter_sdk })
@@ -125,7 +207,7 @@ function M.attach()
 
     config.cmd = config.cmd
       or {
-        executable.dart_bin_name,
+        paths.dart_bin,
         analysis_server_snapshot_path(root_path),
         "--lsp",
       }
@@ -138,6 +220,7 @@ function M.attach()
     config.init_options = merge_config(defaults.init_options, config.init_options)
     config.handlers = merge_config(defaults.handlers, config.handlers)
     config.settings = merge_config(defaults.settings, { dart = config.settings })
+    config.commands = merge_config(defaults.commands, config.commands)
 
     config.on_init = function(client, _)
       return client.notify("workspace/didChangeConfiguration", { settings = config.settings })

@@ -25,11 +25,16 @@ mappings.default_mappings = config.values.default_mappings
       ["<C-u>"] = actions.preview_scrolling_up,
       ["<C-d>"] = actions.preview_scrolling_down,
 
+      ["<PageUp>"] = actions.results_scrolling_up,
+      ["<PageDown>"] = actions.results_scrolling_down,
+
       ["<Tab>"] = actions.toggle_selection + actions.move_selection_worse,
       ["<S-Tab>"] = actions.toggle_selection + actions.move_selection_better,
       ["<C-q>"] = actions.send_to_qflist + actions.open_qflist,
       ["<M-q>"] = actions.send_selected_to_qflist + actions.open_qflist,
       ["<C-l>"] = actions.complete_tag,
+      ["<C-_>"] = actions.which_key, -- keys from pressing <C-/>
+      ["<C-w>"] = { "<c-s-w>", type = "command" },
     },
 
     n = {
@@ -53,9 +58,16 @@ mappings.default_mappings = config.values.default_mappings
 
       ["<Down>"] = actions.move_selection_next,
       ["<Up>"] = actions.move_selection_previous,
+      ["gg"] = actions.move_to_top,
+      ["G"] = actions.move_to_bottom,
 
       ["<C-u>"] = actions.preview_scrolling_up,
       ["<C-d>"] = actions.preview_scrolling_down,
+
+      ["<PageUp>"] = actions.results_scrolling_up,
+      ["<PageDown>"] = actions.results_scrolling_down,
+
+      ["?"] = actions.which_key,
     },
   }
 
@@ -222,6 +234,7 @@ mappings.execute_keymap = function(prompt_bufnr, keymap_identifier)
   assert(key_func, string.format("Unsure of how we got this failure: %s %s", prompt_bufnr, keymap_identifier))
 
   key_func(prompt_bufnr)
+  vim.cmd [[ doautocmd User TelescopeKeymap ]]
 end
 
 mappings.clear = function(prompt_bufnr)

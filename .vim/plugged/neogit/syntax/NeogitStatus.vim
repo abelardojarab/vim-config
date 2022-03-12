@@ -2,7 +2,7 @@ if exists("b:current_syntax")
   finish
 endif
 
-syn match NeogitObjectId /^[a-z0-9]\{7} /
+syn match NeogitObjectId /^[a-z0-9]\{7,}\>/
 syn match NeogitCommitMessage /.*/ contained
 syn match NeogitBranch /\S\+/ contained nextgroup=NeogitCommitMessage
 syn match NeogitRemote /\S\+/ contained nextgroup=NeogitCommitMessage
@@ -12,7 +12,7 @@ syn match NeogitStash /stash@{[0-9]*}\ze/
 syn match NeogitUnmergedInto /Unmerged into/ contained
 syn match NeogitUnpulledFrom /Unpulled from/ contained
 
-let b:sections = ["Untracked files", "Unstaged changes", "Unmerged changes", "Unpulled changes", "Staged changes", "Stashes"]
+let b:sections = ["Untracked files", "Unstaged changes", "Unmerged changes", "Unpulled changes", "Recent commits", "Staged changes", "Stashes"]
 
 for section in b:sections
   let id = join(split(section, " "), "")
@@ -39,12 +39,6 @@ hi def link NeogitUnmergedInto Function
 hi def link NeogitUnpulledFrom Function
 
 hi def link NeogitStash Comment
-
-hi def NeogitDiffAddHighlight guibg=#404040 guifg=#859900
-hi def NeogitDiffDeleteHighlight guibg=#404040 guifg=#dc322f
-hi def NeogitDiffContextHighlight guibg=#333333 guifg=#b2b2b2
-hi def NeogitHunkHeader guifg=#cccccc guibg=#404040
-hi def NeogitHunkHeaderHighlight guifg=#cccccc guibg=#4d4d4d
 
 hi def NeogitFold guifg=None guibg=None
 

@@ -24,12 +24,13 @@ end
 ---@param on_complete function
 function M.execute(action, bufnr, on_complete)
   bufnr = bufnr or 0
+  on_complete = on_complete and require("flutter-tools.utils").lsp_handler(on_complete) or nil
   -- textDocument/codeAction can return either Command[] or CodeAction[].
   -- If it is a CodeAction, it can have either an edit, a command or both.
   -- Edits should be executed first
   if action.edit or type(action.command) == "table" then
     if action.edit then
-      vim.lsp.util.apply_workspace_edit(action.edit)
+      vim.lsp.util.apply_workspace_edit(action.edit, "utf-8")
     end
     if type(action.command) == "table" then
       vim.lsp.buf_request(bufnr, "workspace/executeCommand", action.command, on_complete)

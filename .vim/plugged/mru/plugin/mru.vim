@@ -117,6 +117,13 @@ if !exists('MRU_FuzzyMatch')
   endif
 endif
 
+" Controls whether the alternate file (:help alternate-file) is set when the
+" plugin is loaded to the first file in the MRU list. Default is to set the
+" alternate file.
+if !exists('MRU_Set_Alternate_File')
+  let MRU_Set_Alternate_File = 0
+endif
+
 " Format of the file names displayed in the MRU window.
 " The default is to display the filename followed by the complete path to the
 " file in parenthesis. This variable controls the expressions used to format
@@ -397,7 +404,7 @@ func! s:MRU_Window_Edit_File(fname, multi, edit_type, open_type) abort
   let esc_fname = s:MRU_escape_filename(a:fname)
 
   if a:open_type ==# 'newwin_horiz'
-    " Edit the file in a new horizontally split window above the previous
+    " Edit the file in a new horizontally split window below the previous
     " window
     wincmd p
     if bufexists(esc_fname)
@@ -406,7 +413,7 @@ func! s:MRU_Window_Edit_File(fname, multi, edit_type, open_type) abort
       exe 'belowright new ' . esc_fname
     endif
   elseif a:open_type ==# 'newwin_vert'
-    " Edit the file in a new vertically split window above the previous
+    " Edit the file in a new vertically split window right of the previous
     " window
     wincmd p
     if bufexists(esc_fname)
@@ -423,7 +430,7 @@ func! s:MRU_Window_Edit_File(fname, multi, edit_type, open_type) abort
     " If the selected file is already open in one of the windows,
     " jump to it
     let winnum = bufwinnr('^' . a:fname . '$')
-    if winnum != -1
+    if winnum != -1 && g:MRU_Use_Current_Window == 0
       exe winnum . 'wincmd w'
     else
       if g:MRU_Auto_Close == 1 && g:MRU_Use_Current_Window == 0
@@ -474,14 +481,18 @@ func! s:MRU_Window_Edit_File(fname, multi, edit_type, open_type) abort
 	  exe 'sview ' . esc_fname
 	endif
       else
+	let mod = ''
+	if g:MRU_Use_Current_Window
+	  let mod = 'keepalt '
+	endif
 	if a:edit_type ==# 'edit'
 	  if bufexists(esc_fname)
-	    exe 'buffer ' . esc_fname
+	    exe mod . 'buffer ' . esc_fname
 	  else
-	    exe 'edit ' . esc_fname
+	    exe mod . 'edit ' . esc_fname
 	  endif
 	else
-	  exe 'view ' . esc_fname
+	  exe mod . 'view ' . esc_fname
 	endif
       endif
     endif
@@ -595,7 +606,7 @@ func! s:MRU_Open_Window(pat, splitdir, winsz) abort
       let bufnum = bufnr(bname)
       if bufnum == -1
 	if split_window
-	  let cmd = 'botright split edit ' . bname
+	  let cmd = 'botright split ' . bname
 	else
 	  let cmd = 'edit ' . bname
 	endif
@@ -644,7 +655,12 @@ func! s:MRU_Open_Window(pat, splitdir, winsz) abort
 
   " Mark the buffer as scratch
   setlocal buftype=nofile
-  setlocal bufhidden=delete
+  if g:MRU_Use_Current_Window
+    " avoid using mru buffer as alternate file
+    setlocal bufhidden=wipe
+  else
+    setlocal bufhidden=delete
+  endif
   setlocal noswapfile
   setlocal nobuflisted
   setlocal nowrap
@@ -844,7 +860,11 @@ func! s:MRU_Toggle(pat, splitdir) abort
     let winnum = bufwinnr(s:MRU_buf_name)
     if winnum != -1
         exe winnum . 'wincmd w'
-        silent! close
+        if g:MRU_Use_Current_Window && !empty(expand('#'))
+          silent! b #
+        else
+          silent! close
+        endif
     else
         call s:MRU_Cmd(a:pat, a:splitdir, '')
     endif
@@ -991,6 +1011,20 @@ endfunc
 " Load the MRU list on plugin startup
 call s:MRU_LoadList()
 
+" Set the first entry in the MRU list as the alternate file
+" Credit to Martin Roa Villescas (https://github.com/mroavi) for the patch.
+" bufadd() is available starting from Vim 8.1.1610
+if g:MRU_Set_Alternate_File == 1 &&
+      \ (v:version >= 802 || has('patch-8.1.1610') || has('nvim'))
+  if !empty(s:MRU_files)
+    let first_mru_file = s:MRU_files[0]
+    if filereadable(first_mru_file)
+      call bufadd(first_mru_file)
+      let @# = first_mru_file
+    endif
+  endif
+endif
+
 " MRU autocommands {{{1
 " Autocommands to update the most recently used files
 augroup MRUAutoCmds
@@ -1034,9 +1068,14 @@ func s:MRU_FZF_Run() abort
     call s:MRU_Warn_Msg('FZF plugin is not present')
     return
   endif
+
+  " Load the latest MRU list
+  call s:MRU_LoadList()
+
   call fzf#run(fzf#wrap({'source' : s:MRU_files,
-	\ 'sink' : function('s:MRU_FZF_EditFile'),
-	\ 'down' : g:MRU_Window_Height}, 0))
+    \ 'options' : '--no-sort',
+    \ 'sink' : function('s:MRU_FZF_EditFile'),
+    \ 'down' : g:MRU_Window_Height}, 0))
 endfunc
 command! -nargs=0 FZFMru call s:MRU_FZF_Run()
 

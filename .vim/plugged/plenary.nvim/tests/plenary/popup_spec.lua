@@ -27,7 +27,7 @@ describe("plenary.popup", function()
       highlight = "PopupColor1",
     })
 
-    eq("Normal:PopupColor1", vim.api.nvim_win_get_option(win_id, "winhl"))
+    eq("Normal:PopupColor1,EndOfBuffer:PopupColor1", vim.api.nvim_win_get_option(win_id, "winhl"))
   end)
 
   it("can create a border", function()
@@ -42,6 +42,23 @@ describe("plenary.popup", function()
     local border_id = config.border.win_id
     assert(border_id, "Has a border win id")
     eq(true, vim.api.nvim_win_is_valid(border_id))
+  end)
+
+  it("can apply a border highlight", function()
+    local _, opts = popup.create("hello there", {
+      border = true,
+      borderhighlight = "PopupColor2",
+    })
+
+    local border_win_id = opts.border.win_id
+    eq("Normal:PopupColor2", vim.api.nvim_win_get_option(border_win_id, "winhl"))
+  end)
+
+  it("can ignore border highlight with no border", function()
+    local _ = popup.create("hello there", {
+      border = false,
+      borderhighlight = "PopupColor3",
+    })
   end)
 
   it("can do basic padding", function()
@@ -74,7 +91,7 @@ describe("plenary.popup", function()
   describe("borderchars", function()
     local test_border = function(name, borderchars, expected)
       it(name, function()
-        local win_id, config = popup.create("all the plus signs", {
+        local _, config = popup.create("all the plus signs", {
           line = 8,
           col = 55,
           padding = { 0, 3, 0, 3 },

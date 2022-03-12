@@ -68,8 +68,7 @@ function M.handle_log(data)
   devtools_profiler_url = try_get_tools_flutter(data)
 
   if devtools_profiler_url then
-    start_browser()
-    ui.notify({ "Detected devtools url", "Execute FlutterCopyProfilerUrl to copy it" })
+    M.handle_devtools_available()
     return
   end
 
@@ -80,11 +79,24 @@ function M.handle_log(data)
   profiler_url = try_get_profiler_url_chrome(data)
 
   if profiler_url then
+    M.register_profiler_url(profiler_url)
+  end
+end
+
+function M.register_profiler_url(url)
+  if url then
+    profiler_url = url
     local autostart = require("flutter-tools.config").get("dev_tools").autostart
     if autostart then
       M.start()
+      M.handle_devtools_available()
     end
   end
+end
+
+function M.handle_devtools_available()
+  start_browser()
+  ui.notify({ "Detected devtools url", "Execute FlutterCopyProfilerUrl to copy it" })
 end
 
 --[[ {
@@ -100,8 +112,8 @@ end
 ---Open dev tools
 ---@param _ number
 ---@param data string
----@param __ Job
-local function handle_start(_, data, __)
+---@param _ Job
+local function handle_start(_, data, _)
   if #data > 0 then
     local json = fn.json_decode(data)
     if json and json.params then
@@ -109,7 +121,7 @@ local function handle_start(_, data, __)
       devtools_url = string.format("http://%s:%s", json.params.host, json.params.port)
       start_browser()
       local msg = string.format("Serving DevTools at %s", devtools_url)
-      ui.notify({ msg }, 20000)
+      ui.notify({ msg }, { timeout = 20000 })
     end
   end
 end
@@ -117,8 +129,8 @@ end
 ---Handler errors whilst opening dev tools
 ---@param _ number
 ---@param data string
----@param __ Job
-local function handle_error(_, data, __)
+---@param _ Job
+local function handle_error(_, data, _)
   for _, str in ipairs(data) do
     if str:match("No active package devtools") then
       executable.flutter(function(cmd)
@@ -164,7 +176,7 @@ function M.start()
       job:start()
     end)
   else
-    utils.notify("DevTools are already running!")
+    ui.notify({ "DevTools are already running!" })
   end
 end
 

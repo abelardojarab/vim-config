@@ -89,9 +89,9 @@ function M.extract_device_props(result, device_type)
   return lines, devices_by_line, highlights
 end
 
-function M.select_device()
+function M.select_device(args)
   if not vim.b.devices then
-    return utils.notify("Sorry there is no device on this line")
+    return ui.notify({ "Sorry there is no device on this line" })
   end
   local lnum = fn.line(".")
   local line = api.nvim_buf_get_lines(0, lnum - 1, lnum, false)
@@ -100,7 +100,12 @@ function M.select_device()
     if device.type == EMULATOR then
       M.launch_emulator(device)
     else
-      require("flutter-tools.commands").run({ device = device })
+      if args then
+        vim.list_extend(args, { "-d", device.id })
+        require("flutter-tools.commands").run({ cli_args = args })
+      else
+        require("flutter-tools.commands").run({ device = device })
+      end
     end
     api.nvim_win_close(0, true)
   end
@@ -165,7 +170,7 @@ function M.list_emulators()
       show_emulators(j:result())
     end))
     job:after_failure(vim.schedule_wrap(function(j)
-      return ui.notify(j:stderr_result())
+      return ui.notify(j:stderr_result(), { timeout = 5000, level = ui.ERROR })
     end))
     job:start()
   end)
@@ -197,7 +202,7 @@ function M.list_devices()
     job:after_failure(vim.schedule_wrap(function(j)
       local result = j:result()
       local message = not vim.tbl_isempty(result) and result or j:stderr_result()
-      ui.notify(message)
+      ui.notify(message, { level = ui.ERROR })
     end))
     job:start()
   end)

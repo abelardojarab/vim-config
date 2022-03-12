@@ -16,7 +16,6 @@
 TSDanger	nvim-treesitter.txt	/*TSDanger*
 TSWarning	nvim-treesitter.txt	/*TSWarning*
 hl-None	nvim-treesitter.txt	/*hl-None*
-hl-TSAnnotation	nvim-treesitter.txt	/*hl-TSAnnotation*
 hl-TSAttribute	nvim-treesitter.txt	/*hl-TSAttribute*
 hl-TSBoolean	nvim-treesitter.txt	/*hl-TSBoolean*
 hl-TSCharacter	nvim-treesitter.txt	/*hl-TSCharacter*

@@ -6,78 +6,10 @@ A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
 - **Requires neovim 0.5+**
-- **Requires distant 0.12.0+**
+- **Requires distant 0.15.0+**
 
 🚧 **(Alpha stage software) This plugin is in rapid development and may
 break or change frequently!** 🚧
-
-## Installation
-
-Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
-
-```lua
-use {
-  'chipsenkbeil/distant.nvim',
-  config = function()
-    local actions = require('distant.nav.actions')
-
-    require('distant').setup {
-      -- Apply these settings to the specific host
-      ['example.com'] = {
-        launch = {
-          -- Specify a specific location for the distant binary on the remote machine
-          distant = '/path/to/distant',
-        }
-
-        lsp = {
-          -- Specify an LSP to run for a specific project
-          ['My Project'] = {
-            cmd = '/path/to/rust-analyzer',
-            root_dir = '/path/to/project/root',
-
-            -- Do your on_attach with keybindings like you would with
-            -- nvim-lspconfig
-            on_attach = function() 
-              -- Apply some general bindings for every buffer supporting lsp
-            end,
-          },
-        },
-      },
-
-      -- Apply these settings to any remote host
-      ['*'] = {
-        -- Apply these launch settings to all hosts
-        launch = {
-          -- Apply additional CLI options to the listening server, such as
-          -- shutting down when there is no connection to it after 30 seconds
-          extra_server_args = '"--shutdown-after 30"',
-        },
-
-        -- Specify mappings to apply on remote file buffers
-        -- Presently, the only one you would want is some way to trigger
-        -- file navigation
-        file = {
-          mappings = {
-            ['-']         = actions.up,
-          },
-        },
-
-        -- Specify mappings to apply on remote directory bufffers
-        dir = {
-          mappings = {
-            ['<Return>']  = actions.edit,
-            ['-']         = actions.up,
-            ['K']         = actions.mkdir,
-            ['N']         = actions.newfile,
-            ['R']         = actions.rename,
-            ['D']         = actions.remove,
-          }
-        },
-      }
-    }
-  end
-}
-```
 
 ## Features
 
@@ -92,8 +24,78 @@ Supports the following features against remote machines:
 
 Support is coming up for these features:
 
-- [ ] Optional [lir.nvim](https://github.com/tamago324/lir.nvim) integration
 - [ ] Optional [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration
+
+## Demo
+
+### Intro Video
+
+Demonstrates using distant.nvim to edit files and use a language server on a
+remote machine.
+
+[![Intro Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
+
+### v0.1.0 Update
+
+Demonstrates the new release of distant.nvim (v0.1.0) leveraging distant's new
+lua module (v0.15.0). Main highlights include:
+
+- integrated ssh authentication
+- ssh mode
+- refactored and simplified vim & Lua APIs
+- complete help documentation
+
+[![v0.1.0 update](https://img.youtube.com/vi/wVAsbpByQ3o/0.jpg)](https://www.youtube.com/watch?v=wVAsbpByQ3o)
+
+## Installation & Setup
+
+Using [packer.nvim](https://github.com/wbthomason/packer.nvim), the quickest
+way to get up and running is the following:
+
+```lua
+use {
+  'chipsenkbeil/distant.nvim',
+  config = function()
+    require('distant').setup {
+      -- Applies Chip's personal settings to every machine you connect to
+      --
+      -- 1. Ensures that distant servers terminate with no connections
+      -- 2. Provides navigation bindings for remote directories
+      -- 3. Provides keybinding to jump into a remote file's parent directory
+      ['*'] = require('distant.settings').chip_default()
+    }
+  end
+}
+```
+
+The above will initialize the plugin with the following:
+
+1. Any spawned distant server will shutdown after 60 seconds of inactivity
+2. Standard keybindings are assigned for remote buffers (described below)
+
+#### Within a file
+
+| Key | Action                         |
+|-----|--------------------------------|
+| `-` | `lua distant.nav.actions.up()` |
+
+#### Within a directory
+
+| Key        | Action                              |
+|------------|-------------------------------------|
+| `<Return>` | `lua distant.nav.actions.edit()`    |
+| `-`        | `lua distant.nav.actions.up()`      |
+| `K`        | `lua distant.nav.actions.mkdir()`   |
+| `N`        | `lua distant.nav.actions.newfile()` |
+| `R`        | `lua distant.nav.actions.rename()`  |
+| `D`        | `lua distant.nav.actions.remove()`  |
+
+#### Post-setup
+
+Run `:DistantInstall` to complete the setup.
+
+* For more information on installation, check out `:help distant-installation`
+* For more information on settings, check out `:help distant-settings`
 
 ## Getting Started
 
@@ -110,87 +112,11 @@ out something simple like displaying a list of files, directories, and symlinks
 by running `:DistantOpen /some/dir`, which will open a dialog that displays
 all of the contents of the specified directory.
 
-## Functions
+## Documentation
 
-### Blocking Functions
-
-Synchronous functions are available that perform the given operation in a
-blocking fashion. All blocking functions support being provided a timeout and
-interval to check said timeout, defaulting both to the global settings. For
-more details, check out the doc comments for the individual functions.
-
-| Functions             | Description                                                                   |
-|-----------------------|-------------------------------------------------------------------------------|
-| `fn.copy`             | Copies a remote file or directory to another remote location                  |
-| `fn.dir_list`         | Lists remote files & directories for the given path on the remote machine     |
-| `fn.metadata`         | Retrieves metadata about a remote file, directory, or symlink                 |
-| `fn.mkdir`            | Creates a new directory remotely                                              |
-| `fn.read_file_text`   | Reads a remote file, returning its content as text                            |
-| `fn.remove`           | Removes a remote file or directory                                            |
-| `fn.rename`           | Renames a remote file or directory                                            |
-| `fn.run`              | Runs a remote program to completion, returning stdout, stderr, and exit code  |
-| `fn.system_info`      | Retrieves information about the remote machine such as its os name and arch   |
-| `fn.write_file_text`  | Writes text to a remote file                                                  |
-
-### Async Functions
-
-Asynchronous functions are available that use callbacks when functions are
-executed. The singular argument to the callback matches that of the return
-value of the synchronous function. For more details, check out the doc comments
-for the individual functions.
-
-| Functions                     | Description                                               |
-|-------------------------------|-----------------------------------------------------------|
-| `fn.async.copy`               | Async variant of `fn.copy` using callbacks                |
-| `fn.async.dir_list`           | Async variant of `fn.dir_list` using callbacks            |
-| `fn.async.metadata`           | Async variant of `fn.metadata` using callbacks            |
-| `fn.async.mkdir`              | Async variant of `fn.mkdir` using callbacks               |
-| `fn.async.read_file_text`     | Async variant of `fn.read_file_text` using callbacks      |
-| `fn.async.remove`             | Async variant of `fn.remove` using callbacks              |
-| `fn.async.rename`             | Async variant of `fn.rename` using callbacks              |
-| `fn.async.run`                | Async variant of `fn.run` using callbacks                 |
-| `fn.async.system_info`        | Async variant of `fn.system_info` using callbacks         |
-| `fn.async.write_file_text`    | Async variant of `fn.write_file_text` using callbacks     |
-
-## Commands
-
-Alongside functions, this plugin also provides vim commands that can be used to
-initiate different tasks remotely. It also includes specialized commands such
-as `DistantLaunch` that is used to start a remote session.
-
-### Specialized Commands
-
-These commands are geared towards performing actions that expose some dialogs
-or other user interfaces within neovim.
-
-| Commands              | Description                                               |
-|-----------------------|-----------------------------------------------------------|
-| `DistantOpen`         | Opens a file for editing or a directory for navigation    |
-| `DistantLaunch`       | Opens a dialog to launch `distant` on a remote machine    |
-| `DistantMetadata`     | Presents information about some path on a remote machine  |
-| `DistantSessionInfo`  | Presents information related to the remote connection     |
-| `DistantSystemInfo`   | Presents information about remote machine itself          |
-
-### Function Commands
-
-These commands are purely wrappers around existing functions that accept those
-function's arguments as input.
-
-| Commands              | Description                                       |
-|-----------------------|---------------------------------------------------|
-| `DistantCopy`         | Alias to `lua require('distant').fn.copy`         |
-| `DistantMkdir`        | Alias to `lua require('distant').fn.mkdir`        |
-| `DistantRemove`       | Alias to `lua require('distant').fn.remove`       |
-| `DistantRename`       | Alias to `lua require('distant').fn.rename`       |
-| `DistantRun`          | Alias to `lua require('distant').fn.run`          |
-
-## lir Integration
-
-TODO
-
-## telescope Integration
-
-TODO
+For more details on available functions, settings, commands, and more,
+please check out the vim help documentation via 
+[`:help distant.txt`](doc/distant.txt).
 
 ## License
 

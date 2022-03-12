@@ -7,17 +7,6 @@ local fmt = string.format
 -- Global store of callback for autocommand (and eventually mappings)
 _G.__flutter_tools_callbacks = __flutter_tools_callbacks or {}
 
-M.L = vim.log.levels
-
----proxy for vim.notify
----@param msg string
----@param level integer
----@return nil
-function M.notify(msg, level)
-  level = level or M.L.INFO
-  vim.notify(msg, level, { title = "Flutter Tools" })
-end
-
 ---@param name string
 ---@return string
 function M.display_name(name, platform)
@@ -167,15 +156,19 @@ end
 
 ---Merge two table but maintain metatables
 ---Priority is given to the second table
+--- FIXME: this does not copy metatables
 ---@param t1 table
 ---@param t2 table
+---@param skip string[]
 ---@return table
-function M.merge(t1, t2)
+function M.merge(t1, t2, skip)
   for k, v in pairs(t2) do
-    if (type(v) == "table") and (type(t1[k] or false) == "table") then
-      M.merge(t1[k], t2[k])
-    else
-      t1[k] = v
+    if not skip or not vim.tbl_contains(skip, k) then
+      if (type(v) == "table") and (type(t1[k] or false) == "table") then
+        M.merge(t1[k], t2[k])
+      else
+        t1[k] = v
+      end
     end
   end
   return t1
@@ -197,7 +190,7 @@ end
 ---@param attribute string
 ---@return string
 function M.get_hl(name, attribute)
-  return fn.synIDattr(fn.hlID("Normal"), "fg")
+  return fn.synIDattr(fn.hlID(name), attribute)
 end
 
 function M.open_command()
@@ -212,6 +205,28 @@ function M.open_command()
     return "explorer"
   end
   return nil, nil
+end
+
+---Create an lsp handler compatible with the new handler signature
+---@see: https://github.com/neovim/neovim/pull/15504/
+---@param func function
+---@return function
+function M.lsp_handler(func)
+  return function(...)
+    local config_or_client_id = select(4, ...)
+    local is_new = type(config_or_client_id) ~= "number"
+    if is_new then
+      func(...)
+    else
+      local err = select(1, ...)
+      local method = select(2, ...)
+      local result = select(3, ...)
+      local client_id = select(4, ...)
+      local bufnr = select(5, ...)
+      local config = select(6, ...)
+      func(err, result, { method = method, client_id = client_id, bufnr = bufnr }, config)
+    end
+  end
 end
 
 return M

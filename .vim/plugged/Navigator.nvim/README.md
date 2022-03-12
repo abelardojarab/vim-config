@@ -1,30 +1,30 @@
 <h1 align='center'>Navigator.nvim</h1>
+<p align="center"><sup>✨ Smoothly navigate between splits and panes ✨</sup></p>
 
-<h4 align='center'>✨ Smoothly navigate between splits and panes ✨</h4>
+![Navigator](https://user-images.githubusercontent.com/24727447/157040356-1f44323a-c7b6-4955-8207-5e6cade08c9e.gif "Navigating to the moon")
 
-![Navigator](https://user-images.githubusercontent.com/24727447/113504572-92f22180-9556-11eb-963a-218e17c13704.gif "Navigator navigating to the moon")
-
-<!-- <p align='center'><a href="https://user-images.githubusercontent.com/24727447/113504213-4dccf000-9554-11eb-8dcb-43d13e20be59.mp4" target="_blank" >Source</a></p> -->
-
-### Requirements
-
--   Neovim 0.5
-
-### Installation
+### 🚀 Installation
 
 #### Neovim
 
--   With [packer.nvim](https://github.com/wbthomason/packer.nvim)
+- With [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```lua
-
 use {
     'numToStr/Navigator.nvim',
     config = function()
         require('Navigator').setup()
     end
 }
+```
 
+- With [vim-plug](https://github.com/junegunn/vim-plug)
+
+```vim
+Plug 'numToStr/Navigator.nvim'
+
+" Somewhere after plug#end()
+lua require('Navigator').setup()
 ```
 
 #### Tmux
@@ -33,55 +33,73 @@ This plugin doesn't provides any configuration for `tmux`. You can read [here](h
 
 Or, you can use [tmux-tilish](https://github.com/jabirali/tmux-tilish) which is an excellent tmux plugin.
 
-### Configuration
-
-This plugin provides the following configuration which can be given when calling `setup()`.
-
--   `auto_save`: When you want to save the modified buffers when moving to tmux
-
-    Values:
-
-    -   `nil` - Don't save (default)
-    -   `current` - Only save the current modified buffer
-    -   `all` - Save all the buffers
-
--   `disable_on_zoom`: Disable navigation when tmux is zoomed in (`false` by default)
-
-### Commands
-
-This plugin doesn't comes with any default keybinding but rather gives you the flexibility to setup your own keybindings with the provided functions
-
--   `require('Navigator').left()` - Go left to split or pane
-
--   `require('Navigator').up()` - Go up to split or pane
-
--   `require('Navigator').right()` - Go right to split or pane
-
--   `require('Navigator').down()` - Go down to split or pane
-
--   `require('Navigator').previous()` - Go to previous split or pane
-
-### Setup
+### ⚒️ Setup
 
 ```lua
-
 -- Configuration
-require('Navigator').setup({
-    auto_save = 'current',
-    disable_on_zoom = true
-})
+require('Navigator').setup()
 
 -- Keybindings
-local map = vim.api.nvim_set_keymap
-local opts = { noremap = true, silent = true }
-
-map('n', "<A-h>", "<CMD>lua require('Navigator').left()<CR>", opts)
-map('n', "<A-k>", "<CMD>lua require('Navigator').up()<CR>", opts)
-map('n', "<A-l>", "<CMD>lua require('Navigator').right()<CR>", opts)
-map('n', "<A-j>", "<CMD>lua require('Navigator').down()<CR>", opts)
-map('n', "<A-p>", "<CMD>lua require('Navigator').previous()<CR>", opts)
+vim.keymap.set('n', "<A-h>", require('Navigator').left)
+vim.keymap.set('n', "<A-k>", require('Navigator').up)
+vim.keymap.set('n', "<A-l>", require('Navigator').right)
+vim.keymap.set('n', "<A-j>", require('Navigator').down)
+vim.keymap.set('n', "<A-p>", require('Navigator').previous)
 ```
 
-### Credits
+#### Configuration (optional)
 
-This plugin is a port of [vim-tmux-navigator](https://github.com/christoomey/vim-tmux-navigator) in lua. So, all the credit goes to it.
+Following options can be given when calling `setup({config})`. Below is the default configuration
+
+```lua
+{
+    -- When you want to save the modified buffers when moving to tmux
+    -- nil - Don't save (default)
+    -- 'current' - Only save the current modified buffer
+    -- 'all' - Save all the buffers
+    auto_save = nil,
+
+    -- Disable navigation when tmux is zoomed in
+    disable_on_zoom = false
+}
+```
+
+### 🔥 Usage
+
+Following are the functions that are exported as part of the lua API.
+
+> NOTE: This plugin doesn't creates default keybinding or commands
+
+- Go to left split/pane
+
+```lua
+require('Navigator').left()
+```
+
+- Go to upper split/pane
+
+```lua
+require('Navigator').up()
+```
+
+- Go to right split/pane
+
+```lua
+require('Navigator').right()
+```
+
+- Go to down split/pane
+
+```lua
+require('Navigator').down()
+```
+
+- Go to previous split/pane
+
+```lua
+require('Navigator').previous()
+```
+
+### 💐 Credits
+
+- [vim-tmux-navigator](https://github.com/christoomey/vim-tmux-navigator) - Motivator and Vimscript cousin

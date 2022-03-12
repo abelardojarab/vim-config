@@ -1,4 +1,5 @@
 local a = require 'plenary.async'
+local util = require 'neogit.lib.util'
 local logger = require 'neogit.logger'
 local cli = require('neogit.lib.git.cli')
 local Collection = require('neogit.lib.collection')
@@ -14,7 +15,7 @@ local function parse_diff_stats(raw)
   }
   -- local matches raw:match('1 file changed, (%d+ insertions?%(%+%))?(, )?(%d+ deletions?%(%-%))?')
   for _, part in ipairs(raw) do
-    part = vim.trim(part)
+    part = util.trim(part)
     local additions = part:match("(%d+) insertion.*")
     local deletions = part:match("(%d+) deletion.*")
 
@@ -49,7 +50,7 @@ local function parse_diff(output, with_stats)
     local header = {}
 
     for i=start_idx,#output do
-      if output[i]:match('^@@.*@@') then
+      if output[i]:match('^@@@*.*@@@*') then
         start_idx = i
         break
       end
@@ -85,7 +86,14 @@ local function parse_diff(output, with_stats)
   for i=1,len do
     local line = diff.lines[i]
     if not vim.startswith(line, "+++") then
-      local index_from, index_len, disk_from, disk_len = line:match('@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@')
+      local index_from, index_len, disk_from, disk_len
+      if vim.startswith(line, "@@@") then
+        -- Combined diff header
+        index_from, index_len, disk_from, disk_len = line:match('@@@* %-(%d+),?(%d*) .* %+(%d+),?(%d*) @@@*')
+      else
+        -- Normal diff header
+        index_from, index_len, disk_from, disk_len = line:match('@@ %-(%d+),?(%d*) %+(%d+),?(%d*) @@')
+      end
 
       if index_from then
         if hunk ~= nil then
@@ -160,7 +168,7 @@ function diff.register(meta)
       end))
     end
 
-    for _, f in ipairs(repo.unstaged.files) do
+    for _, f in ipairs(repo.unstaged.items) do
       if f.mode ~= 'D' and f.mode ~= 'F' and (not filter or filter:accepts('unstaged', f.name)) then
         table.insert(executions, function ()
           local raw_diff = cli.diff.files(f.name).call()
@@ -171,7 +179,7 @@ function diff.register(meta)
       end
     end
 
-    for _, f in ipairs(repo.staged.files) do
+    for _, f in ipairs(repo.staged.items) do
       if f.mode ~= 'D' and f.mode ~= 'F' and (not filter or filter:accepts('staged', f.name)) then
         table.insert(executions, function ()
           local raw_diff = cli.diff.cached.files(f.name).call()

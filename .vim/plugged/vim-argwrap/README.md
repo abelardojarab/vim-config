@@ -1,27 +1,33 @@
+<!-- +++
+Area = "projects"
+GitHub = "vim-argwrap"
+Layout = "page"
+Tags = ["argwrap", "vim", "mit license", "vimscript"]
+Description = "Wrap and unwrap function arguments, lists, and dictionaries in Vim."
+Collection = "ProjectsActive"
++++ -->
+
 # Vim-ArgWrap
 
-ArgWrap is an industrial strength argument wrapping and unwrapping extension for the Vim text editor. It can be used for
-collapsing and expanding everything from function calls to array and dictionary definitions.  All operations are easily
-reversible and correctly preserve the indentation of the surrounding code.
+Vim-ArgWrap is an industrial strength argument wrapping and unwrapping extension for the Vim text editor. It can be used
+for collapsing and expanding everything from function calls to array and dictionary definitions.  All operations are
+easily reversible and correctly preserve the indentation of the surrounding code.
 
-![](https://foosoft.net/projects/vim-argwrap/img/demo.gif)
+![](img/demo.gif)
 
-## Installation
+## Installation and Usage
 
 1.  Clone or otherwise download ArgWrap extension. Users of [pathogen.vim](https://github.com/tpope/vim-pathogen) can
     clone the repository directly to their bundle directory:
-
     ```
-    $ git clone https://github.com/FooSoft/vim-argwrap ~/.vim/bundle/vim-argwrap
+    git clone https://github.com/FooSoft/vim-argwrap ~/.vim/bundle/vim-argwrap
     ```
-
-2.  Create a keyboard binding for the `ArgWrap` command inside your `~/.vimrc` file.
-
-    For example, to declare a normal mode mapping, add the following command:
-
+2.  Create a keyboard binding for the `ArgWrap` command. For example, to declare a normal mode mapping, add: \
     ```
     nnoremap <silent> <leader>a :ArgWrap<CR>
     ```
+3.  Position the cursor inside of the parenthesis, brackets or curly braces you wish to wrap/unwrap.
+4.  Execute the keyboard binding you defined above to toggle the wrapping and unwrapping of arguments.
 
 ## Configuration
 
@@ -31,11 +37,11 @@ global variables (prefixed with `g:`), making them ideal for configuring the beh
 file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` variable has two variants declared as
 `b:argwrap_tail_comma` and `g:argwrap_tail_comma`, for buffer and global scopes respectively.
 
-*   **argwrap\_line\_prefix**
+*   `argwrap_line_prefix`
 
     Specifies a line prefix to be added and removed when working with languages that require newlines to be escaped.
 
-    *Line prefix disabled (default)*
+    Line prefix disabled (default):
 
     ```
     Foo(
@@ -45,7 +51,7 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-    *Line prefix enabled for Vimscript (`let g:argwrap_line_prefix = '\'`)*
+    Line prefix enabled for Vimscript (`let g:argwrap_line_prefix = '\'`):
 
     ```
     Foo(
@@ -55,31 +61,31 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     \)
     ```
 
-*   **argwrap\_padded\_braces**
+*   `argwrap_padded_braces`
 
     Specifies which brace types should be padded on the inside with spaces.
 
-    *Brace padding disabled (default)*
+    Brace padding disabled (default):
 
     ```
     [1, 2, 3]
     {1, 2, 3}
     ```
 
-    *Brace padding enabled for square brackets only (`let g:argwrap_padded_braces = '['`)*
+    Brace padding enabled for square brackets only (`let g:argwrap_padded_braces = '['`):
 
     ```
     [ 1, 2, 3 ]
     {1, 2, 3}
     ```
 
-    *Padding can be specified for multiple brace types (`let g:argwrap_padded_braces = '[{'`)*
+    Padding can be specified for multiple brace types (`let g:argwrap_padded_braces = '[{'`).
 
-*   **argwrap\_tail\_comma**
+*   `argwrap_tail_comma`
 
     Specifies if any closing brace should be preceded with a comma when wrapping lines.
 
-    *Tail comma disabled (default)*
+    Tail comma disabled (default)::
 
     ```
     Foo(
@@ -89,7 +95,7 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-    *Tail comma enabled (`let g:argwrap_tail_comma = 1`)*
+    Tail comma enabled (`let g:argwrap_tail_comma = 1`):
 
     ```
     Foo(
@@ -99,11 +105,11 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-*   **argwrap\_tail\_comma\_braces**
+*   `argwrap_tail_comma_braces`
 
     Specifies which closing brace should be preceded with a comma when wrapping lines.
 
-    *Tail comma disabled (default)*
+    Tail comma disabled (default):
 
     ```
     Foo(
@@ -113,7 +119,7 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-    *Tail comma enabled for square brackets only (`let g:argwrap_tail_comma_braces = '['`)*
+    Tail comma enabled for square brackets only (`let g:argwrap_tail_comma_braces = '['`):
 
     ```
     [
@@ -123,11 +129,11 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     ]
     ```
 
-*   **argwrap\_tail\_indent\_braces**
+*   `argwrap_tail_indent_braces`
 
     Specifies if the closing brace should be indented to argument depth.
 
-    *Tail indent disabled*
+    Tail indent disabled:
 
     ```
     Foo(
@@ -137,7 +143,7 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-    *Tail indent enabled for parenthesis (`let g:argwrap_tail_indent_braces = '('`)*
+    Tail indent enabled for parenthesis (`let g:argwrap_tail_indent_braces = '('`):
 
     ```
     Foo(
@@ -147,11 +153,11 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
         )
     ```
 
-*   **argwrap\_wrap\_closing\_brace**
+*   `argwrap_wrap_closing_brace`
 
     Specifies if the closing brace should be wrapped to a new line.
 
-    *Brace wrapping enabled (default)*
+    Brace wrapping enabled (default):
 
     ```
     Foo(
@@ -161,7 +167,7 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-    *Brace wrapping disabled (`let g:argwrap_wrap_closing_brace = 0`)*
+    Brace wrapping disabled (`let g:argwrap_wrap_closing_brace = 0`):
 
     ```
     Foo(
@@ -170,11 +176,11 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
         wubble)
     ```
 
-*   **argwrap\_comma\_first**
+*   `argwrap_comma_first`
 
     Specifies if the argument comma delimiter should be placed before arguments.
 
-    *Comma first disabled (default)*
+    Comma first disabled (default):
 
     ```
     Foo(
@@ -184,7 +190,7 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-    *Comma first enabled (`let g:argwrap_comma_first = 1`)*
+    Comma first enabled (`let g:argwrap_comma_first = 1`):
 
     ```
     Foo(
@@ -194,11 +200,11 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-*   **argwrap\_comma\_first\_indent**
+*   `argwrap_comma_first_indent`
 
     Specifies if the first argument should be indented when used in conjunction with `argwrap_comma_first`.
 
-    *Comma first indent disabled (default)*
+    Comma first indent disabled (default):
 
     ```
     Foo(
@@ -208,18 +214,12 @@ file basis using `ftplugin` or `autocmd`. For example, the `argwrap_tail_comma` 
     )
     ```
 
-    *Comma first indent enabled (`let g:argwrap_comma_first_indent = 1`)*
+    Comma first indent enabled (`let g:argwrap_comma_first_indent = 1`):
 
     ```
     Foo(
-          wibble
+        wibble
         , wobble
         , wubble
     )
     ```
-
-## Usage
-
-1.  Position the cursor *inside* of the scope of the parenthesis, brackets or curly braces you wish to wrap/unwrap (not
-    on top, before or after them).
-2.  Execute the keyboard binding you defined above to *toggle* the wrapping and unwrapping of arguments.

@@ -11,18 +11,23 @@
 
 (property_identifier) @property
 (shorthand_property_identifier) @property
+(private_property_identifier) @property
+
+(variable_declarator
+  name: (object_pattern
+    (shorthand_property_identifier_pattern))) @variable
 
 ; Special identifiers
 ;--------------------
 
 ((identifier) @constructor
- (#match? @constructor "^[A-Z]"))
+ (#lua-match? @constructor "^[A-Z]"))
 
 ((identifier) @constant
- (#vim-match? @constant "^[A-Z_][A-Z\\d_]+$"))
+ (#lua-match? @constant "^[A-Z_][A-Z%d_]+$"))
 
 ((shorthand_property_identifier) @constant
- (#vim-match? @constant "^[A-Z_][A-Z\\d_]+$"))
+ (#lua-match? @constant "^[A-Z_][A-Z%d_]+$"))
 
 ((identifier) @variable.builtin
  (#vim-match? @variable.builtin "^(arguments|module|console|window|document)$"))
@@ -42,7 +47,7 @@
 (generator_function_declaration
   name: (identifier) @function)
 (method_definition
-  name: (property_identifier) @method)
+  name: [(property_identifier) (private_property_identifier)] @method)
 
 (pair
   key: (property_identifier) @method
@@ -82,7 +87,7 @@
 
 (call_expression
   function: (member_expression
-    property: (property_identifier) @method))
+    property: [(property_identifier) (private_property_identifier)] @method))
 
 ; Variables
 ;----------
@@ -106,6 +111,7 @@
 (regex) @punctuation.delimiter
 (regex_pattern) @string.regex
 (template_string) @string
+(escape_sequence) @string.escape
 (number) @number
 
 ; Punctuation
@@ -168,16 +174,16 @@
 (ternary_expression ["?" ":"] @conditional)
 (unary_expression ["!" "~" "-" "+" "delete" "void" "typeof"]  @operator)
 
-"(" @punctuation.bracket
-")" @punctuation.bracket
-"[" @punctuation.bracket
-"]" @punctuation.bracket
-"{" @punctuation.bracket
-"}" @punctuation.bracket
+[
+  "("
+  ")"
+  "["
+  "]"
+  "{"
+  "}"
+] @punctuation.bracket
 
-(template_substitution
-  "${" @punctuation.special
-  "}" @punctuation.special) @none
+((template_substitution ["${" "}"] @punctuation.special) @none)
 
 ; Keywords
 ;----------

@@ -20,20 +20,22 @@ BACKENDS = {}
 if "gdb" in config.BACKEND_NAMES:
     BACKENDS['gdb'] = {
         'name': 'gdb',
-        'launch': ' dd\n',
+        'launch': ' dd a.out\n',
         'tbreak_main': 'tbreak main\n',
         'break_main': 'break main\n',
         'break_bar': 'break Bar\n',
         'launchF': ':GdbStart gdb -q {}\n',
+        'watchF': 'watch {}\n',
     }
 if "lldb" in config.BACKEND_NAMES:
     BACKENDS['lldb'] = {
         'name': 'lldb',
-        'launch': ' dl\n',
+        'launch': ' dl a.out\n',
         'tbreak_main': 'breakpoint set -o true -n main\n',
         'break_main': 'breakpoint set -n main\n',
         'break_bar': 'breakpoint set --fullname Bar\n',
         'launchF': ':GdbStartLLDB lldb {}\n',
+        'watchF': 'watchpoint set variable {}\n',
     }
 
 
@@ -111,10 +113,19 @@ def config_test(eng, post):
     yield True
     eng.exec_lua('''
 for scope in ("bwtg"):gmatch'.' do
-  for k, _ in pairs(NvimGdb.vim.fn.eval(scope .. ':')) do
+  for k, _ in pairs(vim.fn.eval(scope .. ':')) do
     if type(k) == "string" and k:find('^nvimgdb_') then
       NvimGdb.vim.cmd('unlet ' .. scope .. ':' .. k)
     end
   end
 end
                  ''')
+
+
+@pytest.fixture(scope='function')
+def cd_to_cmake(eng):
+    eng.exe("cd src")
+    eng.exe("e test.cpp")
+    yield True
+    eng.exe("bd")
+    eng.exe("cd ..")

@@ -95,8 +95,6 @@ function! s:after_open(instance) abort
     setlocal bufhidden=hide
   end
 
-  call s:resize_instance(a:instance)
-
   if g:neoterm_autoinsert
     startinsert
   elseif !g:neoterm_autojump
@@ -132,7 +130,16 @@ endfunction
 function! neoterm#do(opts) abort
   let l:opts = extend(a:opts, { 'mod': '', 'target': 0 }, 'keep')
   let l:opts.cmd = [l:opts.cmd, g:neoterm_eof]
+
+  let g:neoterm.last_command = l:opts
+
   call neoterm#exec(l:opts)
+endfunction
+
+function neoterm#redo() abort
+  if type(g:neoterm.last_command) != type(v:null)
+    call neoterm#exec(g:neoterm.last_command)
+  end
 endfunction
 
 function! neoterm#exec(opts) abort
@@ -253,28 +260,32 @@ function! neoterm#list_ids() abort
 endfunction
 
 function! s:create_window(instance) abort
-  if empty(a:instance.mod)
-    let a:instance.mod = g:neoterm_default_mod
+  let l:instance = a:instance
+
+  if empty(l:instance.mod)
+    let l:instance.mod = g:neoterm_default_mod
   end
 
-  if a:instance.mod !=# ''
+  if exists('*g:neoterm_callbacks.before_create_window')
+    call g:neoterm_callbacks.before_create_window(l:instance)
+  end
+
+  let l:instance.size = neoterm#args#size(get(l:instance, 'args', ''), g:neoterm_size)
+
+  if l:instance.mod !=# ''
     let l:hidden=&hidden
     let &hidden=0
 
-    let l:cmd = printf('%s %snew', a:instance.mod, g:neoterm_size)
-    if a:instance.buffer_id > 0
-      let l:cmd .= printf(' +buffer%s', a:instance.buffer_id)
+    let l:cmd = printf('%s %snew', l:instance.mod, l:instance.size)
+    if l:instance.buffer_id > 0
+      let l:cmd .= printf(' +buffer%s', l:instance.buffer_id)
     end
 
     exec l:cmd
 
-    if !empty(g:neoterm_size)
-      exec printf('%s resize %s', a:instance.mod, g:neoterm_size)
-    endif
-
     let &hidden=l:hidden
-  elseif get(a:instance, 'buffer_id', 0) > 0 && bufnr('') != a:instance.buffer_id
-    exec printf('buffer %s', a:instance.buffer_id)
+  elseif get(l:instance, 'buffer_id', 0) > 0 && bufnr('') != l:instance.buffer_id
+    exec printf('buffer %s', l:instance.buffer_id)
   else
     enew
   end
@@ -313,14 +324,6 @@ endfunction
 
 function! s:update_last_active(instance) abort
   let g:neoterm.last_active = a:instance.id
-endfunction
-
-function! s:resize_instance(instance) abort
-  let size = neoterm#args#size(a:instance.args, g:neoterm_size)
-
-  if size > 0
-    exec printf('%s resize %s', a:instance.mod, size)
-  endif
 endfunction
 
 " Calculates the next neoterm's ID.

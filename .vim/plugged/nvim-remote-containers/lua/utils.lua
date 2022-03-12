@@ -1,29 +1,124 @@
 local M = {}
-local loop = vim.loop
+local uv = vim.loop
+local message = {}
 
-local function safe_close(handle)
-	if not loop.is_closing(handle) then
-		loop.close(handle)
+local function jsonc_no_comment(content)
+  local parser = vim.treesitter.get_string_parser(content, 'jsonc')
+  local tree = parser:parse()
+  local root = tree[1]:root()
+  -- create comment query
+  local query = vim.treesitter.parse_query('jsonc', '((comment) @c (#offset! @c))')
+  -- split content lines
+  local lines = vim.split(content, '\n')
+
+  -- iterate over query match metadata
+  for _, _, metadata in query:iter_matches(root, content, root:start(), root:end_()) do
+    local region = metadata.content[1]
+    local line = region[1] + 1
+    local col_start = region[2]
+    -- remove comment by extracting the text before
+    lines[line] = string.sub(lines[line], 1, col_start)
+  end
+  -- join lines
+  local result = vim.fn.join(lines, '\n')
+  return result
+end
+
+local function jsonc_no_trailing_comma(content)
+  return vim.fn.substitute(content, ',\\_s*}', '}', 'g')
+end
+
+local function jsonc_to_json(content)
+  content = jsonc_no_trailing_comma(content)
+  content = jsonc_no_comment(content)
+  return content
+end
+
+function M.systemChecks()
+	if not (vim.fn.executable("docker")) then
+		error("must install docker for this functionality")
+	end
+	if not (M.exists(".devcontainer")) then
+		error("Could not find .devcontainer folder")
+	end
+	if not (M.exists(".devcontainer/devcontainer.json")) then
+		error("Could not find .devcontainer/devcontainer.json")
 	end
 end
 
+function M.parseConfig(configType)
+	M.systemChecks()
+
+	-- TODO: Check current directory and the devcontainer
+  local config = vim.fn.join(vim.fn.readfile(".devcontainer/devcontainer.json"))
+	local parsedConfig = vim.fn.json_decode(jsonc_to_json(config))
+	if not parsedConfig.image and not parsedConfig.dockerComposeFile and not parsedConfig.dockerFile then
+		error("must have an image, dockerfile, or docker-compose file")
+		return
+	end
+
+	if not parsedConfig[configType] then
+		error("Must have " .. configType .. " defined in the devcontainer.json")
+		return
+	end
+	return parsedConfig
+end
+
+local function safe_close(handle)
+	if not uv.is_closing(handle) then
+		uv.close(handle)
+	end
+end
+
+local function fmt(data)
+	local vars = vim.split(data, "\n")
+	for _, d in pairs(vars) do
+		table.insert(message, d)
+	end
+end
+
+local function onread(err, data)
+	if err then
+		fmt(err)
+	end
+	if data then
+		fmt(data)
+	end
+end
+
+local function showError()
+	local buf = M.floatingWindow()
+	vim.api.nvim_buf_set_lines(buf, 0, -1, true, message)
+	vim.api.nvim_buf_set_option(buf, "modifiable", false)
+end
+
 function M.spawn(cmd, opts, onexit)
-	local inpt = { stdout = opts.stdout or function() end, stderr = opts.stderr or function() end }
+	local inpt = { stdout = opts.stdout or function() end, stderr = onread or opts.stderr or function() end }
 	local handle
-	local stdout = loop.new_pipe(false)
-	local stderr = loop.new_pipe(false)
-	handle, _ = loop.spawn(cmd, vim.tbl_extend("force", opts, { stdio = { stdout, stderr } }), function(code, signal)
-		if type(onexit) == "function" then
-			onexit(code, signal)
-		end
-		loop.read_stop(stdout)
-		loop.read_stop(stderr)
-		safe_close(handle)
-		safe_close(stdout)
-		safe_close(stderr)
-	end)
-	loop.read_start(stdout, inpt.stdout)
-	loop.read_start(stderr, inpt.stderr)
+	local stdout = uv.new_pipe(false)
+	local stderr = uv.new_pipe(false)
+
+	handle, _ = uv.spawn(
+		cmd,
+		vim.tbl_extend("force", opts, { stdio = { nil, stdout, stderr } }),
+		vim.schedule_wrap(function(code, signal)
+			uv.read_stop(stdout)
+			uv.read_stop(stderr)
+			safe_close(handle)
+			safe_close(stdout)
+			safe_close(stderr)
+
+			print(code, signal)
+			if code == 1 then
+				showError()
+			end
+			if type(onexit) == "function" then
+				onexit()
+			end
+		end)
+	)
+	uv.read_start(stdout, inpt.stdout)
+	uv.read_start(stderr, inpt.stderr)
 end
 
 --- Check if a file or directory exists in this path
@@ -79,6 +174,7 @@ function M.floatingWindow()
 
 		-- create a new floating window, centered in the editor
 		vim.api.nvim_open_win(buf, true, opts)
+		return buf
 	end
 end
 

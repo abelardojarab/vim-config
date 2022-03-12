@@ -1,104 +1,97 @@
 local tmux = require('Navigator.tmux')
-local api = vim.api
-local cmd = api.nvim_command
-local exec = api.nvim_exec
+local A = vim.api
+local cmd = A.nvim_command
 
-local N = {}
+---@class Config
+---@field auto_save '"current"'|'"all"' When you want to save the modified buffers when moving to tmux
+---@field disable_on_zoom boolean Disable navigation when tmux is zoomed in
 
-local function wincmd(direction)
-    cmd('wincmd ' .. direction)
+---Just some state and defaults
+---@class Nav
+---@field last_pane boolean
+---@field config Config
+local N = {
+    last_pane = false,
+    config = nil,
+}
+
+local function wincmd(way)
+    cmd(('wincmd %s'):format(way))
 end
 
--- Just some state and defaults
-function N:new()
-    local state = {
-        last_pane = false,
-        config = {
-            disable_on_zoom = false, -- boolean
-            auto_save = nil, -- 'current' | 'all'
-        },
+---For setting up the plugin with the user provided options
+---@param opts Config
+function N.setup(opts)
+    N.config = {
+        disable_on_zoom = false,
+        auto_save = nil,
     }
 
-    self.__index = self
-
-    return setmetatable(state, self)
-end
-
--- For setting up the plugin with the user provided options
-function N:setup(opts)
     if opts ~= nil then
-        self.config = vim.tbl_extend('keep', opts, self.config)
+        N.config = vim.tbl_extend('keep', opts, N.config)
     end
 
     function _G.__navigator_reset_last_pane()
-        self.last_pane = false
+        N.last_pane = false
     end
 
-    exec(
-        [[
-            augroup NavigatorGroup
-              au!
-              autocmd WinEnter * lua __navigator_reset_last_pane()
-            augroup END
-        ]],
-        false
-    )
+    vim.cmd([[
+        augroup NavigatorGroup
+            au!
+            autocmd WinEnter * lua __navigator_reset_last_pane()
+        augroup END
+    ]])
 end
 
-function N:back_to_tmux(at_edge)
-    if self.config.disable_on_zoom and tmux.is_zoomed() then
+---Checks whether we need to move to the nearby tmux pane
+---@param at_edge boolean
+---@return boolean
+function N.back_to_tmux(at_edge)
+    if N.config.disable_on_zoom and tmux.is_zoomed() then
         return false
     end
 
-    return self.last_pane or at_edge
+    return N.last_pane or at_edge
 end
 
--- For smoothly navigating through neovim splits and tmux panes
-function N:navigate(direction)
+---For smoothly navigating through neovim splits and tmux panes
+---@param direction string
+function N.navigate(direction)
     -- For moments when you have this plugin installed
     -- but for some reason you didn't bother to install tmux
     if not tmux.is_tmux then
-        wincmd(direction)
-
-        return
+        return wincmd(direction)
     end
 
     -- window id before navigation
-    local cur_win = api.nvim_get_current_win()
-    local tmux_last_pane = direction == 'p' and self.last_pane
+    local cur_win = A.nvim_get_current_win()
+    local tmux_last_pane = direction == 'p' and N.last_pane
 
     if not tmux_last_pane then
         wincmd(direction)
     end
 
-    -- window id after navigation
-    local new_win = api.nvim_get_current_win()
-
     -- After navigation, if the old window and new window matches
-    local at_edge = cur_win == new_win
+    local at_edge = cur_win == A.nvim_get_current_win()
 
     -- then we can assume that we hit the edge
     -- there is tmux pane besided the edge
     -- So we can navigate to the tmux pane
-    if self:back_to_tmux(at_edge) then
+    if N.back_to_tmux(at_edge) then
         tmux.change_pane(direction)
 
-        local w = self.config.auto_save
+        local save = N.config.auto_save
 
-        if w ~= nil then
-            if w == 'current' then
-                cmd('update')
-            end
-
-            if w == 'all' then
-                cmd('wall')
-            end
+        if save == 'current' then
+            cmd('update')
+        elseif save == 'all' then
+            cmd('wall')
         end
 
-        self.last_pane = true
+        N.last_pane = true
     else
-        self.last_pane = false
+        N.last_pane = false
     end
 end
 
-return N:new()
+return N

@@ -43,7 +43,7 @@ end
 
 -- codeAction event callback handler
 -- use customSelectionHandler for defining custom way to handle selection
-local code_action_handler = function(_,_,actions, _, _, _, customSelectionHandler)
+local code_action_handler = function(_,actions, _, _, customSelectionHandler)
     if actions == nil or vim.tbl_isempty(actions) then
 	print("No code actions available")
 	return

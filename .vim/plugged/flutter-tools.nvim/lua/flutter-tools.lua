@@ -8,6 +8,8 @@ local function setup_commands()
     [[lua require('flutter-tools.commands').run_command(<q-args>)]],
     { nargs = "*" }
   )
+  utils.command("FlutterLspRestart", 'lua require("flutter-tools.lsp").restart()')
+  utils.command("FlutterDetach", [[lua require('flutter-tools.commands').detach()]])
   utils.command("FlutterReload", [[lua require('flutter-tools.commands').reload()]])
   utils.command("FlutterRestart", [[lua require('flutter-tools.commands').restart()]])
   utils.command("FlutterQuit", [[lua require('flutter-tools.commands').quit()]])
@@ -83,6 +85,27 @@ local function setup_autocommands()
       command = "lua require('flutter-tools.lsp').attach()",
     },
   })
+
+  local color_enabled = require("flutter-tools.config").get("lsp").color.enabled
+  if color_enabled then
+    utils.augroup("FlutterToolsLspColors", {
+      {
+        events = { "BufEnter", "TextChanged", "InsertLeave" },
+        targets = { "*.dart" },
+        command = function()
+          require("flutter-tools.lsp").document_color()
+        end,
+      },
+      {
+        -- NOTE: we piggyback of this event to check for when the server is first initialized
+        events = { "User FlutterToolsLspAnalysisComplete" },
+        modifiers = { "++once" },
+        command = function()
+          require("flutter-tools.lsp").document_color()
+        end,
+      },
+    })
+  end
 
   utils.augroup("FlutterToolsHotReload", {
     {

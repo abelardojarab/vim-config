@@ -15,6 +15,7 @@
 :Topen	neoterm.txt	/*:Topen*
 :Tpos	neoterm.txt	/*:Tpos*
 :Tprevious	neoterm.txt	/*:Tprevious*
+:Tredo	neoterm.txt	/*:Tredo*
 :Ttoggle	neoterm.txt	/*:Ttoggle*
 :TtoggleAll	neoterm.txt	/*:TtoggleAll*
 <Plug>(neoterm-repl-send)	neoterm.txt	/*<Plug>(neoterm-repl-send)*
@@ -25,6 +26,7 @@ g:neoterm_autojump	neoterm.txt	/*g:neoterm_autojump*
 g:neoterm_automap_keys	neoterm.txt	/*g:neoterm_automap_keys*
 g:neoterm_autoscroll	neoterm.txt	/*g:neoterm_autoscroll*
 g:neoterm_bracketed_paste	neoterm.txt	/*g:neoterm_bracketed_paste*
+g:neoterm_callbacks.before_create_window(instance)	neoterm.txt	/*g:neoterm_callbacks.before_create_window(instance)*
 g:neoterm_callbacks.before_exec()	neoterm.txt	/*g:neoterm_callbacks.before_exec()*
 g:neoterm_callbacks.before_new()	neoterm.txt	/*g:neoterm_callbacks.before_new()*
 g:neoterm_clear_cmd	neoterm.txt	/*g:neoterm_clear_cmd*

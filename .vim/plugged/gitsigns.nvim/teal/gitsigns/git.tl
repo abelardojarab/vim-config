@@ -1,9 +1,9 @@
 local wrap = require('plenary.async.async').wrap
 local scheduler = require('plenary.async.util').scheduler
-local JobSpec = require('plenary.job').JobSpec
 
 local gsd = require("gitsigns.debug")
 local util = require('gitsigns.util')
+local subprocess = require('gitsigns.subprocess')
 
 local gs_hunks = require("gitsigns.hunks")
 local Hunk = gs_hunks.Hunk
@@ -11,16 +11,15 @@ local Hunk = gs_hunks.Hunk
 local uv = vim.loop
 local startswith = vim.startswith
 
+local dprint = require("gitsigns.debug").dprint
+
 local record GJobSpec
   command: string
   args: {string}
   cwd: string
-  on_stdout: function
-  on_stderr: function
-  on_exit: function
   writer: {string}
 
-  -- gitsigns extensions
+  -- local extensions
   supress_stderr: boolean
 end
 
@@ -58,37 +57,69 @@ local record M
   enable_yadm: boolean
 
   set_version: function(string)
+  get_repo_info: function(path: string, cmd: string): string,string,string
   command    : function(args: {string}, spec: GJobSpec): {string}, string
+  diff       : function(file_cmp: string, file_buf: string, indent_heuristic: boolean, diff_algo: string): {string}, string
 
-  record Obj
-    toplevel      : string
-    gitdir        : string
-    file          : string
-    abbrev_head   : string
-    username      : string
+  record Repo
+    toplevel   : string
+    gitdir     : string
+    abbrev_head: string
+    username   : string
+
+    command            : function(Repo, {string}, GJobSpec): {string}, string
+    files_changed      : function(Repo): {string}
+    get_show_text      : function(Repo, string): {string}, string
+    update_abbrev_head : function(Repo)
+    new                : function(string): Repo
+  end
+
+  record FileProps
     relpath       : string
     orig_relpath  : string -- Use for tracking moved files
     object_name   : string
     mode_bits     : string
     has_conflicts : boolean
+    i_crlf        : boolean  -- Object has crlf
+    w_crlf        : boolean  -- Working copy has crlf
+  end
+
+  record Obj
+    repo          : Repo
+    file          : string
+    relpath       : string
+    orig_relpath  : string -- Use for tracking moved files
+    object_name   : string
+    mode_bits     : string
+    has_conflicts : boolean
+    i_crlf        : boolean  -- Object has crlf
+    w_crlf        : boolean  -- Working copy has crlf
 
     command              : function(Obj, {string}, GJobSpec): {string}, string
-    update_abbrev_head   : function(Obj)
-    update_file_info     : function(Obj): boolean
+    update_file_info     : function(Obj, boolean): boolean
     unstage_file         : function(Obj, string, string)
+    run_blame            : function(Obj, {string}, number, boolean): BlameInfo
+    file_info            : function(Obj, string): FileProps
     get_show_text        : function(Obj, string): {string}, string
-    run_blame            : function(Obj, {string}, number): M.BlameInfo
-    file_info            : function(Obj, string): string, string, string, boolean
     ensure_file_in_index : function(Obj)
     stage_hunks          : function(Obj, {Hunk}, boolean)
     has_moved            : function(Obj): string
-    files_changed        : function(Obj): {string}
     new                  : function(string): Obj
   end
 
 end
 
+local in_git_dir = function(file: string): boolean
+  for _, p in ipairs(vim.split(file, util.path_sep)) do
+    if p == '.git' then
+      return true
+    end
+  end
+  return false
+end
+
 local Obj = M.Obj
+local Repo = M.Repo
 
 local function parse_version(version: string): M.Version
   assert(version:match('%d+%.%d+%.%w+'), 'Invalid git version: '..version)
@@ -120,57 +151,64 @@ local function check_version(version: {number,number,number}): boolean
   return true
 end
 
+local type JobSpec = subprocess.JobSpec
+
 M.command = wrap(function(args: {string}, spec: GJobSpec, callback: function({string}, string))
-  local result: {string} = {}
-  local reserr: string
   spec = spec or {}
   spec.command = spec.command or 'git'
-  spec.args = {'--no-pager', unpack(args) }
-  spec.on_stdout = spec.on_stdout or function(_, line: string)
-    table.insert(result, line)
-    if gsd.verbose and #result <= 10 then
-      gsd.vprint(line)
-    end
-  end
-  spec.on_stderr = spec.on_stderr or function(err: string, line: string)
+  spec.args = spec.command == 'git' and {'--no-pager', unpack(args) } or args
+  subprocess.run_job(spec as JobSpec, function(_: integer, _: integer, stdout: string, stderr: string)
     if not spec.supress_stderr then
-      if err  then gsd.eprint(err)  end
-      if line then gsd.eprint(line) end
+      if stderr then
+        gsd.eprint(stderr)
+      end
     end
-    if not reserr then
-      reserr = ''
-    else
-      reserr = reserr..'\n'
+
+    local stdout_lines = vim.split(stdout or '', '\n', true)
+
+    -- If stdout ends with a newline, then remove the final empty string after
+    -- the split
+    if stdout_lines[#stdout_lines] == '' then
+      stdout_lines[#stdout_lines] = nil
     end
-    if err  then reserr = reserr..err  end
-    if line then reserr = reserr..line end
-  end
-  local old_on_exit = spec.on_exit
-  spec.on_exit = function()
-    if old_on_exit then
-      old_on_exit()
+
+    if gsd.verbose then
+      gsd.vprintf('%d lines:', #stdout_lines)
+      for i = 1, math.min(10, #stdout_lines) do
+        gsd.vprintf('\t%s', stdout_lines[i])
+      end
     end
-    if gsd.verbose and #result then
-      gsd.vprintf('%d lines', #result)
-    end
-    callback(result, reserr)
-  end
-  util.run_job(spec as JobSpec)
+
+    callback(stdout_lines, stderr)
+  end)
 end, 3)
+
+M.diff = function(file_cmp: string, file_buf: string, indent_heuristic: boolean, diff_algo: string): {string}, string
+  return M.command{
+    '-c', 'core.safecrlf=false',
+    'diff',
+    '--color=never',
+    '--'..(indent_heuristic and '' or 'no-')..'indent-heuristic',
+    '--diff-algorithm='..diff_algo,
+    '--patch-with-raw',
+    '--unified=0',
+    file_cmp,
+    file_buf,
+  }
+
+end
 
 local function process_abbrev_head(gitdir: string, head_str: string, path: string, cmd: string): string
   if not gitdir then
     return head_str
   end
   if head_str == 'HEAD' then
-    local short_sha: string
-    if not gsd.debug_mode then
-      short_sha = M.command({'rev-parse', '--short', 'HEAD'}, {
+    local short_sha = M.command({'rev-parse', '--short', 'HEAD'}, {
         command = cmd or 'git',
         supress_stderr = true,
         cwd = path,
       })[1] or ''
-    else
+    if gsd.debug_mode and short_sha ~= '' then
       short_sha = 'HEAD'
     end
     if util.path_exists(gitdir..'/rebase-merge')
@@ -182,7 +220,7 @@ local function process_abbrev_head(gitdir: string, head_str: string, path: strin
   return head_str
 end
 
-local get_repo_info = function(path: string, cmd: string): string,string,string
+M.get_repo_info = function(path: string, cmd: string): string,string,string
   -- Does git rev-parse have --absolute-git-dir, added in 2.13:
   --   https://public-inbox.org/git/20170203024829.8071-16-szeder.dev@gmail.com/
   local has_abs_gd = check_version{2,13}
@@ -202,7 +240,7 @@ local get_repo_info = function(path: string, cmd: string): string,string,string
 
   local toplevel = results[1]
   local gitdir = results[2]
-  if not has_abs_gd then
+  if gitdir and not has_abs_gd then
     gitdir = uv.fs_realpath(gitdir)
   end
   local abbrev_head = process_abbrev_head(gitdir, results[3], path, cmd)
@@ -222,75 +260,148 @@ M.set_version = function(version: string)
 end
 
 --------------------------------------------------------------------------------
--- Git object methods
+-- Git repo object methods
 --------------------------------------------------------------------------------
 
 --- Run git command the with the objects gitdir and toplevel
-Obj.command = function(self: Obj, args: {string}, spec: GJobSpec): {string}, string
+Repo.command = function(self: Repo, args: {string}, spec: GJobSpec): {string}, string
   spec = spec or {}
   spec.cwd = self.toplevel
   return M.command({'--git-dir='..self.gitdir, unpack(args)}, spec)
 end
 
-Obj.update_abbrev_head = function(self: Obj)
-  _, _, self.abbrev_head = get_repo_info(self.toplevel)
+Repo.files_changed = function(self: Repo): {string}
+  local results = self:command({ 'status', '--porcelain', '--ignore-submodules' })
+
+  local ret: {string} = {}
+  for _, line in ipairs(results) do
+    if line:sub(1, 2):match('^.M') then
+      ret[#ret+1] = line:sub(4, -1)
+    end
+  end
+  return ret
 end
 
-Obj.update_file_info = function(self: Obj): boolean
+--- Get version of file in the index, return array lines
+Repo.get_show_text = function(self: Repo, object: string): {string}, string
+  return self:command({'show', object}, {supress_stderr = true})
+end
+
+Repo.update_abbrev_head = function(self: Repo)
+  _, _, self.abbrev_head = M.get_repo_info(self.toplevel)
+end
+
+Repo.new = function(dir: string): Repo
+  local self = setmetatable({} as Repo, {__index = Repo})
+
+  self.username = M.command({'config', 'user.name'})[1]
+  self.toplevel, self.gitdir, self.abbrev_head = M.get_repo_info(dir)
+
+  -- Try yadm
+  if M.enable_yadm and not self.gitdir then
+    if vim.startswith(dir, os.getenv('HOME'))
+      and #M.command({'ls-files', dir}, {command = 'yadm'}) ~= 0 then
+      self.toplevel, self.gitdir, self.abbrev_head =
+        M.get_repo_info(dir, 'yadm')
+    end
+  end
+
+  return self
+end
+
+--------------------------------------------------------------------------------
+-- Git object methods
+--------------------------------------------------------------------------------
+
+--- Run git command the with the objects gitdir and toplevel
+Obj.command = function(self: Obj, args: {string}, spec: GJobSpec): {string}, string
+  return self.repo:command(args, spec)
+end
+
+Obj.update_file_info = function(self: Obj, update_relpath: boolean): boolean
   local old_object_name = self.object_name
-  _, self.object_name, self.mode_bits, self.has_conflicts = self:file_info()
+  local props = self:file_info()
+
+  if update_relpath then
+    self.relpath = props.relpath
+  end
+  self.object_name   = props.object_name
+  self.mode_bits     = props.mode_bits
+  self.has_conflicts = props.has_conflicts
+  self.i_crlf        = props.i_crlf
+  self.w_crlf        = props.w_crlf
 
   return old_object_name ~= self.object_name
 end
 
-Obj.file_info = function(self: Obj, file: string): string, string, string, boolean
-  local results = self:command({
+Obj.file_info = function(self: Obj, file: string): M.FileProps
+  local results, stderr = self:command({
+    '-c', 'core.quotepath=off',
     'ls-files',
     '--stage',
     '--others',
     '--exclude-standard',
+    '--eol',
     file or self.file
-  })
+  }, {supress_stderr = true})
 
-  local relpath: string
-  local object_name: string
-  local mode_bits: string
-  local stage: number
-  local has_conflict: boolean = false
-  for _, line in ipairs(results) do
-    local parts = vim.split(line, '\t')
-    if #parts > 1 then -- tracked file
-      relpath = parts[2]
-      local attrs = vim.split(parts[1], '%s+')
-      stage = tonumber(attrs[3])
-      if stage <= 1 then
-          mode_bits   = attrs[1]
-          object_name = attrs[2]
-      else
-          has_conflict = true
-      end
-    else -- untracked file
-      relpath = parts[1]
+  if stderr then
+    -- Supress_stderr for the cases when we run:
+    --   git ls-files --others exists/nonexist
+    if not stderr:match('^warning: could not open directory .*: No such file or directory') then
+      gsd.eprint(stderr)
     end
   end
-  return relpath, object_name, mode_bits, has_conflict
+
+  local result: M.FileProps = {}
+  for _, line in ipairs(results) do
+    local parts = vim.split(line, '\t')
+    if #parts > 2 then -- tracked file
+      local eol = vim.split(parts[2], '%s+')
+      result.i_crlf = eol[1] == 'i/crlf'
+      result.w_crlf = eol[2] == 'w/crlf'
+      result.relpath = parts[3]
+      local attrs = vim.split(parts[1], '%s+')
+      local stage = tonumber(attrs[3])
+      if stage <= 1 then
+          result.mode_bits   = attrs[1]
+          result.object_name = attrs[2]
+      else
+          result.has_conflicts = true
+      end
+    else -- untracked file
+      result.relpath = parts[2]
+    end
+  end
+  return result
+end
+
+Obj.get_show_text = function(self: Obj, revision: string): {string}, string
+  if not self.relpath then
+    return {}
+  end
+
+  local stdout, stderr =  self.repo:get_show_text(revision..':'..self.relpath)
+
+  if not self.i_crlf and self.w_crlf then
+    -- Add cr
+    for i = 1, #stdout do
+      stdout[i] = stdout[i]..'\r'
+    end
+  end
+
+  return stdout, stderr
 end
 
 Obj.unstage_file = function(self: Obj)
   self:command{'reset', self.file }
 end
 
---- Get version of file in the index, return array lines
-Obj.get_show_text = function(self: Obj, object: string): {string}, string
-  return self:command({'show', object}, {
-    supress_stderr = true
-  })
-end
-
-Obj.run_blame = function(self: Obj, lines: {string}, lnum: number): M.BlameInfo
-  if not self.object_name then
+Obj.run_blame = function(self: Obj, lines: {string}, lnum: number, ignore_whitespace: boolean): M.BlameInfo
+  if not self.object_name or self.repo.abbrev_head == '' then
     -- As we support attaching to untracked files we need to return something if
     -- the file isn't isn't tracked in git.
+    -- If abbrev_head is empty, then assume the repo has no commits
     return {
       author             = 'Not Committed Yet',
       ['author-mail']    = '<not.committed.yet>',
@@ -303,12 +414,13 @@ Obj.run_blame = function(self: Obj, lines: {string}, lnum: number): M.BlameInfo
       '--contents', '-',
       '-L', lnum..',+1',
       '--line-porcelain',
-      self.file
+      self.file,
+      ignore_whitespace and '-w' or nil,
     }, {
     writer = lines,
   })
   if #results == 0 then
-    return {}
+    return
   end
   local header = vim.split(table.remove(results, 1), ' ')
 
@@ -343,8 +455,7 @@ Obj.ensure_file_in_index = function(self: Obj)
       self:command{'update-index', '--add', '--cacheinfo', info}
     end
 
-    -- Update file info
-    _, self.object_name, self.mode_bits, self.has_conflicts = self:file_info()
+    self:update_file_info()
   end
 end
 
@@ -367,48 +478,29 @@ Obj.has_moved = function(self: Obj): string
       if orig_relpath == orig then
         self.orig_relpath = orig_relpath
         self.relpath = new
-        self.file = self.toplevel..'/'..new
+        self.file = self.repo.toplevel..'/'..new
         return new
       end
     end
   end
 end
 
-Obj.files_changed = function(self: Obj): {string}
-  local ret: {string} = {}
-  self:command({'status', '--porcelain'}, {
-    on_stdout = function(_, line: string)
-      if line:sub(1, 2):match('^.M') then
-        ret[#ret+1] = line:sub(4, -1)
-      end
-    end
-  })
-  return ret
-end
-
 Obj.new = function(file: string): Obj
+  if in_git_dir(file) then
+      dprint('In git dir')
+      return nil
+  end
   local self = setmetatable({} as Obj, {__index = Obj})
 
   self.file = file
-  self.username = M.command({'config', 'user.name'})[1]
-  self.toplevel, self.gitdir, self.abbrev_head =
-    get_repo_info(util.dirname(file))
+  self.repo = Repo.new(util.dirname(file))
 
-  -- Try yadm
-  if M.enable_yadm and not self.gitdir then
-    if vim.startswith(file, os.getenv('HOME'))
-      and #M.command({'ls-files', file}, {command = 'yadm'}) ~= 0 then
-      self.toplevel, self.gitdir, self.abbrev_head =
-        get_repo_info(util.dirname(file), 'yadm')
-    end
+  if not self.repo.gitdir then
+    dprint('Not in git repo')
+    return nil
   end
 
-  if not self.gitdir then
-    return self
-  end
-
-  self.relpath, self.object_name, self.mode_bits, self.has_conflicts =
-    self:file_info()
+  self:update_file_info(true)
 
   return self
 end

@@ -9,12 +9,13 @@ local await_count = 1000
 return function(opts)
   opts = opts or {}
 
-  local entry_maker = opts.entry_maker or make_entry.from_string
+  local entry_maker = opts.entry_maker or make_entry.gen_from_string
   local cwd = opts.cwd
+  local env = opts.env
   local fn_command = assert(opts.fn_command, "Must pass `fn_command`")
 
-  local results = {}
-  local num_results = 0
+  local results = vim.F.if_nil(opts.results, {})
+  local num_results = #results
 
   local job_started = false
   local job_completed = false
@@ -47,6 +48,7 @@ return function(opts)
           command = job_opts.command,
           args = job_opts.args,
           cwd = cwd,
+          env = env,
 
           stdout = stdout,
         }
@@ -55,6 +57,11 @@ return function(opts)
       end
 
       if not job_completed then
+        if not vim.tbl_isempty(results) then
+          for _, v in ipairs(results) do
+            process_result(v)
+          end
+        end
         for line in stdout:iter(false) do
           num_results = num_results + 1
 

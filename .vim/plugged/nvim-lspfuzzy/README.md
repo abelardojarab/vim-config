@@ -2,12 +2,9 @@
 
 This plugin makes the Neovim LSP client use
 [FZF](https://github.com/junegunn/fzf) to display results and navigate the code.
+It works by redefining your LSP handlers so that they call FZF.
 
-It works by redefining LSP handlers so that they call FZF. Therefore you don't
-need to change any of your exising LSP mappings. It's also **small** (currently
-at ~250 LOC) and **written entirely in Lua**.
-
-The plugin is compatible only with Neovim 0.5+.
+**The plugin requires Neovim 0.6+.** For Neovim 0.5, use version `v0.1.0`.
 
 ![demo](./demo.gif)
 
@@ -43,8 +40,10 @@ lua require('lspfuzzy').setup {}
 
 In addition, the plugin creates the following commands:
 * `:LspDiagnostics <bufnr>`: list diagnostics from given buffer (use `0` for
-  current buffer)
-* `:LspDiagnosticsAll`: list diagnostics from all buffers
+  current buffer).
+* `:LspDiagnosticsAll`: list diagnostics from all buffers.
+* `:LspFuzzyLast`: re-open the last results (requires `save_last = true`, see
+  [Configuration](#configuration)).
 
 By default the following FZF actions are available:
 * <kbd>**tab**</kbd> : select multiple entries
@@ -62,13 +61,15 @@ with their default settings:
 require('lspfuzzy').setup {
   methods = 'all',         -- either 'all' or a list of LSP methods (see below)
   jump_one = true,         -- jump immediately if there is only one location
+  save_last = false,       -- save last location results for the :LspFuzzyLast command
+  callback = nil,          -- callback called after jumping to a location
   fzf_preview = {          -- arguments to the FZF '--preview-window' option
     'right:+{2}-/2'          -- preview on the right and centered on entry
   },
-  fzf_action = {           -- FZF actions
-    ['ctrl-t'] = 'tabedit',  -- go to location in a new tab
-    ['ctrl-v'] = 'vsplit',   -- go to location in a vertical split
-    ['ctrl-x'] = 'split',    -- go to location in a horizontal split
+  fzf_action = {               -- FZF actions
+    ['ctrl-t'] = 'tab split',  -- go to location in a new tab
+    ['ctrl-v'] = 'vsplit',     -- go to location in a vertical split
+    ['ctrl-x'] = 'split',      -- go to location in a horizontal split
   },
   fzf_modifier = ':~:.',   -- format FZF entries, see |filename-modifiers|
   fzf_trim = true,         -- trim FZF entries
@@ -90,7 +91,6 @@ You can enable FZF only for some LSP methods by passing them as a list to the
 ```
 callHierarchy/incomingCalls
 callHierarchy/outgoingCalls
-textDocument/codeAction
 textDocument/declaration
 textDocument/definition
 textDocument/documentSymbol

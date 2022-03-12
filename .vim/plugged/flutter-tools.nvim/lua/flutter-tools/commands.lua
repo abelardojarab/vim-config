@@ -4,24 +4,49 @@ local utils = require("flutter-tools.utils")
 local devices = require("flutter-tools.devices")
 local config = require("flutter-tools.config")
 local executable = require("flutter-tools.executable")
-local dev_log = require("flutter-tools.log")
 local dev_tools = require("flutter-tools.dev_tools")
-
-local api = vim.api
+local lsp = require("flutter-tools.lsp")
+local job_runner = require("flutter-tools.runners.job_runner")
+local dap_runner = require("flutter-tools.runners.dap_runner")
+local dev_log = require("flutter-tools.log")
+local dap_ok, dap = pcall(require, "dap")
 
 local M = {}
 
----@type Job
-local run_job = nil
 ---@type table
 local current_device = nil
+
+---@class FlutterRunner
+---@field is_running fun():boolean
+---@field run fun(paths:table, args:table, cwd:string, on_run_data:fun(is_err:boolean, data:string), on_run_exit:fun(data:string[]))
+---@field cleanup fun()
+---@field send fun(cmd:string)
+
+---@type FlutterRunner
+local runner = nil
+
+function M.use_dap_runner()
+  local dap_requested = config.get("debugger").run_via_dap
+  if dap_requested then
+    if not dap_ok then
+      ui.notify(
+        { "dap runner was request but nvim-dap is not installed!", dap },
+        { level = ui.ERROR }
+      )
+      return false
+    end
+    return true
+  else
+    return false
+  end
+end
 
 function M.current_device()
   return current_device
 end
 
 function M.is_running()
-  return run_job ~= nil
+  return runner ~= nil and runner:is_running()
 end
 
 local function match_error_string(line)
@@ -51,23 +76,26 @@ end
 
 ---Handle output from flutter run command
 ---@param is_err boolean if this is stdout or stderr
----@param opts table config options for the dev log window
----@return fun(err: string, data: string, job: Job): nil
-local function on_run_data(is_err, opts)
-  return vim.schedule_wrap(function(_, data, _)
-    if is_err then
-      ui.notify({ data })
-    end
-    if not match_error_string(data) then
-      dev_tools.handle_log(data)
-      dev_log.log(data, opts)
-    end
-  end)
+local function on_run_data(is_err, data)
+  local dev_log_conf = config.get("dev_log")
+  if is_err then
+    ui.notify({ data }, { level = ui.ERROR, timeout = 5000 })
+  end
+  dev_log.log(data, dev_log_conf)
+end
+
+local function shutdown()
+  if runner ~= nil then
+    runner:cleanup()
+  end
+  runner = nil
+  current_device = nil
+  dev_tools.on_flutter_shutdown()
 end
 
 ---Handle a finished flutter run command
 ---@param result string[]
-local function on_run_exit(result)
+local function on_run_exit(result, cli_args)
   local matched_error, msg = has_recoverable_error(result)
   if matched_error then
     local lines, win_devices, highlights = devices.extract_device_props(result)
@@ -77,16 +105,13 @@ local function on_run_exit(result)
       highlights = highlights,
       on_create = function(buf, _)
         vim.b.devices = win_devices
-        utils.map("n", "<CR>", devices.select_device, { buffer = buf })
+        utils.map("n", "<CR>", function()
+          devices.select_device(cli_args)
+        end, { buffer = buf })
       end,
     })
   end
-end
-
-local function shutdown()
-  run_job = nil
-  current_device = nil
-  dev_tools.on_flutter_shutdown()
+  shutdown()
 end
 
 --- Take arguments from the commandline and pass
@@ -100,45 +125,35 @@ end
 ---Run the flutter application
 ---@param opts table
 function M.run(opts)
+  if M.is_running() then
+    return ui.notify({ "Flutter is already running!" })
+  end
   opts = opts or {}
   local device = opts.device
   local cmd_args = opts.args
-  if run_job then
-    return utils.notify("Flutter is already running!")
-  end
-  executable.flutter(function(cmd)
-    local args = { "run" }
-    if not cmd_args and device and device.id then
-      current_device = device
-      vim.list_extend(args, { "-d", device.id })
-    end
+  local cli_args = opts.cli_args
+  executable.get(function(paths)
+    local args = cli_args or {}
+    if not cli_args then
+      if not M.use_dap_runner() then
+        vim.list_extend(args, { "run" })
+      end
+      if not cmd_args and device and device.id then
+        vim.list_extend(args, { "-d", device.id })
+      end
 
-    if cmd_args then
-      vim.list_extend(args, cmd_args)
-    end
+      if cmd_args then
+        vim.list_extend(args, cmd_args)
+      end
 
-    local dev_url = dev_tools.get_url()
-    if dev_url then
-      vim.list_extend(args, { "--devtools-server-address", dev_url })
+      local dev_url = dev_tools.get_url()
+      if dev_url then
+        vim.list_extend(args, { "--devtools-server-address", dev_url })
+      end
     end
-
     ui.notify({ "Starting flutter project..." })
-    local conf = config.get("dev_log")
-    run_job = Job:new({
-      command = cmd,
-      args = args,
-      on_start = function()
-        vim.cmd("doautocmd User FlutterToolsAppStarted")
-      end,
-      on_stdout = on_run_data(false, conf),
-      on_stderr = on_run_data(true, conf),
-      on_exit = vim.schedule_wrap(function(j, _)
-        on_run_exit(j:result())
-        shutdown()
-      end),
-    })
-
-    run_job:start()
+    runner = M.use_dap_runner() and dap_runner or job_runner
+    runner:run(paths, args, lsp.get_lsp_root_dir(), on_run_data, on_run_exit)
   end)
 end
 
@@ -146,35 +161,35 @@ end
 ---@param quiet boolean
 ---@param on_send function|nil
 local function send(cmd, quiet, on_send)
-  if run_job then
-    run_job:send(cmd)
+  if M.is_running() then
+    runner:send(cmd, quiet)
     if on_send then
       on_send()
     end
   elseif not quiet then
-    utils.notify("Sorry! Flutter is not running")
+    ui.notify({ "Sorry! Flutter is not running" })
   end
 end
 
 ---@param quiet boolean
 function M.reload(quiet)
-  send("r", quiet)
+  send("reload", quiet)
 end
 
 ---@param quiet boolean
 function M.restart(quiet)
-  send("R", quiet, function()
+  send("restart", quiet, function()
     if not quiet then
-      ui.notify({ "Restarting..." }, 1500)
+      ui.notify({ "Restarting..." }, { timeout = 1500 })
     end
   end)
 end
 
 ---@param quiet boolean
 function M.quit(quiet)
-  send("q", quiet, function()
+  send("quit", quiet, function()
     if not quiet then
-      ui.notify({ "Closing flutter application..." }, 1500)
+      ui.notify({ "Closing flutter application..." }, { timeout = 1500 })
       shutdown()
     end
   end)
@@ -182,11 +197,16 @@ end
 
 ---@param quiet boolean
 function M.visual_debug(quiet)
-  send("p", quiet)
+  send("visual_debug", quiet)
+end
+
+---@param quiet boolean
+function M.detach(quiet)
+  send("detach", quiet)
 end
 
 function M.copy_profiler_url()
-  if not run_job then
+  if not M.is_running() then
     ui.notify({ "You must run the app first!" })
     return
   end
@@ -203,6 +223,16 @@ function M.copy_profiler_url()
   end
 end
 
+---@param quiet boolean
+function M.widget_inspector(quiet)
+  send("inspect", quiet)
+end
+
+---@param quiet boolean
+function M.construction_lines(quiet)
+  send("construction_lines", quiet)
+end
+
 -----------------------------------------------------------------------------//
 -- Pub commands
 -----------------------------------------------------------------------------//
@@ -210,7 +240,7 @@ end
 ---@param result string[]
 local function on_pub_get(result, err)
   local timeout = err and 10000 or nil
-  ui.notify(result, timeout)
+  ui.notify(result, { timeout = timeout })
 end
 
 ---@type Job
@@ -219,7 +249,11 @@ local pub_get_job = nil
 function M.pub_get()
   if not pub_get_job then
     executable.flutter(function(cmd)
-      pub_get_job = Job:new({ command = cmd, args = { "pub", "get" } })
+      pub_get_job = Job:new({
+        command = cmd,
+        args = { "pub", "get" },
+        cwd = lsp.get_lsp_root_dir(),
+      })
       pub_get_job:after_success(vim.schedule_wrap(function(j)
         on_pub_get(j:result())
         pub_get_job = nil
@@ -252,17 +286,86 @@ function M.pub_upgrade(cmd_args)
       if cmd_args then
         vim.list_extend(args, cmd_args)
       end
-      pub_upgrade_job = Job:new({ command = cmd, args = args })
+      pub_upgrade_job = Job:new({ command = cmd, args = args, cwd = lsp.get_lsp_root_dir() })
       pub_upgrade_job:after_success(vim.schedule_wrap(function(j)
-        ui.notify(j:result(), notify_timeout)
+        ui.notify(j:result(), { timeout = notify_timeout })
         pub_upgrade_job = nil
       end))
       pub_upgrade_job:after_failure(vim.schedule_wrap(function(j)
-        ui.notify(j:stderr_result(), notify_timeout)
+        ui.notify(j:stderr_result(), { timeout = notify_timeout })
         pub_upgrade_job = nil
       end))
       pub_upgrade_job:start()
     end)
+  end
+end
+
+-----------------------------------------------------------------------------//
+-- FVM commands
+-----------------------------------------------------------------------------//
+
+---@type Job
+local fvm_list_job = nil
+
+--- Returns table<{name: string, status: active|global|nil}>
+function M.fvm_list(callback)
+  if not fvm_list_job then
+    -- Example output:
+    --
+    -- Cache Directory:  /Users/rjm/fvm/versions
+    --
+    -- master (active)
+    -- beta
+    -- stable (global)
+    fvm_list_job = Job:new({ command = "fvm", args = { "list" } })
+
+    fvm_list_job:after_success(vim.schedule_wrap(function(j)
+      local out = j:result()
+      local sdks_out = { unpack(out, 3, #out) }
+
+      local sdks = {}
+      for _, sdk_out in pairs(sdks_out) do
+        -- matches: "<name> (<status>)"
+        local name, status = sdk_out:match("(.*)%s%((%w+)%)")
+        name = name or sdk_out
+        table.insert(sdks, { name = name, status = status })
+      end
+
+      callback(sdks)
+      fvm_list_job = nil
+    end))
+
+    fvm_list_job:after_failure(vim.schedule_wrap(function(j)
+      ui.notify(j:stderr_result(), { level = ui.ERROR })
+      fvm_list_job = nil
+    end))
+
+    fvm_list_job:start()
+  end
+end
+
+---@type Job
+local fvm_use_job = nil
+
+function M.fvm_use(sdk_name)
+  if not fvm_use_job then
+    fvm_use_job = Job:new({ command = "fvm", args = { "use", sdk_name } })
+
+    fvm_use_job:after_success(vim.schedule_wrap(function(j)
+      ui.notify(j:result())
+      shutdown()
+      executable.reset_paths()
+      require("flutter-tools.lsp").restart()
+
+      fvm_use_job = nil
+    end))
+
+    fvm_use_job:after_failure(vim.schedule_wrap(function(j)
+      ui.notify(j:result(), { timeout = 10000 }) -- FVM doesn't output to stderr, nice
+      fvm_use_job = nil
+    end))
+
+    fvm_use_job:start()
   end
 end
 

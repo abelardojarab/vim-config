@@ -11,7 +11,10 @@ local shell = require "nvim-treesitter.shell_command_selectors"
 local M = {}
 local lockfile = {}
 
-M.compilers = { vim.fn.getenv "CC", "cc", "gcc", "clang", "cl" }
+M.compilers = { vim.fn.getenv "CC", "cc", "gcc", "clang", "cl", "zig" }
+M.prefer_git = fn.has "win32" == 1
+M.command_extra_args = {}
+M.ts_generate_args = nil
 
 local started_commands = 0
 local finished_commands = 0
@@ -124,6 +127,10 @@ function M.iter_cmd(cmd_list, i, lang, success_message)
     print(get_job_status() .. " " .. attr.info)
   end
 
+  if attr.opts and attr.opts.args and M.command_extra_args[attr.cmd] then
+    vim.list_extend(attr.opts.args, M.command_extra_args[attr.cmd])
+  end
+
   if type(attr.cmd) == "function" then
     local ok, err = pcall(attr.cmd)
     if ok then
@@ -180,6 +187,9 @@ end
 local function get_command(cmd)
   local options = ""
   if cmd.opts and cmd.opts.args then
+    if M.command_extra_args[cmd.cmd] then
+      vim.list_extend(cmd.opts.args, M.command_extra_args[cmd.cmd])
+    end
     for _, opt in ipairs(cmd.opts.args) do
       options = string.format("%s %s", options, opt)
     end
@@ -250,6 +260,15 @@ local function run_install(cache_folder, install_folder, lang, repo, with_sync, 
       )
     end
     return
+  else
+    if not M.ts_generate_args then
+      local ts_cli_version = utils.ts_cli_version()
+      if ts_cli_version and vim.split(ts_cli_version, " ")[1] > "0.20.2" then
+        M.ts_generate_args = { "generate", "--abi", vim.treesitter.language_version }
+      else
+        M.ts_generate_args = { "generate" }
+      end
+    end
   end
   if generate_from_grammar and vim.fn.executable "node" ~= 1 then
     api.nvim_err_writeln "Node JS not found: `node` is not executable!"
@@ -270,7 +289,10 @@ local function run_install(cache_folder, install_folder, lang, repo, with_sync, 
   local command_list = {}
   if not from_local_path then
     vim.list_extend(command_list, { shell.select_install_rm_cmd(cache_folder, project_name) })
-    vim.list_extend(command_list, shell.select_download_commands(repo, project_name, cache_folder, revision))
+    vim.list_extend(
+      command_list,
+      shell.select_download_commands(repo, project_name, cache_folder, revision, M.prefer_git)
+    )
   end
   if generate_from_grammar then
     if repo.generate_requires_npm then
@@ -296,26 +318,29 @@ local function run_install(cache_folder, install_folder, lang, repo, with_sync, 
         info = "Generating source files from grammar.js...",
         err = 'Error during "tree-sitter generate"',
         opts = {
-          args = { "generate" },
+          args = M.ts_generate_args,
           cwd = compile_location,
         },
       },
     })
   end
   vim.list_extend(command_list, {
-    {
-      cmd = cc,
-      info = "Compiling...",
-      err = "Error during compilation",
-      opts = {
-        args = vim.tbl_flatten(shell.select_compiler_args(repo, cc)),
-        cwd = compile_location,
-      },
-    },
+    shell.select_compile_command(repo, cc, compile_location),
     shell.select_mv_cmd("parser.so", parser_lib_name, compile_location),
     {
       cmd = function()
         vim.fn.writefile({ revision or "" }, utils.join_path(utils.get_parser_info_dir(), lang .. ".revision"))
+      end,
+    },
+    { -- auto-attach modules after installation
+      cmd = function()
+        for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+          if parsers.get_buf_lang(buf) == lang then
+            for _, mod in ipairs(require("nvim-treesitter.configs").available_modules()) do
+              require("nvim-treesitter.configs").reattach_module(mod, buf)
+            end
+          end
+        end
       end,
     },
   })
@@ -417,13 +442,13 @@ function M.update(options)
         end
       end
       if installed == 0 then
-        print "Parsers are up-to-date!"
+        utils.notify "Parsers are up-to-date!"
       end
     else
       local parsers_to_update = configs.get_update_strategy() == "lockfile" and outdated_parsers()
         or info.installed_parsers()
       if #parsers_to_update == 0 then
-        print "All parsers are up-to-date!"
+        utils.notify "All parsers are up-to-date!"
       end
       for _, lang in pairs(parsers_to_update) do
         install {
@@ -509,6 +534,7 @@ function M.write_lockfile(verbose, skip_langs)
 end
 
 M.ensure_installed = install { exclude_configured_parsers = true }
+M.ensure_installed_sync = install { with_sync = true, exclude_configured_parsers = true }
 
 M.commands = {
   TSInstall = {

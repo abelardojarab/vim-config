@@ -20,7 +20,7 @@ local get_commit_message = a.wrap(function (content, cb)
   local written = false
   Buffer.create {
     name = get_commit_file(),
-    filetype = "gitcommit",
+    filetype = "NeogitCommitMessage",
     buftype = "",
     kind = config.values.commit_popup.kind,
     modifiable = true,
@@ -51,6 +51,9 @@ local get_commit_message = a.wrap(function (content, cb)
     },
     initialize = function(buffer)
       buffer:set_lines(0, -1, false, content)
+      if not config.values.disable_insert_on_commit then
+        vim.cmd(":startinsert")
+      end
     end
   }
 end, 2)
@@ -58,17 +61,30 @@ end, 2)
 -- If skip_gen is true we don't generate the massive git comment.
 -- This flag should be true when the file already exists
 local function prompt_commit_message(args, msg, skip_gen)
+  local msg_template_path = cli.config.get("commit.template").show_popup(false).call()[1]
   local output = {}
 
   if msg and #msg > 0 then
     for _, line in ipairs(msg) do
       table.insert(output, line)
     end
-  elseif not skip_gen then
+  elseif not skip_gen and not msg_template_path then
     table.insert(output, "")
   end
 
   if not skip_gen then
+    if msg_template_path then
+      a.util.scheduler()
+      local expanded_path = vim.fn.glob(msg_template_path)
+      if expanded_path == "" then
+        return
+      end
+      local msg_template = uv_utils.read_file_sync(expanded_path)
+      for _, line in pairs(msg_template) do
+        table.insert(output, line)
+      end
+      table.insert(output, "")
+    end
     local lines = cli.commit.dry_run.args(unpack(args)).call()
     for _, line in ipairs(lines) do
       table.insert(output, "# " .. line)
@@ -87,13 +103,13 @@ local function do_commit(popup, data, cmd, skip_gen)
   end
   a.util.scheduler()
   local notification = notif.create("Committing...", vim.log.levels.INFO, 9999)
-  local _, code = cmd.call()
+  local result = cli.interactive_git_cmd(cmd)
   a.util.scheduler()
   if notification then
     notification:delete()
   end
   notif.create("Successfully committed!")
-  if code == 0 then
+  if result.code == 0 then
     a.uv.fs_unlink(commit_file)
     status.refresh(true)
   end
@@ -120,24 +136,24 @@ function M.create()
       data = data or ''
       -- we need \r? to support windows
       data = split(data, '\r?\n')
-      do_commit(popup, data, cli.commit.commit_message_file(commit_file).args(unpack(popup:get_arguments())), skip_gen)
+      do_commit(popup, data, tostring(cli.commit.commit_message_file(commit_file).args(unpack(popup:get_arguments()))), skip_gen)
     end)
     :action("e", "Extend", function(popup)
-      do_commit(popup, nil, cli.commit.no_edit.amend)
+      do_commit(popup, nil, tostring(cli.commit.no_edit.amend))
     end)
     :action("w", "Reword", function(popup)
       a.util.scheduler()
       local commit_file = get_commit_file()
       local msg = cli.log.max_count(1).pretty('%B').call()
 
-      do_commit(popup, msg, cli.commit.commit_message_file(commit_file).amend.only)
+      do_commit(popup, msg, tostring(cli.commit.commit_message_file(commit_file).amend.only))
     end)
     :action("a", "Amend", function(popup)
       a.util.scheduler()
       local commit_file = get_commit_file()
       local msg = cli.log.max_count(1).pretty('%B').call()
 
-      do_commit(popup, msg, cli.commit.commit_message_file(commit_file).amend)
+      do_commit(popup, msg, tostring(cli.commit.commit_message_file(commit_file).amend), true)
     end)
     :new_action_group()
     :action("f", "Fixup")

@@ -40,10 +40,16 @@ vim.cmd [[autocmd CursorHold,CursorHoldI * lua require'nvim-lightbulb'.update_li
 
 ### Configuration
 
-##### Available options:
+##### Set defaults
+
+Configuration can be passed to the setup function.
+
 ```lua
 -- Showing defaults
-require'nvim-lightbulb'.update_lightbulb {
+require'nvim-lightbulb'.setup {
+    -- LSP client names to ignore
+    -- Example: {"sumneko_lua", "null-ls"}
+    ignore = {},
     sign = {
         enabled = true,
         -- Priority of the gutter sign
@@ -73,6 +79,8 @@ require'nvim-lightbulb'.update_lightbulb {
         enabled = false,
         -- Text to show at virtual text
         text = "💡",
+        -- highlight mode to use for virtual text (replace, combine, blend), see :help nvim_buf_set_extmark() for reference
+        hl_mode = "replace",
     },
     status_text = {
         enabled = false,
@@ -82,6 +90,19 @@ require'nvim-lightbulb'.update_lightbulb {
         text_unavailable = ""
     }
 }
+```
+##### Per-call configuration
+
+You can overwrite the defaults by passing options to the `update_lightbulb` function.
+
+VimScript:
+```vim
+autocmd CursorHold,CursorHoldI * lua require'nvim-lightbulb'.update_lightbulb({ ignore = {"null-ls"} })
+```
+
+Lua:
+```lua
+vim.cmd [[autocmd CursorHold,CursorHoldI * lua require'nvim-lightbulb'.update_lightbulb({ ignore = {"null-ls"} })]]
 ```
 
 ##### Modify the [lightbulb sign](https://neovim.io/doc/user/sign.html#:sign-define):

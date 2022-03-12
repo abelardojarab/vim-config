@@ -38,7 +38,7 @@ function! nvimgdb#GlobalInit()
   command! GdbBreakpointClearAll lua NvimGdb.i():breakpoint_clear_all()
   command! GdbFrame lua NvimGdb.i():send('f')
   command! GdbRun lua NvimGdb.i():send('run')
-  command! GdbUntil lua NvimGdb.i():send('until %s', NvimGdb.vim.fn.line('.'))
+  command! GdbUntil lua NvimGdb.i():send('until %s', vim.fn.line('.'))
   command! GdbContinue lua NvimGdb.i():send('c')
   command! GdbNext lua NvimGdb.i():send('n')
   command! GdbStep lua NvimGdb.i():send('s')
@@ -46,9 +46,10 @@ function! nvimgdb#GlobalInit()
   command! GdbFrameUp lua NvimGdb.i():send('up')
   command! GdbFrameDown lua NvimGdb.i():send('down')
   command! GdbInterrupt lua NvimGdb.i():send()
-  command! GdbEvalWord lua NvimGdb.i():send('print %s', NvimGdb.vim.fn.expand('<cword>'))
+  command! GdbEvalWord lua NvimGdb.i():send('print %s', vim.fn.expand('<cword>'))
   command! -range GdbEvalRange call luaeval("NvimGdb.i():send('print %s', _A[1])", [s:GetExpression(<f-args>)])
   command! -nargs=1 GdbCreateWatch call luaeval("NvimGdb.i():create_watch(_A[1], '<mods>')", [<q-args>])
+  command! -nargs=+ Gdb call luaeval("NvimGdb.i():send(_A[1])", [<q-args>])
   command! GdbLopenBacktrace call luaeval("NvimGdb.i():lopen('backtrace', '<mods>')")
   command! GdbLopenBreakpoints call luaeval("NvimGdb.i():lopen('breakpoints', '<mods>')")
 
@@ -103,6 +104,7 @@ function! nvimgdb#GlobalCleanup()
   delcommand GdbEvalWord
   delcommand GdbEvalRange
   delcommand GdbCreateWatch
+  delcommand Gdb
   delcommand GdbLopenBacktrace
   delcommand GdbLopenBreakpoints
 endfunction

@@ -68,9 +68,11 @@ g:lsp_fold_enabled	vim-lsp.txt	/*g:lsp_fold_enabled*
 g:lsp_format_sync_timeout	vim-lsp.txt	/*g:lsp_format_sync_timeout*
 g:lsp_get_supported_capabilities	vim-lsp.txt	/*g:lsp_get_supported_capabilities*
 g:lsp_hover_conceal	vim-lsp.txt	/*g:lsp_hover_conceal*
+g:lsp_hover_ui	vim-lsp.txt	/*g:lsp_hover_ui*
 g:lsp_ignorecase	vim-lsp.txt	/*g:lsp_ignorecase*
 g:lsp_insert_text_enabled	vim-lsp.txt	/*g:lsp_insert_text_enabled*
 g:lsp_log_file	vim-lsp.txt	/*g:lsp_log_file*
+g:lsp_log_verbose	vim-lsp.txt	/*g:lsp_log_verbose*
 g:lsp_peek_alignment	vim-lsp.txt	/*g:lsp_peek_alignment*
 g:lsp_preview_autoclose	vim-lsp.txt	/*g:lsp_preview_autoclose*
 g:lsp_preview_doubletap	vim-lsp.txt	/*g:lsp_preview_doubletap*
@@ -89,6 +91,7 @@ g:lsp_tagfunc_source_methods	vim-lsp.txt	/*g:lsp_tagfunc_source_methods*
 g:lsp_text_document_did_save_delay	vim-lsp.txt	/*g:lsp_text_document_did_save_delay*
 g:lsp_text_edit_enabled	vim-lsp.txt	/*g:lsp_text_edit_enabled*
 g:lsp_tree_incoming_prefix	vim-lsp.txt	/*g:lsp_tree_incoming_prefix*
+g:lsp_untitled_buffer_enabled	vim-lsp.txt	/*g:lsp_untitled_buffer_enabled*
 g:lsp_use_event_queue	vim-lsp.txt	/*g:lsp_use_event_queue*
 g:lsp_work_done_progress_enabled	vim-lsp.txt	/*g:lsp_work_done_progress_enabled*
 lsp#disable()	vim-lsp.txt	/*lsp#disable()*
@@ -111,6 +114,7 @@ lsp_buffer_enabled	vim-lsp.txt	/*lsp_buffer_enabled*
 lsp_complete_done	vim-lsp.txt	/*lsp_complete_done*
 lsp_diagnostics_updated	vim-lsp.txt	/*lsp_diagnostics_updated*
 lsp_float_closed	vim-lsp.txt	/*lsp_float_closed*
+lsp_float_focused	vim-lsp.txt	/*lsp_float_focused*
 lsp_float_opened	vim-lsp.txt	/*lsp_float_opened*
 lsp_progress_updated	vim-lsp.txt	/*lsp_progress_updated*
 lsp_register_server	vim-lsp.txt	/*lsp_register_server*
@@ -124,6 +128,7 @@ vim-lsp-autocommands	vim-lsp.txt	/*vim-lsp-autocommands*
 vim-lsp-autocomplete	vim-lsp.txt	/*vim-lsp-autocomplete*
 vim-lsp-commands	vim-lsp.txt	/*vim-lsp-commands*
 vim-lsp-completion-filter	vim-lsp.txt	/*vim-lsp-completion-filter*
+vim-lsp-completion-sort	vim-lsp.txt	/*vim-lsp-completion-sort*
 vim-lsp-configure	vim-lsp.txt	/*vim-lsp-configure*
 vim-lsp-configure-wiki	vim-lsp.txt	/*vim-lsp-configure-wiki*
 vim-lsp-contents	vim-lsp.txt	/*vim-lsp-contents*
@@ -138,6 +143,7 @@ vim-lsp-mappings	vim-lsp.txt	/*vim-lsp-mappings*
 vim-lsp-omnifunc	vim-lsp.txt	/*vim-lsp-omnifunc*
 vim-lsp-options	vim-lsp.txt	/*vim-lsp-options*
 vim-lsp-performance	vim-lsp.txt	/*vim-lsp-performance*
+vim-lsp-popup-format	vim-lsp.txt	/*vim-lsp-popup-format*
 vim-lsp-refresh_pattern	vim-lsp.txt	/*vim-lsp-refresh_pattern*
 vim-lsp-semantic	vim-lsp.txt	/*vim-lsp-semantic*
 vim-lsp-server_info	vim-lsp.txt	/*vim-lsp-server_info*
@@ -146,4 +152,5 @@ vim-lsp-settings_plugin	vim-lsp.txt	/*vim-lsp-settings_plugin*
 vim-lsp-snippets	vim-lsp.txt	/*vim-lsp-snippets*
 vim-lsp-tagfunc	vim-lsp.txt	/*vim-lsp-tagfunc*
 vim-lsp-tcp	vim-lsp.txt	/*vim-lsp-tcp*
+vim-lsp-workspace-folders	vim-lsp.txt	/*vim-lsp-workspace-folders*
 vim-lsp.txt	vim-lsp.txt	/*vim-lsp.txt*

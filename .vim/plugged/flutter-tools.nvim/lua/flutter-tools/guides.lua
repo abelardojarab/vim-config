@@ -21,9 +21,7 @@ local markers = {
 -- should should be added relative to the symbol it is for
 --
 -- remove 1 because lua is 1 based,
--- remove another 1 because the character should appear before the first character
--- remove another 1 to add visual padding
-local START_OFFSET = 3
+local START_OFFSET = 1
 
 local MIDDLE_OFFSET = 2
 
@@ -58,9 +56,9 @@ end
 ---@return string
 local function get_guide_character(lnum, end_line, parent_start, indent_size, children, lines)
   for index, child in ipairs(children) do
-    -- if the child is within the parent range i.e. not at the start or the end
+    -- if the child is within the parent range but not at the end
     local child_lnum = child.range.start.line
-    if index ~= #children and index ~= 1 and lnum == child_lnum then
+    if index ~= #children and lnum == child_lnum then
       local child_indent = first_marker_index(lines, child_lnum, MIDDLE_OFFSET) - parent_start
       return markers.middle .. markers.horizontal:rep(child_indent)
     end
@@ -97,7 +95,7 @@ local function collect_guides(lines, data, guides)
     -- marker to end *at the level* of the symbol
     local end_lnum = data.children[#data.children].range.start.line
 
-    local start_index = first_marker_index(lines, start_lnum, START_OFFSET)
+    local start_index = first_marker_index(lines, data.range.start.line, START_OFFSET)
     for lnum = start_lnum, end_lnum, 1 do
       -- TODO: skip empty lines since currently extmarks,
       -- cannot be set where there is no existing text
@@ -158,12 +156,11 @@ local function render_guides(bufnum, guides, conf)
         )
       if not success and conf.debug then
         local name = api.nvim_buf_get_name(bufnum)
-        utils.notify({
-          fmt("error drawing widget guide for %s at line %d, col %d\n", name, lnum, start)
-            .. "\n"
-            .. msg,
-          utils.L.ERROR,
-        })
+        local ui = require("flutter-tools.ui")
+        ui.notify({
+          fmt("error drawing widget guide for %s at line %d, col %d.", name, lnum, start),
+          "because: " .. msg,
+        }, { level = ui.ERROR })
       end
     end
   end
@@ -183,7 +180,7 @@ local function is_buf_valid(bufnum)
     and vim.bo.buftype == ""
 end
 
-function M.widget_guides(_, _, data, _)
+function M.widget_guides(_, data, _, _)
   local conf = config.get().widget_guides
   if conf.enabled then
     local bufnum = vim.uri_to_bufnr(data.uri)

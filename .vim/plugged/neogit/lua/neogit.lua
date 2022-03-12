@@ -1,6 +1,7 @@
 local config = require("neogit.config")
 local lib = require("neogit.lib")
 local signs = require("neogit.lib.signs")
+local hl = require("neogit.lib.hl")
 local status = require("neogit.status")
 
 local neogit = {
@@ -28,7 +29,7 @@ local neogit = {
         popup.create()
       end
     else
-      status.create(opts.kind or "tab")
+      status.create(opts.kind, opts.cwd)
     end
   end,
   reset = status.reset,
@@ -37,6 +38,7 @@ local neogit = {
   end,
   dispatch_reset = status.dispatch_reset,
   refresh = status.refresh,
+  refresh_manually = status.refresh_manually,
   dispatch_refresh = status.dispatch_refresh,
   refresh_viml_compat = status.refresh_viml_compat,
   close = status.close,
@@ -47,6 +49,11 @@ local neogit = {
     if not config.values.disable_signs then
       signs.setup()
     end
+    if config.values.use_magit_keybindings then
+      config.values.mappings.status["F"] = "PullPopup"
+      config.values.mappings.status["p"] = ""
+    end
+    hl.setup()
   end
 }
 

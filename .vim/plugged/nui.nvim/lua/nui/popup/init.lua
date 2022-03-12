@@ -3,11 +3,14 @@ local buf_storage = require("nui.utils.buf_storage")
 local autocmd = require("nui.utils.autocmd")
 local keymap = require("nui.utils.keymap")
 local utils = require("nui.utils")
+
+local _ = utils._
+local defaults = utils.defaults
 local is_type = utils.is_type
 
-local function get_container_info(popup)
-  local win_config = popup.win_config
-  local relative = win_config.relative
+---@param position nui_popup_internal_position
+local function get_container_info(position)
+  local relative = position.relative
 
   if relative == "editor" then
     return {
@@ -19,14 +22,14 @@ local function get_container_info(popup)
 
   if relative == "cursor" or relative == "win" then
     return {
-      relative = win_config.bufpos and "buf" or relative,
-      size = utils.get_window_size(win_config.win),
+      relative = position.bufpos and "buf" or relative,
+      size = utils.get_window_size(position.win),
       type = "window",
     }
   end
 end
 
-local function calculate_window_size(size, container)
+local function calculate_window_size(size, container_size)
   if not is_type("table", size) then
     size = {
       width = size,
@@ -34,10 +37,10 @@ local function calculate_window_size(size, container)
     }
   end
 
-  local width = utils._.normalize_dimension(size.width, container.size.width)
+  local width = _.normalize_dimension(size.width, container_size.width)
   assert(width, "invalid size.width")
 
-  local height = utils._.normalize_dimension(size.height, container.size.height)
+  local height = _.normalize_dimension(size.height, container_size.height)
   assert(height, "invalid size.height")
 
   return {
@@ -46,6 +49,7 @@ local function calculate_window_size(size, container)
   }
 end
 
+---@return nui_popup_internal_position
 local function calculate_window_position(position, size, container)
   local row
   local col
@@ -98,26 +102,14 @@ local function calculate_winblend(opacity)
   return 100 - (opacity * 100)
 end
 
+---@return nui_popup_internal_position
 local function parse_relative(relative, fallback_winid)
-  relative = utils.defaults(relative, "win")
-
-  if is_type("string", relative) then
-    relative = {
-      type = utils.defaults(relative, "win"),
-    }
-  end
-
-  if relative.type == "win" then
-    return {
-      relative = relative.type,
-      win = utils.defaults(relative.winid, fallback_winid),
-    }
-  end
+  local winid = defaults(relative.winid, fallback_winid)
 
   if relative.type == "buf" then
     return {
       relative = "win",
-      win = utils.defaults(relative.winid, fallback_winid),
+      win = winid,
       bufpos = {
         relative.position.row,
         relative.position.col,
@@ -127,150 +119,248 @@ local function parse_relative(relative, fallback_winid)
 
   return {
     relative = relative.type,
+    win = winid,
   }
 end
 
-local function init(class, options)
-  local self = setmetatable({}, class)
+local function normalize_options(options)
+  options.enter = defaults(options.enter, false)
+  options.zindex = defaults(options.zindex, 50)
 
-  self.popup_state = {
+  options.relative = defaults(options.relative, "win")
+  if is_type("string", options.relative) then
+    options.relative = {
+      type = options.relative,
+    }
+  end
+
+  options.buf_options = defaults(options.buf_options, {})
+  options.win_options = defaults(options.win_options, {})
+
+  options.border = defaults(options.border, "none")
+  if is_type("string", options.border) then
+    options.border = {
+      style = options.border,
+    }
+  end
+
+  return options
+end
+
+---@param class NuiPopup
+local function init(class, options)
+  ---@type NuiPopup
+  local self = setmetatable({}, { __index = class })
+
+  options = normalize_options(options)
+
+  self._ = {
+    buf_options = options.buf_options,
     loading = false,
     mounted = false,
+    win_enter = options.enter,
+    win_options = options.win_options,
   }
 
-  self.popup_props = {}
-  self.win_config = vim.tbl_extend("force", {
-    _enter = utils.defaults(options.enter, false),
+  self.win_config = {
     focusable = options.focusable,
     style = "minimal",
-    zindex = utils.defaults(options.zindex, 50),
-  }, parse_relative(
-    options.relative,
-    vim.api.nvim_get_current_win()
-  ))
+    zindex = options.zindex,
+  }
 
-  self.buf_options = utils.defaults(options.buf_options, {})
+  self.ns_id = _.normalize_namespace_id(options.ns_id)
 
-  self.win_options = utils.defaults(options.win_options, {})
-
-  if not self.win_options.winblend and is_type("number", options.opacity) then
-    -- @deprecated
-    self.win_options.winblend = calculate_winblend(options.opacity)
+  if options.bufnr then
+    self.bufnr = options.bufnr
+    self._.unmanaged_bufnr = true
   end
 
-  if not self.win_options.winhighlight and not is_type("nil", options.highlight) then
+  if not self._.win_options.winblend and is_type("number", options.opacity) then
     -- @deprecated
-    self.win_options.winhighlight = options.highlight
+    self._.win_options.winblend = calculate_winblend(options.opacity)
   end
 
-  local props = self.popup_props
+  -- @deprecated
+  if not self._.win_options.winhighlight and not is_type("nil", options.highlight) then
+    self._.win_options.winhighlight = options.highlight
+  end
+
   local win_config = self.win_config
 
-  local container_info = get_container_info(self)
-  props.size = calculate_window_size(options.size, container_info)
-  props.position = calculate_window_position(options.position, props.size, container_info)
+  self._.position = parse_relative(options.relative, vim.api.nvim_get_current_win())
+
+  local container_info = get_container_info(self._.position)
+
+  self._.size = calculate_window_size(options.size, container_info.size)
+  win_config.width = self._.size.width
+  win_config.height = self._.size.height
+
+  self._.position = vim.tbl_extend(
+    "force",
+    self._.position,
+    calculate_window_position(options.position, self._.size, container_info)
+  )
+
+  win_config.relative = self._.position.relative
+  win_config.win = self._.position.relative == "win" and self._.position.win or nil
+  win_config.bufpos = self._.position.bufpos
+  win_config.row = self._.position.row
+  win_config.col = self._.position.col
 
   self.border = Border(self, options.border)
 
-  win_config.width = props.size.width
-  win_config.height = props.size.height
-  win_config.row = props.position.row
-  win_config.col = props.position.col
   win_config.border = self.border:get()
-
-  if win_config.width < 1 then
-    error("width can not be negative. is padding more than width?")
-  end
-
-  if win_config.height < 1 then
-    error("height can not be negative. is padding more than height?")
-  end
 
   return self
 end
 
-local Popup = {
-  name = "Popup",
+--luacheck: push no max line length
+
+---@alias nui_popup_internal_position { relative: "'cursor'"|"'editor'"|"'win'", win: number, bufpos?: number[], row: number, col: number }
+---@alias nui_popup_internal_size { height: number, width: number }
+---@alias nui_popup_internal { loading: boolean, mounted: boolean, position: nui_popup_internal_position, size: nui_popup_internal_size, win_enter: boolean, unmanaged_bufnr?: boolean, buf_options: table<string,any>, win_options: table<string,any> }
+---@alias nui_popup_win_config { focusable: boolean, style: "'minimal'", zindex: number, relative: "'cursor'"|"'editor'"|"'win'", win?: number, bufpos?: number[], row: number, col: number, width: number, height: number, border?: table }
+
+--luacheck: pop
+
+---@class NuiPopup
+---@field border NuiPopupBorder
+---@field bufnr number
+---@field ns_id number
+---@field private _ nui_popup_internal
+---@field win_config nui_popup_win_config
+---@field winid number
+local Popup = setmetatable({
   super = nil,
-}
+}, {
+  __call = init,
+  __name = "NuiPopup",
+})
 
 function Popup:init(options)
   return init(self, options)
 end
 
-function Popup:mount()
-  if self.popup_state.loading or self.popup_state.mounted then
+function Popup:_open_window()
+  if self.winid or not self.bufnr then
     return
   end
 
-  self.popup_state.loading = true
+  self.winid = vim.api.nvim_open_win(self.bufnr, self._.win_enter, self.win_config)
+  assert(self.winid, "failed to create popup window")
+
+  _.set_win_options(self.winid, self._.win_options)
+end
+
+function Popup:_close_window()
+  if not self.winid then
+    return
+  end
+
+  if vim.api.nvim_win_is_valid(self.winid) then
+    vim.api.nvim_win_close(self.winid, true)
+  end
+
+  self.winid = nil
+end
+
+function Popup:mount()
+  if self._.loading or self._.mounted then
+    return
+  end
+
+  self._.loading = true
 
   self.border:mount()
 
-  self.bufnr = vim.api.nvim_create_buf(false, true)
-  assert(self.bufnr, "failed to create buffer")
-
-  for name, value in pairs(self.buf_options) do
-    vim.api.nvim_buf_set_option(self.bufnr, name, value)
+  if not self.bufnr then
+    self.bufnr = vim.api.nvim_create_buf(false, true)
+    assert(self.bufnr, "failed to create buffer")
   end
 
-  local enter = self.win_config._enter
-  self.win_config._enter = nil
-  self.winid = vim.api.nvim_open_win(self.bufnr, enter, self.win_config)
-  self.win_config._enter = enter
-  assert(self.winid, "failed to create popup window")
+  _.set_buf_options(self.bufnr, self._.buf_options)
 
-  for name, value in pairs(self.win_options) do
-    vim.api.nvim_win_set_option(self.winid, name, value)
-  end
+  self:_open_window()
 
-  self.popup_state.loading = false
-  self.popup_state.mounted = true
+  self._.loading = false
+  self._.mounted = true
 end
 
-function Popup:unmount()
-  if self.popup_state.loading or not self.popup_state.mounted then
+function Popup:hide()
+  if self._.loading or not self._.mounted then
     return
   end
 
-  self.popup_state.loading = true
+  self._.loading = true
+
+  self.border:_close_window()
+
+  self:_close_window()
+
+  self._.loading = false
+end
+
+function Popup:show()
+  if self._.loading or not self._.mounted then
+    return
+  end
+
+  self._.loading = true
+
+  self.border:_open_window()
+
+  self:_open_window()
+
+  self._.loading = false
+end
+
+function Popup:unmount()
+  if self._.loading or not self._.mounted then
+    return
+  end
+
+  self._.loading = true
 
   self.border:unmount()
 
   buf_storage.cleanup(self.bufnr)
 
-  if self.bufnr then
+  if self.bufnr and not self._.unmanaged_bufnr then
     if vim.api.nvim_buf_is_valid(self.bufnr) then
       vim.api.nvim_buf_delete(self.bufnr, { force = true })
     end
     self.bufnr = nil
   end
 
-  if self.winid then
-    if vim.api.nvim_win_is_valid(self.winid) then
-      vim.api.nvim_win_close(self.winid, true)
-    end
-    self.winid = nil
-  end
+  self:_close_window()
 
-  self.popup_state.loading = false
-  self.popup_state.mounted = false
+  self._.loading = false
+  self._.mounted = false
 end
 
--- set keymap for this popup window. if keymap was already set and
--- `force` is not `true` returns `false`, otherwise returns `true`
----@param mode "'i'" | "'n'"
----@param key string
----@param handler any
----@param opts table<"'expr'" | "'noremap'" | "'nowait'" | "'script'" | "'silent'" | "'unique'", boolean>
----@param force boolean
----@return boolean ok
+-- set keymap for this popup window
+---@param mode string check `:h :map-modes`
+---@param key string|string[] key for the mapping
+---@param handler string | fun(): nil handler for the mapping
+---@param opts table<"'expr'"|"'noremap'"|"'nowait'"|"'remap'"|"'script'"|"'silent'"|"'unique'", boolean>
+---@return nil
 function Popup:map(mode, key, handler, opts, force)
-  if not self.popup_state.mounted then
+  if not self._.mounted then
     error("popup window is not mounted yet. call popup:mount()")
   end
 
   return keymap.set(self.bufnr, mode, key, handler, opts, force)
+end
+
+---@param mode string check `:h :map-modes`
+---@param key string|string[] key for the mapping
+---@return nil
+function Popup:unmap(mode, key, force)
+  if not self._.mounted then
+    error("popup window is not mounted yet. call popup:mount()")
+  end
+
+  return keymap._del(self.bufnr, mode, key, force)
 end
 
 ---@param event string | string[]
@@ -286,66 +376,48 @@ function Popup:off(event)
 end
 
 function Popup:set_size(size)
-  local props = self.popup_props
+  local container_info = get_container_info(self._.position)
 
-  local container_info = get_container_info(self)
-  props.size = calculate_window_size(size, container_info)
+  self._.size = calculate_window_size(size, container_info.size)
+  self.win_config.width = self._.size.width
+  self.win_config.height = self._.size.height
 
-  if self.border.win_config then
-    self.border:resize()
-  end
-
-  self.win_config.width = props.size.width
-  self.win_config.height = props.size.height
+  self.border:resize()
 
   if self.winid then
-    vim.api.nvim_win_set_config(self.winid, {
-      width = props.size.width,
-      height = props.size.height,
-    })
+    vim.api.nvim_win_set_config(self.winid, self.win_config)
   end
 end
 
 function Popup:set_position(position, relative)
-  local props = self.popup_props
+  local win_config = self.win_config
 
   if relative then
-    local relative_config = parse_relative(relative, self.win_config.win)
-
-    if not relative_config.win then
-      self.win_config.win = nil
-    end
-
-    if not relative_config.bufpos then
-      self.win_config.bufpos = nil
-    end
-
-    self.win_config = vim.tbl_extend("force", self.win_config, relative_config)
+    self._.position = vim.tbl_extend("force", self._.position, parse_relative(relative, self._.position.win))
+    win_config.relative = self._.position.relative
+    win_config.win = self._.position.relative == "win" and self._.position.win or nil
+    win_config.bufpos = self._.position.bufpos
   end
 
-  local container_info = get_container_info(self)
-  props.position = calculate_window_position(position, props.size, container_info)
+  local container_info = get_container_info(self._.position)
 
-  if self.border.win_config then
-    self.border:reposition()
-  end
+  self._.position = vim.tbl_extend(
+    "force",
+    self._.position,
+    calculate_window_position(position, self._.size, container_info)
+  )
+  win_config.row = self._.position.row
+  win_config.col = self._.position.col
 
-  self.win_config.row = props.position.row
-  self.win_config.col = props.position.col
+  self.border:reposition()
 
   if self.winid then
-    local enter = self.win_config._enter
-    self.win_config._enter = nil
     vim.api.nvim_win_set_config(self.winid, self.win_config)
-    self.win_config._enter = enter
   end
 end
 
-local PopupClass = setmetatable({
-  __index = Popup,
-}, {
-  __call = init,
-  __index = Popup,
-})
+---@alias NuiPopup.constructor fun(options: table): NuiPopup
+---@type NuiPopup|NuiPopup.constructor
+local NuiPopup = Popup
 
-return PopupClass
+return NuiPopup

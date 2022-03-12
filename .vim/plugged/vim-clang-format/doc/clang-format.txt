@@ -20,7 +20,8 @@ License          |vim-clang-format-license|
 INTRODUCTION                                     *vim-clang-format-introduction*
 
 *vim-clang-format* formats your C, C++ and Objective-C code with specific coding
-style using clang.  Following filetypes are supported.
+style using clang.  Automatic formatting is supported for the following file
+types by default.
 
 * c
 * cpp
@@ -127,6 +128,11 @@ g:clang_format#command                                  *g:clang_format#command*
     Name of clang-format command.
     The default value is "clang-format".
 
+g:clang_format#git                                          *g:clang_format#git*
+
+    Name of the git command.
+    The default value is "git".
+
 g:clang_format#code_style                            *g:clang_format#code_style*
 
     Base coding style for formatting.  Available coding styles are "llvm",
@@ -186,6 +192,25 @@ g:clang_format#auto_format                          *g:clang_format#auto_format*
     buffer on saving the buffer.  Formatting is executed at |BufWritePre| event.
     The default value is 0.
 
+g:clang_format#auto_format_git_diff        *g:clang_format#auto_format_git_diff*
+
+    When this value is 1, and when g:clang_format#auto_format is 1, the auto
+    format only formats modified lines is the file is tracked in git.
+    If the file is not tracked, or even not in a git project, fallback
+    behavior depends on |g:clang_format#auto_format_git_diff_fallback|.
+    WARNING: this option should not be used with
+    |g:clang_format#auto_format_on_insert_leave|.
+    The default value is 0.
+
+g:clang_format#auto_format_git_diff_fallback
+                                  *g:clang_format#auto_format_git_diff_fallback*
+
+    Fallback behavior when |g:clang_format#auto_format_git_diff| is 1 and the
+    current file is not tracked. The value can be:
+    - 'file': the whole file is formatted (which is the default
+      |g:clang_format#auto_format| behavior).
+    - 'pass': the file is not formatted.
+
 g:clang_format#auto_format_on_insert_leave
                                     *g:clang_format#auto_format_on_insert_leave*
 
@@ -198,6 +223,15 @@ g:clang_format#auto_formatexpr		        *g:clang_format#auto_formatexpr*
     and |objc| codes.  Vim's format mappings (e.g. |gq|) get to use |clang-format|
     to format. This option is not comptabile with Vim's `textwidth` feature. You
     must set `textwidth` to `0` when the `formatexpr` is set.
+
+g:clang_format#auto_filetypes                    *g:clang_format#auto_filetypes*
+
+    List of file types to which |g:clang_format#auto_format|,
+    |g:clang_format#auto_format_on_insert_leave|, and
+    |g:clang_format#auto_formatexpr| should be applied.
+
+    The default value is [ "c", "cpp", "objc", "java",
+                         \ "javascript", "typescript", "proto", "arduino" ].
 
 g:clang_format#enable_fallback_style	  *g:clang_format#enable_fallback_style*
 
@@ -247,7 +281,7 @@ LICENSE                                               *vim-clang-format-license*
 
 |vim-clang-format| is distributed under MIT license.
 
-  Copyright (c) 2013-2017 rhysd
+  Copyright (c) 2013-2021 rhysd
 
   Permission is hereby granted, free of charge, to any person obtaining
   a copy of this software and associated documentation files (the

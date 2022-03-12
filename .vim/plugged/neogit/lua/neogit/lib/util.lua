@@ -8,6 +8,23 @@ local function map(tbl, f)
   return t
 end
 
+---@param value number
+---@param min number
+---@param max number
+---@return number
+local function clamp(value, min, max)
+  if value < min then
+    return min
+  elseif value > max then
+    return max
+  end
+  return value
+end
+
+local function trim(s)
+  return (string.gsub(s, "^%s*(.-)%s*$", "%1"))
+end
+
 local function deepcopy(o)
   local mt = getmetatable(o)
   local copy = vim.deepcopy(o)
@@ -143,6 +160,7 @@ end
 return {
   time = time,
   time_async = time_async,
+  clamp = clamp,
   slice = slice,
   map = map,
   range = range,
@@ -155,6 +173,7 @@ return {
   intersperse = intersperse,
   split_lines = split_lines,
   deepcopy = deepcopy,
+  trim = trim,
   parse_command_args = parse_command_args
 }
 

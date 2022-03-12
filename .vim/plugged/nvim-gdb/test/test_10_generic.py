@@ -80,8 +80,8 @@ def test_program_exit(eng, backend):
     eng.feed(backend['launch'])
     assert eng.wait_paused() is None
     eng.feed(backend['tbreak_main'])
-    eng.feed('run\n', 1000)
     eng.feed('<esc>')
+    eng.feed(':Gdb run\n', 1000)
     eng.feed('<f5>')
     assert eng.wait_signs({}) is None
 
@@ -146,8 +146,7 @@ def test_scrolloff(eng, backend):
 
     def _check_margin():
         jump_win = eng.exec_lua('return NvimGdb.i().win.jump_win')
-        wininfo = eng.eval(
-            f"getwininfo(win_getid(nvim_win_get_number({jump_win})))[0]")
+        wininfo = eng.eval(f"getwininfo({jump_win})[0]")
         curline = eng.eval(f"nvim_win_get_cursor({jump_win})[0]")
         signline = int(eng.get_signs()['cur'].split(':')[1])
         assert signline == curline

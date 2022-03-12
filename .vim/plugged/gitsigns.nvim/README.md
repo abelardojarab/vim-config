@@ -26,11 +26,14 @@ Super fast git decorations implemented purely in lua/teal.
 - Hunk text object
 - Automatically follow files moved in the index.
 - Live intra-line word diff
+- Ability to display deleted/changed lines via virtual lines.
 - Support for [yadm](https://yadm.io/)
 
 ## Requirements
 
-- Neovim >= 0.5.0
+- Neovim >= 0.5.0 
+
+  Note: If you are running a development version of Neovim (aka `master`), then breakage may occur if your build is behind latest.
 - Newish version of git. Older versions may not work with some features.
 
 ## Installation
@@ -41,7 +44,8 @@ use {
   'lewis6991/gitsigns.nvim',
   requires = {
     'nvim-lua/plenary.nvim'
-  }
+  },
+  -- tag = 'release' -- To use the latest release
 }
 ```
 
@@ -89,29 +93,7 @@ require('gitsigns').setup {
   numhl      = false, -- Toggle with `:Gitsigns toggle_numhl`
   linehl     = false, -- Toggle with `:Gitsigns toggle_linehl`
   word_diff  = false, -- Toggle with `:Gitsigns toggle_word_diff`
-  keymaps = {
-    -- Default keymap options
-    noremap = true,
-
-    ['n ]c'] = { expr = true, "&diff ? ']c' : '<cmd>lua require\"gitsigns.actions\".next_hunk()<CR>'"},
-    ['n [c'] = { expr = true, "&diff ? '[c' : '<cmd>lua require\"gitsigns.actions\".prev_hunk()<CR>'"},
-
-    ['n <leader>hs'] = '<cmd>lua require"gitsigns".stage_hunk()<CR>',
-    ['v <leader>hs'] = '<cmd>lua require"gitsigns".stage_hunk({vim.fn.line("."), vim.fn.line("v")})<CR>',
-    ['n <leader>hu'] = '<cmd>lua require"gitsigns".undo_stage_hunk()<CR>',
-    ['n <leader>hr'] = '<cmd>lua require"gitsigns".reset_hunk()<CR>',
-    ['v <leader>hr'] = '<cmd>lua require"gitsigns".reset_hunk({vim.fn.line("."), vim.fn.line("v")})<CR>',
-    ['n <leader>hR'] = '<cmd>lua require"gitsigns".reset_buffer()<CR>',
-    ['n <leader>hp'] = '<cmd>lua require"gitsigns".preview_hunk()<CR>',
-    ['n <leader>hb'] = '<cmd>lua require"gitsigns".blame_line(true)<CR>',
-    ['n <leader>hS'] = '<cmd>lua require"gitsigns".stage_buffer()<CR>',
-    ['n <leader>hU'] = '<cmd>lua require"gitsigns".reset_buffer_index()<CR>',
-
-    -- Text objects
-    ['o ih'] = ':<C-U>lua require"gitsigns.actions".select_hunk()<CR>',
-    ['x ih'] = ':<C-U>lua require"gitsigns.actions".select_hunk()<CR>'
-  },
-  watch_index = {
+  watch_gitdir = {
     interval = 1000,
     follow_files = true
   },
@@ -121,10 +103,9 @@ require('gitsigns').setup {
     virt_text = true,
     virt_text_pos = 'eol', -- 'eol' | 'overlay' | 'right_align'
     delay = 1000,
+    ignore_whitespace = false,
   },
-  current_line_blame_formatter_opts = {
-    relative_time = false
-  },
+  current_line_blame_formatter = '<author>, <author_time:%Y-%m-%d> - <summary>',
   sign_priority = 6,
   update_debounce = 100,
   status_formatter = nil, -- Use default
@@ -137,7 +118,6 @@ require('gitsigns').setup {
     row = 0,
     col = 1
   },
-  use_internal_diff = true,  -- If vim.diff or luajit is present
   yadm = {
     enable = false
   },
@@ -146,6 +126,98 @@ require('gitsigns').setup {
 
 For information on configuring neovim via lua please see
 [nvim-lua-guide](https://github.com/nanotee/nvim-lua-guide).
+
+### Keymaps
+
+Gitsigns provides an `on_attach` callback which can be used to setup buffer mappings.
+
+Here is a suggested example:
+
+```lua
+require('gitsigns').setup{
+  ...
+  on_attach = function(bufnr)
+    local gs = package.loaded.gitsigns
+
+    local function map(mode, l, r, opts)
+      opts = opts or {}
+      opts.buffer = bufnr
+      vim.keymap.set(mode, l, r, opts)
+    end
+
+    -- Navigation
+    map('n', ']c', "&diff ? ']c' : '<cmd>Gitsigns next_hunk<CR>'", {expr=true})
+    map('n', '[c', "&diff ? '[c' : '<cmd>Gitsigns prev_hunk<CR>'", {expr=true})
+
+    -- Actions
+    map({'n', 'v'}, '<leader>hs', ':Gitsigns stage_hunk<CR>')
+    map({'n', 'v'}, '<leader>hr', ':Gitsigns reset_hunk<CR>')
+    map('n', '<leader>hS', gs.stage_buffer)
+    map('n', '<leader>hu', gs.undo_stage_hunk)
+    map('n', '<leader>hR', gs.reset_buffer)
+    map('n', '<leader>hp', gs.preview_hunk)
+    map('n', '<leader>hb', function() gs.blame_line{full=true} end)
+    map('n', '<leader>tb', gs.toggle_current_line_blame)
+    map('n', '<leader>hd', gs.diffthis)
+    map('n', '<leader>hD', function() gs.diffthis('~') end)
+    map('n', '<leader>td', gs.toggle_deleted)
+
+    -- Text object
+    map({'o', 'x'}, 'ih', ':<C-U>Gitsigns select_hunk<CR>')
+  end
+}
+```
+
+Note this requires Neovim v0.7 which introduces `vim.keymap.set`. If you are using Neovim with version prior to v0.7 then use the following:
+<details>
+  <summary>Click to expand</summary>
+
+```lua
+require('gitsigns').setup {
+  ...
+  on_attach = function(bufnr)
+    local function map(mode, lhs, rhs, opts)
+        opts = vim.tbl_extend('force', {noremap = true, silent = true}, opts or {})
+        vim.api.nvim_buf_set_keymap(bufnr, mode, lhs, rhs, opts)
+    end
+
+    -- Navigation
+    map('n', ']c', "&diff ? ']c' : '<cmd>Gitsigns next_hunk<CR>'", {expr=true})
+    map('n', '[c', "&diff ? '[c' : '<cmd>Gitsigns prev_hunk<CR>'", {expr=true})
+
+    -- Actions
+    map('n', '<leader>hs', ':Gitsigns stage_hunk<CR>')
+    map('v', '<leader>hs', ':Gitsigns stage_hunk<CR>')
+    map('n', '<leader>hr', ':Gitsigns reset_hunk<CR>')
+    map('v', '<leader>hr', ':Gitsigns reset_hunk<CR>')
+    map('n', '<leader>hS', '<cmd>Gitsigns stage_buffer<CR>')
+    map('n', '<leader>hu', '<cmd>Gitsigns undo_stage_hunk<CR>')
+    map('n', '<leader>hR', '<cmd>Gitsigns reset_buffer<CR>')
+    map('n', '<leader>hp', '<cmd>Gitsigns preview_hunk<CR>')
+    map('n', '<leader>hb', '<cmd>lua require"gitsigns".blame_line{full=true}<CR>')
+    map('n', '<leader>tb', '<cmd>Gitsigns toggle_current_line_blame<CR>')
+    map('n', '<leader>hd', '<cmd>Gitsigns diffthis<CR>')
+    map('n', '<leader>hD', '<cmd>lua require"gitsigns".diffthis("~")<CR>')
+    map('n', '<leader>td', '<cmd>Gitsigns toggle_deleted<CR>')
+
+    -- Text object
+    map('o', 'ih', ':<C-U>Gitsigns select_hunk<CR>')
+    map('x', 'ih', ':<C-U>Gitsigns select_hunk<CR>')
+  end
+}
+```
+
+</details>
+
+## Non-Goals
+
+### Implement every feature in [vim-fugitive](https://github.com/tpope/vim-fugitive)
+
+This plugin is actively developed and by one of the most well regarded vim plugin developers. Gitsigns will only implement features of this plugin if: it is simple, or, the technologies leveraged by Gitsigns (LuaJIT, Libuv, Neovim's API, etc) can provide a better experience.
+
+### Support for other VCS
+
+There aren't any active developers of this plugin who use other kinds of VCS, so adding support for them isn't feasible. However a well written PR with a commitment of future support could change this.
 
 ## Status Line
 
@@ -160,15 +232,6 @@ set statusline+=%{get(b:,'gitsigns_status','')}
 
 For the current branch use the variable `b:gitsigns_head`.
 
-## TODO
-
-- [ ] Add ability to show staged hunks with different signs (maybe in a different sign column?)
-- [ ] Add ability to show commit in floating window of current line
-- [ ] Allow extra options to be passed to `git diff`
-- [ ] Folding of text around hunks
-- [ ] Show messages when navigating hunks similar to '/' search
-- [ ] Stage partial hunks
-
 ## Comparison with [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
 
 Feature                                                  | gitsigns             | gitgutter                                     | Note
@@ -178,7 +241,7 @@ Asynchronous                                             | :white_check_mark:   
 Runs diffs in-process (no IO or pipes)                   | :white_check_mark: * |                                               | * Via [lua](https://github.com/neovim/neovim/pull/14536) or FFI.
 Only adds signs for drawn lines                          | :white_check_mark: * |                                               | * Via Neovims decoration API
 Updates immediately                                      | :white_check_mark:   | *                                             | * Triggered on CursorHold
-Ensures signs are always up to date                      | :white_check_mark: * |                                               | * Watches the git index to do so
+Ensures signs are always up to date                      | :white_check_mark: * |                                               | * Watches the git dir to do so
 Never saves the buffer                                   | :white_check_mark:   | :white_check_mark: :heavy_exclamation_mark: * | * Writes [buffer](https://github.com/airblade/vim-gitgutter/blob/0f98634b92da9a35580b618c11a6d2adc42d9f90/autoload/gitgutter/diff.vim#L106) (and index) to short lived temp files
 Quick jumping between hunks                              | :white_check_mark:   | :white_check_mark:                            |
 Stage/reset/preview individual hunks                     | :white_check_mark:   | :white_check_mark:                            |
@@ -187,7 +250,8 @@ Stage/reset all hunks in buffer                          | :white_check_mark:   
 Undo staged hunks                                        | :white_check_mark:   |                                               |
 Word diff in buffer                                      | :white_check_mark:   |                                               |
 Word diff in hunk preview                                | :white_check_mark:   | :white_check_mark:                            |
-Stage partial hunks                                      |                      | :white_check_mark:                            |
+Show deleted/changes lines directly in buffer            | :white_check_mark: * |                                               | * Via [virtual lines](https://github.com/neovim/neovim/pull/15351)
+Stage partial hunks                                      | :white_check_mark:   |                                               |
 Hunk text object                                         | :white_check_mark:   | :white_check_mark:                            |
 Diff against index or any commit                         | :white_check_mark:   | :white_check_mark:                            |
 Folding of unchanged text                                |                      | :white_check_mark:                            |
@@ -197,7 +261,7 @@ Optional line highlighting                               | :white_check_mark:   
 Optional line number highlighting                        | :white_check_mark:   | :white_check_mark:                            |
 Optional counts on signs                                 | :white_check_mark:   |                                               |
 Customizable signs and mappings                          | :white_check_mark:   | :white_check_mark:                            |
-Customizable extra git-diff arguments                    |                      | :white_check_mark:                            |
+Customizable extra diff arguments                        | :white_check_mark:   | :white_check_mark:                            |
 Can be toggled globally or per buffer                    | :white_check_mark: * | :white_check_mark:                            | * Through the detach/attach functions
 Statusline integration                                   | :white_check_mark:   | :white_check_mark:                            |
 Works with [yadm](https://yadm.io/)                      | :white_check_mark:   |                                               |
@@ -208,6 +272,38 @@ CLI with completion                                      | :white_check_mark:   
 Open diffview with any revision/commit                   | :white_check_mark:   |                                               |
 
 As of 2021-07-05
+
+## Integrations
+
+### [vim-repeat](https://github.com/tpope/vim-repeat)
+
+If installed, `stage_hunk()` and `reset_hunk()` are repeatable with the `.` (dot) operator.
+
+### [vim-fugitive](https://github.com/tpope/vim-fugitive)
+
+When viewing revisions of a file (via `:0Gclog` for example), Gitsigns will attach to the fugitive buffer with the base set to the commit immediately before the commit of that revision. This means the signs placed in the buffer reflect the changes introduced by that revision of the file.
+
+### [null-ls](https://github.com/jose-elias-alvarez/null-ls.nvim)
+
+Null-ls can provide code actions from Gitsigns. To setup:
+
+```lua
+local null_ls = require("null-ls")
+
+null_ls.setup {
+  sources = {
+    null_ls.builtins.code_actions.gitsigns,
+    ...
+  }
+}
+```
+
+Will enable `:lua vim.lsp.buf.code_action()` to retrieve code actions from Gitsigns.
+Alternatively if you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) installed, you can use `:Telescope lsp_code_actions`.
+
+### [trouble.nvim](https://github.com/folke/trouble.nvim)
+
+If installed and enabled (via `config.trouble`; defaults to true if installed), `:Gitsigns setqflist` or `:Gitsigns seqloclist` will open Trouble instead of Neovim's built-in quickfix or location list windows.
 
 ## Similar plugins
 

@@ -92,6 +92,7 @@ deoplete-options-num_processes	deoplete.txt	/*deoplete-options-num_processes*
 deoplete-options-omni_patterns	deoplete.txt	/*deoplete-options-omni_patterns*
 deoplete-options-on_insert_enter	deoplete.txt	/*deoplete-options-on_insert_enter*
 deoplete-options-on_text_changed_i	deoplete.txt	/*deoplete-options-on_text_changed_i*
+deoplete-options-overwrite_completeopt	deoplete.txt	/*deoplete-options-overwrite_completeopt*
 deoplete-options-prev_completion_mode	deoplete.txt	/*deoplete-options-prev_completion_mode*
 deoplete-options-profile	deoplete.txt	/*deoplete-options-profile*
 deoplete-options-refresh_always	deoplete.txt	/*deoplete-options-refresh_always*

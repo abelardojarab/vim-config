@@ -5,7 +5,19 @@ local M = {}
 
 local escape = vim.fn.shellescape
 
-function M.raw_async_action(fn)
+
+-- creates a new address to listen to messages from actions. This is important,
+-- if the user is using a custom fixed $NVIM_LISTEN_ADDRESS. Different neovim
+-- instances will then use the same path as the address and it causes a mess,
+-- i.e. actions stop working on the old instance. So we create our own (random
+-- path) RPC server for this instance if it hasn't been started already.
+local action_server_address = nil
+
+function M.raw_async_action(fn, fzf_field_expression)
+
+  if not fzf_field_expression then
+    fzf_field_expression = "{+}"
+  end
 
   local nvim_fzf_directory = vim.g.nvim_fzf_directory
 
@@ -19,26 +31,32 @@ function M.raw_async_action(fn)
     end)
   end
 
+  if not action_server_address then
+    action_server_address = vim.fn.serverstart()
+  end
+
   local id = registry.register_func(receiving_function)
+
 
   -- this is for windows WSL and AppImage users, their nvim path isn't just
   -- 'nvim', it can be something else
   local nvim_command = vim.v.argv[1]
 
-  local action_string = string.format("%s --headless --clean --cmd %s %s %s {+}",
+  local action_string = string.format("%s --headless --clean --cmd %s %s %s %s",
     vim.fn.shellescape(nvim_command),
     vim.fn.shellescape("luafile " .. nvim_fzf_directory .. "/action_helper.lua"),
-    vim.fn.shellescape(nvim_fzf_directory),
-    id)
+    vim.fn.shellescape(action_server_address),
+    id,
+    fzf_field_expression)
   return action_string, id
 end
 
-function M.async_action(fn)
-  local action_string, id = M.raw_async_action(fn)
+function M.async_action(fn, fzf_field_expression)
+  local action_string, id = M.raw_async_action(fn, fzf_field_expression)
   return escape(action_string), id
 end
 
-function M.raw_action(fn)
+function M.raw_action(fn, fzf_field_expression)
 
   local receiving_function = function(pipe, ...)
     local ret = fn(...)
@@ -93,11 +111,11 @@ function M.raw_action(fn)
     end
   end
 
-  return M.raw_async_action(receiving_function)
+  return M.raw_async_action(receiving_function, fzf_field_expression)
 end
 
-function M.action(fn)
-  local action_string, id = M.raw_action(fn)
+function M.action(fn, fzf_field_expression)
+  local action_string, id = M.raw_action(fn, fzf_field_expression)
   return escape(action_string), id
 end
 

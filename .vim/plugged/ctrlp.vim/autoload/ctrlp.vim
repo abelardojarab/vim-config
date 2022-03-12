@@ -428,7 +428,8 @@ endf
 if has('patch-8.2-0995')
 	fu! s:GlobPath(dirs, depth)
 		let entries = []
-		for e in split(a:dirs, ',')
+		let dirs = substitute(a:dirs, '\\\([%# ]\)', '\1', 'g')
+		for e in split(dirs, ',')
 			sil let files = readdir(e, '1', {'sort': 'none'})
 			if !s:showhidden | cal filter(files, 'v:val[0] != "."') | en
 			let entries += map(files, 'e.s:lash.v:val')
@@ -1094,7 +1095,7 @@ fu! s:MapSpecs()
 	if !( exists('s:smapped') && s:smapped == s:bufnr )
 		" Correct arrow keys in terminal
 		if ( has('termresponse') && v:termresponse =~ "\<ESC>" )
-			\ || &term =~? '\vxterm|<k?vt|gnome|screen|linux|ansi|tmux|st(-[-a-z0-9]*)?(\:tc)?$'
+			\ || &term =~? '\vxterm|<k?vt|gnome|screen|linux|ansi|tmux|alacritty|st(-[-a-z0-9]*)?(\:tc)?$'
 			for each in ['\A <up>','\B <down>','\C <right>','\D <left>']
 				exe s:lcmap.' <esc>['.each
 			endfo
@@ -1386,6 +1387,7 @@ fu! s:MarkToOpen()
 		en
 	en
 	sil! cal ctrlp#statusline()
+	redr
 endf
 
 fu! s:OpenMulti(...)
@@ -2712,6 +2714,15 @@ fu! ctrlp#nosy()
 	retu !( has('syntax') && exists('g:syntax_on') )
 endf
 
+fu! s:hiupdate()
+	for [ke, va] in items(s:hlgrps)
+		let ke = 'CtrlP' . ke
+		if hlexists(ke)
+			exe 'hi link' ke va
+		en
+	endfo
+endf
+
 fu! ctrlp#hicheck(grp, defgrp)
 	if !hlexists(a:grp)
 		exe 'hi link' a:grp a:defgrp
@@ -2845,6 +2856,7 @@ if has('autocmd')
 		au BufEnter ControlP cal s:checkbuf()
 		au BufLeave ControlP noa cal s:Close()
 		au VimLeavePre * cal s:leavepre()
+		au ColorScheme * cal s:hiupdate()
 	aug END
 en
 

@@ -6,7 +6,6 @@
   "enum"
   "extern"
   "inline"
-  "sizeof"
   "static"
   "struct"
   "typedef"
@@ -16,6 +15,7 @@
   "register"
 ] @keyword
 
+"sizeof" @keyword.operator
 "return" @keyword.return
 
 [
@@ -127,18 +127,20 @@
 (statement_identifier) @label
 
 [
-(type_identifier)
-(primitive_type)
-(sized_type_specifier)
-(type_descriptor)
- ] @type
+ (type_identifier)
+ (primitive_type)
+ (sized_type_specifier)
+ (type_descriptor)
+] @type
 
-(declaration (type_qualifier) @type)
-(cast_expression type: (type_descriptor) @type)
 (sizeof_expression value: (parenthesized_expression (identifier) @type))
 
 ((identifier) @constant
- (#match? @constant "^[A-Z][A-Z0-9_]+$"))
+ (#lua-match? @constant "^[A-Z][A-Z0-9_]+$"))
+(enumerator
+  name: (identifier) @constant)
+(case_statement
+  value: (identifier) @constant)
 
 ;; Preproc def / undef
 (preproc_def
@@ -167,7 +169,19 @@
 (parameter_declaration
   declarator: (pointer_declarator) @parameter)
 
-(preproc_params
-  (identifier)) @parameter
+(preproc_params (identifier) @parameter)
+
+[
+  "__attribute__"
+  "__cdecl"
+  "__clrcall"
+  "__stdcall"
+  "__fastcall"
+  "__thiscall"
+  "__vectorcall"
+  "_unaligned"
+  "__unaligned"
+  "__declspec"
+] @attribute
 
 (ERROR) @error

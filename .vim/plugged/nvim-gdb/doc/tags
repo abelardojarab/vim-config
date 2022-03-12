@@ -1,3 +1,4 @@
+:Gdb	nvimgdb.txt	/*:Gdb*
 :GdbBreakpointClearAll	nvimgdb.txt	/*:GdbBreakpointClearAll*
 :GdbBreakpointToggle	nvimgdb.txt	/*:GdbBreakpointToggle*
 :GdbContinue	nvimgdb.txt	/*:GdbContinue*

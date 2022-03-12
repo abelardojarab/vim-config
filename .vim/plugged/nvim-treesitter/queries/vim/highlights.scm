@@ -1,6 +1,6 @@
 (identifier) @variable
 ((identifier) @constant
- (#match? @constant "^[A-Z][A-Z_0-9]*$"))
+ (#lua-match? @constant "^[A-Z][A-Z_0-9]*$"))
 
 ;; Keywords
 
@@ -35,9 +35,10 @@
 ;; Function related
 (function_declaration name: (_) @function)
 (call_expression function: (identifier) @function)
-(function_declaration parameters: (parameters (identifier) @parameter))
+(parameters (identifier) @parameter)
+(default_parameter (identifier) @parameter)
 
-[ (bang) (spread) ] @punctuation.special
+[ (bang) (spread) (at) ] @punctuation.special
 
 [ (no_option) (inv_option) (default_option) (option_name) ] @variable.builtin
 [
@@ -55,19 +56,50 @@
   "execute"
   "normal"
   "set"
+  "setlocal"
   "silent"
   "echo"
+  "echomsg"
   "autocmd"
   "augroup"
   "return"
+  "syntax"
   "lua"
   "ruby"
   "perl"
   "python"
   "highlight"
+  "delcommand"
+  "comclear"
+  "colorscheme"
+  "startinsert"
+  "stopinsert"
+  "global"
+  "runtime"
+  "wincmd"
 ] @keyword
 (map_statement cmd: _ @keyword)
 (command_name) @function.macro
+
+;; Syntax command
+
+(syntax_statement (keyword) @string)
+(syntax_statement [
+  "enable"
+  "on"
+  "off"
+  "reset"
+  "case"
+  "spell"
+  "foldlevel"
+  "iskeyword"
+  "keyword"
+  "match"
+  "cluster"
+  "region"
+] @keyword)
+
+(syntax_argument name: _ @keyword)
 
 [
   "<buffer>"
@@ -88,6 +120,22 @@
 (au_event) @constant
 (normal_statement (commands) @constant)
 
+;; Highlight command
+
+(highlight_statement [
+  "default"
+  "link"
+  "clear"
+] @keyword)
+
+;; Runtime command
+
+(runtime_statement (where) @keyword.operator)
+
+;; Colorscheme command
+
+(colorscheme_statement (name) @string)
+
 ;; Literals
 
 (string_literal) @string
@@ -95,6 +143,8 @@
 (float_literal) @float
 (comment) @comment
 (pattern) @string.special
+(pattern_multi) @string.regex
+(filename) @string
 ((scoped_identifier
   (scope) @_scope . (identifier) @boolean)
  (#eq? @_scope "v:")
@@ -158,3 +208,12 @@
 ; Options
 ((set_value) @number
  (#match? @number "^[0-9]+(\.[0-9]+)?$"))
+
+((set_item
+   option: (option_name) @_option
+   value: (set_value) @function)
+  (#any-of? @_option
+    "tagfunc" "tfu"
+    "completefunc" "cfu"
+    "omnifunc" "ofu"
+    "operatorfunc" "opfunc"))

@@ -19,9 +19,8 @@ local split_direction_command_map = {
   },
 }
 
-local function get_container_info(split)
-  local relative = split.split_props.relative
-
+---@param relative nui_split_internal_relative
+local function get_container_info(relative)
   if relative == "editor" then
     return {
       size = utils.get_editor_size(),
@@ -37,14 +36,14 @@ local function get_container_info(split)
   end
 end
 
-local function calculate_window_size(split, size, container)
+---@param position nui_split_internal_position
+---@param size number
+local function calculate_window_size(position, size, container)
   if not size then
     return {}
   end
 
-  local props = split.split_props
-
-  if props.position == "left" or props.position == "right" then
+  if position == "left" or position == "right" then
     return {
       width = utils._.normalize_dimension(size, container.size.width),
     }
@@ -55,72 +54,79 @@ local function calculate_window_size(split, size, container)
   }
 end
 
+---@param class NuiSplit
+---@param options table
+---@return NuiSplit
 local function init(class, options)
-  local self = setmetatable({}, class)
+  ---@type NuiSplit
+  local self = setmetatable({}, { __index = class })
 
-  self.split_state = {
-    mounted = false,
+  self._ = {
+    buf_options = defaults(options.buf_options, {}),
     loading = false,
-  }
-
-  self.split_props = {
-    relative = defaults(options.relative, "win"),
+    mounted = false,
     position = defaults(options.position, vim.go.splitbelow and "bottom" or "top"),
+    relative = defaults(options.relative, "win"),
+    win_options = vim.tbl_extend("force", {
+      winfixwidth = true,
+      winfixheight = true,
+    }, defaults(options.win_options, {})),
   }
 
-  local props = self.split_props
-
-  local container_info = get_container_info(self)
-  props.size = calculate_window_size(self, options.size, container_info)
-
-  self.buf_options = defaults(options.buf_options, {})
-
-  self.win_options = vim.tbl_extend("force", {
-    winfixwidth = true,
-    winfixheight = true,
-  }, defaults(
-    options.win_options,
-    {}
-  ))
+  local container_info = get_container_info(self._.relative)
+  self._.size = calculate_window_size(self._.position, options.size, container_info)
 
   return self
 end
 
-local Split = {
-  name = "Split",
-  super = nil,
-}
+--luacheck: push no max line length
 
+---@alias nui_split_internal_position "'top'"|"'right'"|"'bottom'"|"'left'"
+---@alias nui_split_internal_relative "'editor'"|"'win'"
+---@alias nui_split_internal_size { width?: number, height?: number }
+---@alias nui_split_internal { loading: boolean, mounted: boolean, buf_options: table<string,any>, win_options: table<string,any>, position: nui_split_internal_position, relative: nui_split_internal_relative, size: nui_split_internal_size }
+
+--luacheck: pop
+
+---@class NuiSplit
+---@field private _ nui_split_internal
+---@field bufnr number
+---@field winid number
+local Split = setmetatable({
+  super = nil,
+}, {
+  __call = init,
+  __name = "NuiSplit",
+})
+
+-- luacov: disable
 function Split:init(options)
   return init(self, options)
 end
+-- luacov: enable
 
 function Split:_open_window()
   if self.winid or not self.bufnr then
     return
   end
 
-  local props = self.split_props
-
   vim.api.nvim_command(
     string.format(
       "silent noswapfile %s sbuffer %s",
-      split_direction_command_map[props.relative][props.position],
+      split_direction_command_map[self._.relative][self._.position],
       self.bufnr
     )
   )
 
   self.winid = vim.fn.win_getid()
 
-  if props.size.width then
-    vim.api.nvim_win_set_width(self.winid, props.size.width)
-  elseif props.size.height then
-    vim.api.nvim_win_set_height(self.winid, props.size.height)
+  if self._.size.width then
+    vim.api.nvim_win_set_width(self.winid, self._.size.width)
+  elseif self._.size.height then
+    vim.api.nvim_win_set_height(self.winid, self._.size.height)
   end
 
-  for name, value in pairs(self.win_options) do
-    vim.api.nvim_win_set_option(self.winid, name, value)
-  end
+  utils._.set_win_options(self.winid, self._.win_options)
 end
 
 function Split:_close_window()
@@ -129,62 +135,60 @@ function Split:_close_window()
   end
 
   if vim.api.nvim_win_is_valid(self.winid) then
-    vim.api.nvim_win_hide(self.winid)
+    vim.api.nvim_win_close(self.winid, true)
   end
 
   self.winid = nil
 end
 
 function Split:mount()
-  if self.split_state.loading or self.split_state.mounted then
+  if self._.loading or self._.mounted then
     return
   end
 
-  self.split_state.loading = true
+  self._.loading = true
 
   self.bufnr = vim.api.nvim_create_buf(false, true)
   assert(self.bufnr, "failed to create buffer")
 
-  for name, value in pairs(self.buf_options) do
-    vim.api.nvim_buf_set_option(self.bufnr, name, value)
-  end
+  utils._.set_buf_options(self.bufnr, self._.buf_options)
 
   self:_open_window()
 
-  self.split_state.loading = false
-  self.split_state.mounted = true
+  self._.loading = false
+  self._.mounted = true
 end
 
 function Split:hide()
-  if self.split_state.loading or not self.split_state.mounted then
+  if self._.loading or not self._.mounted then
     return
   end
 
-  self.split_state.loading = true
+  self._.loading = true
 
   self:_close_window()
 
-  self.split_state.loading = false
+  self._.loading = false
 end
 
 function Split:show()
-  if self.split_state.loading or not self.split_state.mounted then
+  if self._.loading or not self._.mounted then
     return
   end
 
-  self.split_state.loading = true
+  self._.loading = true
 
   self:_open_window()
 
-  self.split_state.loading = false
+  self._.loading = false
 end
 
 function Split:unmount()
-  if self.split_state.loading or not self.split_state.mounted then
+  if self._.loading or not self._.mounted then
     return
   end
 
-  self.split_state.loading = true
+  self._.loading = true
 
   buf_storage.cleanup(self.bufnr)
 
@@ -195,38 +199,43 @@ function Split:unmount()
     self.bufnr = nil
   end
 
-  if self.winid then
-    if vim.api.nvim_win_is_valid(self.winid) then
-      vim.api.nvim_win_close(self.winid, true)
-    end
-    self.winid = nil
-  end
+  self:_close_window()
 
-  self.split_state.loading = false
-  self.split_state.mounted = false
+  self._.loading = false
+  self._.mounted = false
 end
 
--- set keymap for this split. if keymap was already set and
+-- set keymap for this split
 -- `force` is not `true` returns `false`, otherwise returns `true`
----@param mode "'i'" | "'n'"
----@param key string
----@param handler any
----@param opts table<"'expr'" | "'noremap'" | "'nowait'" | "'script'" | "'silent'" | "'unique'", boolean>
----@param force boolean
----@return boolean ok
+---@param mode string check `:h :map-modes`
+---@param key string|string[] key for the mapping
+---@param handler string | fun(): nil handler for the mapping
+---@param opts table<"'expr'"|"'noremap'"|"'nowait'"|"'remap'"|"'script'"|"'silent'"|"'unique'", boolean>
+---@return nil
 function Split:map(mode, key, handler, opts, force)
-  if not self.split_state.mounted then
+  if not self._.mounted then
     error("split is not mounted yet. call split:mount()")
   end
 
   return keymap.set(self.bufnr, mode, key, handler, opts, force)
 end
 
+---@param mode string check `:h :map-modes`
+---@param key string|string[] key for the mapping
+---@return nil
+function Split:unmap(mode, key)
+  if not self._.mounted then
+    error("split is not mounted yet. call split:mount()")
+  end
+
+  return keymap._del(self.bufnr, mode, key)
+end
+
 ---@param event string | string[]
 ---@param handler string | function
 ---@param options nil | table<"'once'" | "'nested'", boolean>
 function Split:on(event, handler, options)
-  if not self.split_state.mounted then
+  if not self._.mounted then
     error("split is not mounted yet. call split:mount()")
   end
 
@@ -235,18 +244,15 @@ end
 
 ---@param event nil | string | string[]
 function Split:off(event)
-  if not self.split_state.mounted then
+  if not self._.mounted then
     error("split is not mounted yet. call split:mount()")
   end
 
   autocmd.buf.remove(self.bufnr, nil, event)
 end
 
-local SplitClass = setmetatable({
-  __index = Split,
-}, {
-  __call = init,
-  __index = Split,
-})
+---@alias NuiSplit.constructor fun(options: table): NuiSplit
+---@type NuiSplit|NuiSplit.constructor
+local NuiSplit = Split
 
-return SplitClass
+return NuiSplit

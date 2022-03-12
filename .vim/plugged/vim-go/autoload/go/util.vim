@@ -126,8 +126,8 @@ function! go#util#gomod() abort
   return substitute(s:exec(['go', 'env', 'GOMOD'])[0], '\n', '', 'g')
 endfunction
 
-" gomodcache returns 'go env GOMODCACHE'. Use go#util#env('gomodcache')
-" instead.
+" gomodcache returns 'go env GOMODCACHE'. This is an internal function and
+" shouldn't be used. Use go#util#env('gomodcache') instead.
 function! go#util#gomodcache() abort
   return substitute(s:exec(['go', 'env', 'GOMODCACHE'])[0], '\n', '', 'g')
 endfunction
@@ -183,6 +183,8 @@ function! s:system(cmd, ...) abort
   let l:shell = &shell
   let l:shellredir = &shellredir
   let l:shellcmdflag = &shellcmdflag
+  let l:shellquote = &shellquote
+  let l:shellxquote = &shellxquote
 
   if !go#util#IsWin() && executable('/bin/sh')
       set shell=/bin/sh shellredir=>%s\ 2>&1 shellcmdflag=-c
@@ -192,6 +194,8 @@ function! s:system(cmd, ...) abort
     if executable($COMSPEC)
       let &shell = $COMSPEC
       set shellcmdflag=/C
+      set shellquote&
+      set shellxquote&
     endif
   endif
 
@@ -202,6 +206,8 @@ function! s:system(cmd, ...) abort
     let &shell = l:shell
     let &shellredir = l:shellredir
     let &shellcmdflag = l:shellcmdflag
+    let &shellquote = l:shellquote
+    let &shellxquote = l:shellxquote
   endtry
 endfunction
 
@@ -721,8 +727,8 @@ endfunction
 function! go#util#Chdir(dir) abort
   if !exists('*chdir')
     let l:olddir = getcwd()
-    let cd = exists('*haslocaldir') && haslocaldir() ? 'lcd ' : 'cd '
-    execute printf('cd %s', fnameescape(a:dir))
+    let cd = exists('*haslocaldir') && haslocaldir() ? 'lcd' : 'cd'
+    execute printf('%s %s', cd, fnameescape(a:dir))
     return l:olddir
   endif
   return chdir(a:dir)
@@ -747,6 +753,22 @@ function go#util#TestName() abort
 
   let l:decl = getline(l:line)
   return split(split(l:decl, " ")[1], "(")[0]
+endfunction
+
+function go#util#ExpandPattern(...) abort
+  let l:packages = []
+  for l:pattern in a:000
+    let l:pkgs = go#tool#List(l:pattern)
+    if l:pkgs is -1
+      call go#util#EchoError('could not expand package pattern')
+      continue
+    endif
+
+    let l:packages = extend(l:packages, l:pkgs)
+    call go#util#EchoInfo(printf("l:packages = %s, l:pkgs = %s", l:packages, l:pkgs))
+  endfor
+
+  return uniq(sort(l:packages))
 endfunction
 
 " restore Vi compatibility settings

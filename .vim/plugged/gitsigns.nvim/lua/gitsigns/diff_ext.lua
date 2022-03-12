@@ -1,4 +1,4 @@
-local git = require('gitsigns.git')
+local git_diff = require('gitsigns.git').diff
 
 local gs_hunks = require("gitsigns.hunks")
 local Hunk = gs_hunks.Hunk
@@ -25,12 +25,13 @@ end
 M.run_diff = function(
    text_cmp,
    text_buf,
-   diff_algo)
+   diff_algo,
+   indent_heuristic)
 
    local results = {}
 
-   if not util.is_unix then
 
+   if vim.in_fast_event() then
       scheduler()
    end
 
@@ -56,24 +57,21 @@ M.run_diff = function(
 
 
 
-   git.command({
-      '-c', 'core.safecrlf=false',
-      'diff',
-      '--color=never',
-      '--diff-algorithm=' .. diff_algo,
-      '--patch-with-raw',
-      '--unified=0',
-      file_cmp,
-      file_buf,
-   }, {
-      on_stdout = function(_, line)
-         if vim.startswith(line, '@@') then
-            table.insert(results, gs_hunks.parse_diff_line(line))
-         elseif #results > 0 then
-            table.insert(results[#results].lines, line)
+   local out = git_diff(file_cmp, file_buf, indent_heuristic, diff_algo)
+
+   for _, line in ipairs(out) do
+      if vim.startswith(line, '@@') then
+         results[#results + 1] = gs_hunks.parse_diff_line(line)
+      elseif #results > 0 then
+         local r = results[#results]
+         if line:sub(1, 1) == '-' then
+            r.removed.lines[#r.removed.lines + 1] = line:sub(2)
+         elseif line:sub(1, 1) == '+' then
+            r.added.lines[#r.added.lines + 1] = line:sub(2)
          end
-      end,
-   })
+      end
+   end
+
    os.remove(file_buf)
    os.remove(file_cmp)
    return results

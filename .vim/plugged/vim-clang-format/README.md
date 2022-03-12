@@ -1,10 +1,10 @@
 Format your C family code
 =======================================
-[![Build Status](https://travis-ci.org/rhysd/vim-clang-format.svg?branch=master)](https://travis-ci.org/rhysd/vim-clang-format)
+[![CI](https://github.com/rhysd/vim-clang-format/actions/workflows/ci.yml/badge.svg)](https://github.com/rhysd/vim-clang-format/actions/workflows/ci.yml)
 
 This plugin formats your code with specific coding style using [clang-format](http://clang.llvm.org/docs/ClangFormat.html).
 
-Currently below languages are supported:
+Automatic formatting is provided for the following languages by default:
 
 - C
 - C++
@@ -13,6 +13,8 @@ Currently below languages are supported:
 - Java
 - TypeScript
 - Protobuf
+- Cuda
+- Vala
 
 ## Screenshot
 
@@ -110,6 +112,12 @@ Vim's format mappings (e.g. `gq`) get to use `clang-format` to format. This
 option is not comptabile with Vim's `textwidth` feature. You must set
 `textwidth` to `0` when the `formatexpr` is set.
 
+- `g:clang_format#auto_filetypes`
+
+List of file types to which `g:clang_format#auto_format`, `g:clang_format#auto_format_on_insert_leave`,
+and `g:clang_format#auto_formatexpr` should be applied.
+The default value is `["c", "cpp", "objc", "java", "javascript", "typescript", "proto", "arduino"]`.
+
 - `g:clang_format#enable_fallback_style`
 
 When the value is 0, `-fallback-style=none` option is added on executing clang-format command.
@@ -158,7 +166,7 @@ In particular, the following link is useful to know the information of a key and
 
     The MIT License (MIT)
 
-    Copyright (c) 2013 rhysd
+    Copyright (c) 2013-2021 rhysd
 
     Permission is hereby granted, free of charge, to any person obtaining a copy
     of this software and associated documentation files (the "Software"), to deal

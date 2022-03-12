@@ -3,6 +3,7 @@ local logger = require 'neogit.logger'
 local a = require 'plenary.async'
 local process = require('neogit.process')
 local Job = require 'neogit.lib.job'
+local util = require 'neogit.lib.util'
 local split = require('neogit.lib.util').split
 
 local function config(setup)
@@ -70,8 +71,7 @@ local configurations = {
     aliases = {
       get = function(tbl)
         return function(path)
-          tbl._get()
-          return tbl.args(path)
+          return tbl._get.args(path)
         end
       end
     }
@@ -191,7 +191,9 @@ local configurations = {
       list = '--list',
       all = '-a',
       delete = '-d',
-      remotes = '-r'
+      remotes = '-r',
+      current = '--show-current',
+      very_verbose = '-vv',
     },
     aliases = {
       name = function (tbl)
@@ -268,19 +270,32 @@ local configurations = {
       cached = '--cached',
       full_name = '--full-name'
     },
-  })
+  }),
+  ['rev-parse'] = config({
+    flags = {
+      revs_only = "--revs-only",
+      no_revs = "--no-revs",
+      flags = "--flags",
+      no_flags = "--no-flags",
+      symbolic = "--symbolic",
+      symbolic_full_name = "--symbolic-full-name",
+    },
+    options = {
+      abbrev_ref = "--abbrev-ref",
+    },
+  }),
 }
 
 local function git_root()
-  return vim.trim(process.spawn({cmd = 'git', args = {'rev-parse', '--show-toplevel'}}))
+  return util.trim(process.spawn({cmd = 'git', args = {'rev-parse', '--show-toplevel'}}))
 end
 
 local git_root_sync = function()
-  return vim.trim(vim.fn.system("git rev-parse --show-toplevel"))
+  return util.trim(vim.fn.system("git rev-parse --show-toplevel"))
 end
 
 local git_dir_path_sync = function()
-  return vim.trim(vim.fn.system("git rev-parse --git-dir"))
+  return util.trim(vim.fn.system("git rev-parse --git-dir"))
 end
 
 local history = {}
@@ -664,7 +679,7 @@ local function handle_interactive_password_questions(chan, line)
     end
   elseif vim.startswith(line, "Username for ") then
     logger.debug "[CLI]: Asking for username"
-    local prompt = line:match("(.*:):.*")
+    local prompt = line:match("(.*:?):.*")
     local value = vim.fn.input {
       prompt = prompt .. " ",
       cancelreturn = "__CANCEL__"
@@ -676,7 +691,7 @@ local function handle_interactive_password_questions(chan, line)
       logger.debug "[CLI]: Cancelling the interactive cmd"
       vim.fn.chanclose(chan)
     end
-  elseif vim.startswith(line, "Enter passphrase for") 
+  elseif vim.startswith(line, "Enter passphrase") 
     or vim.startswith(line, "Password for") 
     then
     logger.debug "[CLI]: Asking for password"

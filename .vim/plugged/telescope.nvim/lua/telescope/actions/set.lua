@@ -125,13 +125,16 @@ action_set.edit = function(prompt_bufnr, command)
   require("telescope.actions").close(prompt_bufnr)
 
   if entry_bufnr then
+    if not vim.api.nvim_buf_get_option(entry_bufnr, "buflisted") then
+      vim.api.nvim_buf_set_option(entry_bufnr, "buflisted", true)
+    end
     edit_buffer(command, entry_bufnr)
   else
     -- check if we didn't pick a different buffer
     -- prevents restarting lsp server
     if vim.api.nvim_buf_get_name(0) ~= filename or command ~= "edit" then
       filename = Path:new(vim.fn.fnameescape(filename)):normalize(vim.loop.cwd())
-      vim.cmd(string.format("%s %s", command, filename))
+      pcall(vim.cmd, string.format("%s %s", command, filename))
     end
   end
 
@@ -143,7 +146,9 @@ action_set.edit = function(prompt_bufnr, command)
   end
 end
 
---- Scrolls the previewer up or down
+--- Scrolls the previewer up or down.
+--- Defaults to a half page scroll, but can be overridden using the `scroll_speed`
+--- option in `layout_config`. See |telescope.layout| for more details.
 ---@param prompt_bufnr number: The prompt bufnr
 ---@param direction number: The direction of the scrolling
 --      Valid directions include: "1", "-1"
@@ -160,6 +165,26 @@ action_set.scroll_previewer = function(prompt_bufnr, direction)
   local speed = status.picker.layout_config.scroll_speed or default_speed
 
   previewer:scroll_fn(math.floor(speed * direction))
+end
+
+--- Scrolls the results up or down.
+--- Defaults to a half page scroll, but can be overridden using the `scroll_speed`
+--- option in `layout_config`. See |telescope.layout| for more details.
+---@param prompt_bufnr number: The prompt bufnr
+---@param direction number: The direction of the scrolling
+--      Valid directions include: "1", "-1"
+action_set.scroll_results = function(prompt_bufnr, direction)
+  local status = state.get_status(prompt_bufnr)
+  local default_speed = vim.api.nvim_win_get_height(status.results_win) / 2
+  local speed = status.picker.layout_config.scroll_speed or default_speed
+
+  local input = direction > 0 and [[]] or [[]]
+
+  vim.api.nvim_win_call(status.results_win, function()
+    vim.cmd([[normal! ]] .. math.floor(speed) .. input)
+  end)
+
+  action_set.shift_selection(prompt_bufnr, math.floor(speed) * direction)
 end
 
 -- ==================================================

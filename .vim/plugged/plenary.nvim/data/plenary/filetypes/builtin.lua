@@ -35,11 +35,19 @@ return {
     ['nix'] = 'nix',
     ['erb'] = 'eruby',
     ['hbs'] = 'handlebars',
+    ['hdbs'] = 'handlebars',
     ['graphql'] = 'graphql',
     ['gql'] = 'graphql',
+    ['rkt'] = 'racket',
+    ['res'] = 'rescript',
+    ['resi'] = 'rescript'
   },
   file_name = {
     ['cakefile'] = 'coffee',
+    ['.babelrc'] = 'json',
+    ['.prettierrc'] = 'json',
+    ['.eslintrc'] = 'json',
+    ['.firebaserc'] = 'json',
   },
   shebang = shebang
 }

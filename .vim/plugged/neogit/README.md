@@ -38,6 +38,7 @@ You can either open neogit by using the `Neogit` command
 ```vim
 :Neogit " uses tab
 :Neogit kind=<kind> " override kind
+:Neogit cwd=<cwd> " override cwd
 :Neogit commit" open commit popup
 ```
 
@@ -54,11 +55,15 @@ neogit.open({ "commit" })
 
 -- open with split kind
 neogit.open({ kind = "split" })
+
+-- open home directory
+neogit.open({ cwd = "~" })
 ```
 
 The create function takes 1 optional argument that can be one of the following values:
 
 * tab (default)
+* replace
 * floating (This currently doesn't work with popups. Very unstable)
 * split
 * split_above
@@ -104,13 +109,19 @@ local neogit = require("neogit")
 
 neogit.setup {
   disable_signs = false,
+  disable_hint = false,
   disable_context_highlighting = false,
   disable_commit_confirmation = false,
+  -- Neogit refreshes its internal state after specific events, which can be expensive depending on the repository size. 
+  -- Disabling `auto_refresh` will make it so you have to manually refresh the status after you open it.
   auto_refresh = true,
   disable_builtin_notifications = false,
+  use_magit_keybindings = false,
   commit_popup = {
       kind = "split",
   },
+  -- Change the default way of opening neogit
+  kind = "tab",
   -- customize displayed signs
   signs = {
     -- { CLOSED, OPENED }
@@ -133,6 +144,30 @@ neogit.setup {
     --
     diffview = false  
   },
+  -- Setting any section to `false` will make the section not render at all
+  sections = {
+    untracked = {
+      folded = false
+    },
+    unstaged = {
+      folded = false
+    },
+    staged = {
+      folded = false
+    },
+    stashes = {
+      folded = true
+    },
+    unpulled = {
+      folded = true
+    },
+    unmerged = {
+      folded = false
+    },
+    recent = {
+      folded = true
+    },
+  },
   -- override/add mappings
   mappings = {
     -- modify status buffer mappings
@@ -146,7 +181,7 @@ neogit.setup {
 }
 ```
 
-Right now, only the status buffer supports custom mappings. The other popups will follow shortly.
+Right now, only the status buffer supports custom mappings.
 
 List of status commands:
 
@@ -203,9 +238,16 @@ You can override them to fit your colorscheme by creating a `syntax/NeogitStatus
 
 Set `disable_context_highlighting = true` in your call to [`setup`](#configuration) to disable context highlighting altogether.
 
+## Disabling Hint
+Set `disable_hint = true` in your call to [`setup`](#configuration) to hide hints on top of the panel.
+
 ## Disabling Commit Confirmation
 
 Set `disable_commit_confirmation = true` in your call to [`setup`](#configuration) to disable the "Are you sure you want to commit?" prompt after saving the commit message buffer.
+
+## Disabling Insert On Commit
+
+Set `disable_insert_on_commit = true` in your call to [`setup`](#configuration) to disable automatically changing to insert mode when opening the commit message buffer. (Disabled is the default)
 
 ## Events
 
@@ -218,6 +260,25 @@ autocmd User NeogitStatusRefreshed echom "Hello World!"
 ```
 
 Further information can be found under `:h autocmd`.
+
+## Magit-style Keybindings
+
+Neogit uses 'p' for pulling instead of 'F'.
+
+Set `use_magit_keybindings = true` in your call to [`setup`](#configuration) to use magit-style keybindings.
+
+## Refreshing Neogit
+
+If you would like to refresh Neogit manually, you can use `neogit#refresh_manually` in Vimscript or `require('neogit').refresh_manually` in lua. They both require a single file parameter.
+
+This allows you to refresh Neogit on your own custom events
+
+```vim
+augroup DefaultRefreshEvents
+  au!
+  au BufWritePost,BufEnter,FocusGained,ShellCmdPost,VimResume * call <SID>neogit#refresh_manually(expand('<afile>'))
+augroup END
+```
 
 ## Todo
 

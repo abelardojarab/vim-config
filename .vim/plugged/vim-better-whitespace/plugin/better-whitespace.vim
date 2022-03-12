@@ -51,7 +51,7 @@ call s:InitVariable('strip_whitelines_at_eof', 0)
 call s:InitVariable('strip_whitespace_confirm', 1)
 
 " Set this to blacklist specific filetypes
-call s:InitVariable('better_whitespace_filetypes_blacklist', ['diff', 'gitcommit', 'unite', 'qf', 'help', 'markdown'])
+call s:InitVariable('better_whitespace_filetypes_blacklist', ['diff', 'git', 'gitcommit', 'unite', 'qf', 'help', 'markdown', 'fugitive'])
 
 " Skip empty (whitespace-only) lines for highlighting
 call s:InitVariable('better_whitespace_skip_empty_lines', 0)
@@ -84,6 +84,7 @@ if g:better_whitespace_skip_empty_lines == 1
 endif
 
 let s:strip_whitespace_pattern = s:eol_whitespace_pattern
+let s:strip_whitelines_pattern = '\(\n\)\+\%$'
 if g:show_spaces_that_precede_tabs == 1
     let s:eol_whitespace_pattern .= '\|[' . s:whitespace_chars . ']\+\ze[\u0009]'
 endif
@@ -116,11 +117,19 @@ else
     endfunction
 endif
 
+" Function that clears the search entries of BetterWhiteSpace by rolling back to the given index
+function! s:RestoreSearchHistory(index)
+    while histnr('search') > max([a:index, 0])
+        call histdel('search', -1)
+    endwhile
+    let @/ = histget('search', -1)
+endfunction
+
 " query per-buffer setting for whitespace highlighting
 function! s:ShouldHighlight()
     " Guess from the filetype if a) not locally decided, b) globally enabled, c) there is enough information
-    if !exists('b:better_whitespace_enabled') && g:better_whitespace_enabled == 1 && !(empty(&buftype) && empty(&filetype))
-        let b:better_whitespace_enabled = &buftype != 'nofile' && &buftype != 'popup' && index(g:better_whitespace_filetypes_blacklist, &ft) == -1
+    if get(b:, 'better_whitespace_guess', 1) && g:better_whitespace_enabled == 1
+        let b:better_whitespace_enabled = (empty(&buftype) || &buftype == 'acwrite') && index(g:better_whitespace_filetypes_blacklist, &ft) == -1
     endif
     return get(b:, 'better_whitespace_enabled', g:better_whitespace_enabled)
 endfunction
@@ -128,7 +137,7 @@ endfunction
 " query per-buffer setting for whitespace stripping
 function! s:ShouldStripWhitespaceOnSave()
     " Guess from local whitespace enabled-ness and global whitespace setting
-    if !exists('b:strip_whitespace_on_save') && exists('b:better_whitespace_enabled')
+    if get(b:, 'strip_whitespace_guess', 1) && exists('b:better_whitespace_enabled')
         let b:strip_whitespace_on_save = b:better_whitespace_enabled && g:strip_whitespace_on_save && &modifiable &&
                     \ (g:strip_max_file_size == 0 || g:strip_max_file_size >= line('$'))
     endif
@@ -187,13 +196,17 @@ endif
 " WARNING: moves the cursor.
 function! s:DetectWhitespace(line1, line2)
     call cursor(a:line1, 1)
-    return search(s:strip_whitespace_pattern, 'cn', a:line2)
+    let found = search(s:strip_whitespace_pattern, 'cn', a:line2)
+    if g:strip_whitelines_at_eof == 1 && a:line2 >= line('$')
+        let found += search(s:strip_whitelines_pattern, 'cn')
+    endif
+    return found
 endfunction
 
 " Removes all extraneous whitespace in the file
 function! s:StripWhitespace(line1, line2)
     " Save the current search and cursor position
-    let _s=@/
+    let _s = histnr('search')
     let l = line('.')
     let c = col('.')
 
@@ -201,11 +214,11 @@ function! s:StripWhitespace(line1, line2)
 
     " Strip empty lines at EOF
     if g:strip_whitelines_at_eof == 1 && a:line2 >= line('$')
-        silent execute '%s/\(\n\)\+\%$//e'
+        silent execute '%s/' . s:strip_whitelines_pattern . '//e'
     endif
 
     " Restore the saved search and cursor position
-    let @/=_s
+    call <SID>RestoreSearchHistory(_s)
     call cursor(l, c)
 endfunction
 
@@ -374,31 +387,37 @@ autocmd ColorScheme * call <SID>WhitespaceInit()
 
 function! s:EnableWhitespace()
     let b:better_whitespace_enabled = 1
+    let b:better_whitespace_guess = 0
     call <SID>SetupAutoCommands()
 endfunction
 
 function! s:DisableWhitespace()
     let b:better_whitespace_enabled = 0
+    let b:better_whitespace_guess = 0
     call <SID>SetupAutoCommands()
 endfunction
 
 function! s:ToggleWhitespace()
     let b:better_whitespace_enabled = 1 - <SID>ShouldHighlight()
+    let b:better_whitespace_guess = 0
     call <SID>SetupAutoCommands()
 endfunction
 
 function! s:EnableStripWhitespaceOnSave()
     let b:strip_whitespace_on_save = 1
+    let b:strip_whitespace_guess = 0
     call <SID>SetupAutoCommands()
 endfunction
 
 function! s:DisableStripWhitespaceOnSave()
     let b:strip_whitespace_on_save = 0
+    let b:strip_whitespace_guess = 0
     call <SID>SetupAutoCommands()
 endfunction
 
 function! s:ToggleStripWhitespaceOnSave()
     let b:strip_whitespace_on_save = 1 - <SID>ShouldStripWhitespaceOnSave()
+    let b:strip_whitespace_guess = 0
     call <SID>SetupAutoCommands()
 endfunction
 

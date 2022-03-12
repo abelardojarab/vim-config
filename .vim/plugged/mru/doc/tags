@@ -12,6 +12,7 @@ MRU_Max_Entries	mru.txt	/*MRU_Max_Entries*
 MRU_Max_Menu_Entries	mru.txt	/*MRU_Max_Menu_Entries*
 MRU_Max_Submenu_Entries	mru.txt	/*MRU_Max_Submenu_Entries*
 MRU_Open_File_Use_Tabs	mru.txt	/*MRU_Open_File_Use_Tabs*
+MRU_Set_Alternate_File	mru.txt	/*MRU_Set_Alternate_File*
 MRU_Use_Current_Window	mru.txt	/*MRU_Use_Current_Window*
 MRU_Window_Height	mru.txt	/*MRU_Window_Height*
 MRU_Window_Open_Always	mru.txt	/*MRU_Window_Open_Always*

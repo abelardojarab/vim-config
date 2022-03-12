@@ -9,7 +9,7 @@ settings.
 
 ```vim
 Plug 'prettier/vim-prettier', {
-  \ 'do': 'yarn install',
+  \ 'do': 'yarn install --frozen-lockfile --production',
   \ 'branch': 'release/0.x'
   \ }
 ```
@@ -42,7 +42,7 @@ yarn|npm installed globally.
 ```vim
 " post install (yarn install | npm install) then load plugin only for editing supported files
 Plug 'prettier/vim-prettier', {
-  \ 'do': 'yarn install',
+  \ 'do': 'yarn install --frozen-lockfile --production',
   \ 'for': ['javascript', 'typescript', 'css', 'less', 'scss', 'json', 'graphql', 'markdown', 'vue', 'svelte', 'yaml', 'html'] }
 ```
 
@@ -50,7 +50,7 @@ or simply enable for all formats by:
 
 ```vim
 " post install (yarn install | npm install) then load plugin only for editing supported files
-Plug 'prettier/vim-prettier', { 'do': 'yarn install' }
+Plug 'prettier/vim-prettier', { 'do': 'yarn install --frozen-lockfile --production' }
 ```
 
 For those using [vim-pathogen](https://github.com/tpope/vim-pathogen), you can run the following in a terminal:
@@ -68,7 +68,7 @@ call dein#add('prettier/vim-prettier', {'build': 'npm install'})
 
 If using other vim plugin managers or doing manual setup make sure to have
 `prettier` installed globally or go to your vim-prettier directory and either do
-`npm install` or `yarn install`
+`npm install` or `yarn install --frozen-lockfile`
 
 ### Prettier Executable resolution
 
@@ -173,6 +173,13 @@ let g:prettier#autoformat = 1
 Allow auto formatting for files without "@format" or "@prettier" tag
 
 ```vim
+let g:prettier#autoformat_require_pragma = 0
+```
+
+**NOTE** The previous two options can be used together for autoformatting files on save without `@format` or `@prettier` tags
+
+```vim
+let g:prettier#autoformat = 1
 let g:prettier#autoformat_require_pragma = 0
 ```
 

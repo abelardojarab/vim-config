@@ -1,214 +1,246 @@
 local a = vim.api
 
+local core = require "nvim-tree.core"
+
 local M = {}
 
-function M.nvim_tree_callback(callback_name)
-  return string.format(":lua require'nvim-tree'.on_keypress('%s')<CR>", callback_name)
-end
-
 M.View = {
-  bufnr = nil,
   tabpages = {},
-  width = 30,
-  side = 'left',
+  hide_root_folder = false,
   winopts = {
     relativenumber = false,
     number = false,
     list = false,
+    foldenable = false,
     winfixwidth = true,
     winfixheight = true,
-    foldenable = false,
     spell = false,
-    signcolumn = 'yes',
-    foldmethod = 'manual',
-    foldcolumn = '0',
+    signcolumn = "yes",
+    foldmethod = "manual",
+    foldcolumn = "0",
     cursorcolumn = false,
-    colorcolumn = '0',
+    cursorlineopt = "line",
+    colorcolumn = "0",
+    wrap = false,
     winhl = table.concat({
-      'EndOfBuffer:NvimTreeEndOfBuffer',
-      'Normal:NvimTreeNormal',
-      'CursorLine:NvimTreeCursorLine',
-      'VertSplit:NvimTreeVertSplit',
-      'SignColumn:NvimTreeNormal',
-      'StatusLine:NvimTreeStatusLine',
-      'StatusLineNC:NvimTreeStatuslineNC'
-    }, ',')
+      "EndOfBuffer:NvimTreeEndOfBuffer",
+      "Normal:NvimTreeNormal",
+      "CursorLine:NvimTreeCursorLine",
+      "VertSplit:NvimTreeVertSplit",
+      "StatusLine:NvimTreeStatusLine",
+      "StatusLineNC:NvimTreeStatuslineNC",
+      "SignColumn:NvimTreeSignColumn",
+      "NormalNC:NvimTreeNormalNC",
+    }, ","),
   },
-  bufopts = {
-    { name = 'swapfile', val = false },
-    { name = 'buftype', val = 'nofile' },
-    { name = 'modifiable', val = false },
-    { name = 'filetype', val = 'NvimTree' },
-    { name = 'bufhidden', val = 'hide' }
-  },
-  bindings = {
-    { key = {"<CR>", "o", "<2-LeftMouse>"}, cb = M.nvim_tree_callback("edit") },
-    { key = {"<2-RightMouse>", "<C-]>"},    cb = M.nvim_tree_callback("cd") },
-    { key = "<C-v>",                        cb = M.nvim_tree_callback("vsplit") },
-    { key = "<C-x>",                        cb = M.nvim_tree_callback("split") },
-    { key = "<C-t>",                        cb = M.nvim_tree_callback("tabnew") },
-    { key = "<",                            cb = M.nvim_tree_callback("prev_sibling") },
-    { key = ">",                            cb = M.nvim_tree_callback("next_sibling") },
-    { key = "P",                            cb = M.nvim_tree_callback("parent_node") },
-    { key = "<BS>",                         cb = M.nvim_tree_callback("close_node") },
-    { key = "<S-CR>",                       cb = M.nvim_tree_callback("close_node") },
-    { key = "<Tab>",                        cb = M.nvim_tree_callback("preview") },
-    { key = "K",                            cb = M.nvim_tree_callback("first_sibling") },
-    { key = "J",                            cb = M.nvim_tree_callback("last_sibling") },
-    { key = "I",                            cb = M.nvim_tree_callback("toggle_ignored") },
-    { key = "H",                            cb = M.nvim_tree_callback("toggle_dotfiles") },
-    { key = "R",                            cb = M.nvim_tree_callback("refresh") },
-    { key = "a",                            cb = M.nvim_tree_callback("create") },
-    { key = "d",                            cb = M.nvim_tree_callback("remove") },
-    { key = "r",                            cb = M.nvim_tree_callback("rename") },
-    { key = "<C-r>",                        cb = M.nvim_tree_callback("full_rename") },
-    { key = "x",                            cb = M.nvim_tree_callback("cut") },
-    { key = "c",                            cb = M.nvim_tree_callback("copy") },
-    { key = "p",                            cb = M.nvim_tree_callback("paste") },
-    { key = "y",                            cb = M.nvim_tree_callback("copy_name") },
-    { key = "Y",                            cb = M.nvim_tree_callback("copy_path") },
-    { key = "gy",                           cb = M.nvim_tree_callback("copy_absolute_path") },
-    { key = "[c",                           cb = M.nvim_tree_callback("prev_git_item") },
-    { key = "]c",                           cb = M.nvim_tree_callback("next_git_item") },
-    { key = "-",                            cb = M.nvim_tree_callback("dir_up") },
-    { key = "s",                            cb = M.nvim_tree_callback("system_open") },
-    { key = "q",                            cb = M.nvim_tree_callback("close") },
-    { key = "g?",                           cb = M.nvim_tree_callback("toggle_help") }
-  }
 }
 
----Find a rogue NvimTree buffer that might have been spawned by i.e. a session.
----@return integer|nil
-local function find_rogue_buffer()
-  for _, v in ipairs(a.nvim_list_bufs()) do
-    if vim.fn.bufname(v) == "NvimTree" then
-      return v
+local BUFNR_PER_TAB = {}
+local LAST_FOCUSED_WIN = nil
+local BUFFER_OPTIONS = {
+  swapfile = false,
+  buftype = "nofile",
+  modifiable = false,
+  filetype = "NvimTree",
+  bufhidden = "wipe",
+  buflisted = false,
+}
+
+local function matches_bufnr(bufnr)
+  for _, b in pairs(BUFNR_PER_TAB) do
+    if b == bufnr then
+      return true
     end
   end
-  return nil
+  return false
 end
 
----Find pre-existing NvimTree buffer, delete its windows then wipe it.
----@private
-function M._wipe_rogue_buffer()
-  local bn = find_rogue_buffer()
-  if bn then
-    local win_ids = vim.fn.win_findbuf(bn)
-    for _, id in ipairs(win_ids) do
-      if vim.fn.win_gettype(id) ~= "autocmd" then
-        a.nvim_win_close(id, true)
+local function wipe_rogue_buffer()
+  for _, bufnr in ipairs(a.nvim_list_bufs()) do
+    if not matches_bufnr(bufnr) and a.nvim_buf_get_name(bufnr):match "NvimTree" ~= nil then
+      return pcall(a.nvim_buf_delete, bufnr, { force = true })
+    end
+  end
+end
+
+local function create_buffer(bufnr)
+  wipe_rogue_buffer()
+
+  local tab = a.nvim_get_current_tabpage()
+  BUFNR_PER_TAB[tab] = bufnr or a.nvim_create_buf(false, false)
+  a.nvim_buf_set_name(M.get_bufnr(), "NvimTree_" .. tab)
+
+  for option, value in pairs(BUFFER_OPTIONS) do
+    vim.bo[M.get_bufnr()][option] = value
+  end
+
+  require("nvim-tree.actions").apply_mappings(M.get_bufnr())
+end
+
+local function get_size()
+  local width_or_height = M.is_vertical() and "width" or "height"
+  local size = M.View[width_or_height]
+  if type(size) == "number" then
+    return size
+  elseif type(size) == "function" then
+    return size()
+  end
+  local size_as_number = tonumber(size:sub(0, -2))
+  local percent_as_decimal = size_as_number / 100
+  return math.floor(vim.o.columns * percent_as_decimal)
+end
+
+local move_tbl = {
+  left = "H",
+  right = "L",
+  bottom = "J",
+  top = "K",
+}
+
+-- TODO: remove this once they fix https://github.com/neovim/neovim/issues/14670
+local function set_local(opt, value)
+  local cmd
+  if value == true then
+    cmd = string.format("setlocal %s", opt)
+  elseif value == false then
+    cmd = string.format("setlocal no%s", opt)
+  else
+    cmd = string.format("setlocal %s=%s", opt, value)
+  end
+  vim.cmd(cmd)
+end
+
+local function open_window()
+  a.nvim_command "vsp"
+  M.reposition_window()
+  local winnr = a.nvim_get_current_win()
+  local tabpage = a.nvim_get_current_tabpage()
+  M.View.tabpages[tabpage] = vim.tbl_extend("force", M.View.tabpages[tabpage] or { help = false }, { winnr = winnr })
+end
+
+local function set_window_options_and_buffer()
+  pcall(vim.cmd, "buffer " .. M.get_bufnr())
+  for k, v in pairs(M.View.winopts) do
+    set_local(k, v)
+  end
+end
+
+local function get_existing_buffers()
+  return vim.tbl_filter(function(buf)
+    return a.nvim_buf_is_valid(buf) and vim.fn.buflisted(buf) == 1
+  end, a.nvim_list_bufs())
+end
+
+local function switch_buf_if_last_buf()
+  if #a.nvim_list_wins() == 1 then
+    if #get_existing_buffers() > 0 then
+      vim.cmd "sbnext"
+    else
+      vim.cmd "new"
+    end
+  end
+end
+
+function M.close()
+  if not M.is_visible() then
+    return
+  end
+  switch_buf_if_last_buf()
+  local tree_win = M.get_winnr()
+  local current_win = a.nvim_get_current_win()
+  for _, win in pairs(a.nvim_list_wins()) do
+    if tree_win ~= win and a.nvim_win_get_config(win).relative == "" then
+      a.nvim_win_close(tree_win, true)
+      if tree_win == current_win and LAST_FOCUSED_WIN then
+        a.nvim_set_current_win(LAST_FOCUSED_WIN)
       end
+      return
     end
-
-    a.nvim_buf_set_name(bn, "")
-    vim.schedule(function ()
-      pcall(a.nvim_buf_delete, bn, {})
-    end)
   end
 end
 
-local function warn_wrong_mapping()
-  local warn_str = "Wrong configuration for keymaps, refer to the new documentation. Keymaps setup aborted"
-  require'nvim-tree.utils'.echo_warning(warn_str)
-end
-
-local HAS_LOADED = false
--- set user options and create tree buffer (should never be wiped)
-function M.setup()
-  M.View.side = vim.g.nvim_tree_side or M.View.side
-  M.View.width = vim.g.nvim_tree_width or M.View.width
-
-  if not HAS_LOADED then
-    M.View.bufnr = a.nvim_create_buf(false, false)
-    HAS_LOADED = true
-  end
-
-  if not pcall(a.nvim_buf_set_name, M.View.bufnr, 'NvimTree') then
-    M._wipe_rogue_buffer()
-    a.nvim_buf_set_name(M.View.bufnr, 'NvimTree')
-  end
-
-  for _, opt in ipairs(M.View.bufopts) do
-    vim.bo[M.View.bufnr][opt.name] = opt.val
-  end
-
-  vim.cmd "augroup NvimTreeView"
-  vim.cmd "au!"
-  vim.cmd "au BufWinEnter,BufWinLeave * lua require'nvim-tree.view'._prevent_buffer_override()"
-  vim.cmd "au BufEnter,BufNewFile * lua require'nvim-tree'.open_on_directory()"
-  vim.cmd "augroup END"
-  
-  if vim.g.nvim_tree_disable_keybindings == 1 then
+function M.open(options)
+  if M.is_visible() then
     return
   end
 
-  local user_mappings = vim.g.nvim_tree_bindings or {}
-  if vim.g.nvim_tree_disable_default_keybindings == 1 then
-    M.View.bindings = user_mappings
+  LAST_FOCUSED_WIN = a.nvim_get_current_win()
+  create_buffer()
+  open_window()
+  set_window_options_and_buffer()
+  M.resize()
+
+  local opts = options or { focus_tree = true }
+  if not opts.focus_tree then
+    vim.cmd "wincmd p"
+  end
+end
+
+function M.resize(size)
+  if type(size) == "string" then
+    size = vim.trim(size)
+    local first_char = size:sub(1, 1)
+    size = tonumber(size)
+
+    if first_char == "+" or first_char == "-" then
+      size = M.View.width + size
+    end
+  end
+
+  if type(size) == "number" and size <= 0 then
+    return
+  end
+
+  if size then
+    M.View.width = size
+    M.View.height = size
+  end
+
+  if not M.is_visible() then
+    return
+  end
+
+  if M.is_vertical() then
+    a.nvim_win_set_width(M.get_winnr(), get_size())
   else
-    local ok, result = pcall(vim.fn.extend, M.View.bindings, user_mappings)
-    if not ok then
-      -- TODO: remove this in a few weeks
-      warn_wrong_mapping()
-      return
-    else
-      M.View.bindings = result
-    end
+    a.nvim_win_set_height(M.get_winnr(), get_size())
   end
 
-  for _, b in pairs(M.View.bindings) do
-    -- TODO: remove this in a few weeks
-    if type(b) == "string" then
-      warn_wrong_mapping()
-      break
-    end
-    if type(b.key) == "table" then
-      for _, key in pairs(b.key) do
-        a.nvim_buf_set_keymap(M.View.bufnr, b.mode or 'n', key, b.cb, { noremap = true, silent = true, nowait = true })
-      end
-    else
-      a.nvim_buf_set_keymap(M.View.bufnr, b.mode or 'n', b.key, b.cb, { noremap = true, silent = true, nowait = true })
-    end
+  if not M.View.preserve_window_proportions then
+    vim.cmd ":wincmd ="
   end
 end
 
-local goto_tbl = {
-  right = 'h',
-  left = 'l',
-  top = 'j',
-  bottom = 'k',
-}
+function M.reposition_window()
+  local move_to = move_tbl[M.View.side]
+  a.nvim_command("wincmd " .. move_to)
+  local resize_direction = M.is_vertical() and "vertical " or ""
+  a.nvim_command(resize_direction .. "resize " .. get_size())
+end
 
-function M._prevent_buffer_override()
-  vim.schedule(function()
-    local curwin = a.nvim_get_current_win()
-    local curbuf = a.nvim_win_get_buf(curwin)
+local function set_current_win()
+  local current_tab = a.nvim_get_current_tabpage()
+  M.View.tabpages[current_tab] = { winnr = a.nvim_get_current_win() }
+end
 
-    if curwin ~= M.get_winnr() or curbuf == M.View.bufnr then
-      return
-    end
-
-    if a.nvim_buf_is_loaded(M.View.bufnr) and a.nvim_buf_is_valid(M.View.bufnr) then
-      vim.cmd("buffer "..M.View.bufnr)
-    end
-
-    local bufname = a.nvim_buf_get_name(curbuf)
-    local isdir = vim.fn.isdirectory(bufname) == 1
-    if isdir or not bufname or bufname == "" then
-      return
-    end
-
-    if #vim.api.nvim_list_wins() < 2 then
-      vim.cmd("vsplit")
-    else
-      vim.cmd("wincmd "..goto_tbl[M.View.side])
-    end
-    vim.cmd("buffer "..curbuf)
+function M.open_in_current_win(opts)
+  opts = opts or { hijack_current_buf = true, resize = true }
+  create_buffer(opts.hijack_current_buf and a.nvim_get_current_buf())
+  set_current_win()
+  set_window_options_and_buffer()
+  if opts.resize then
+    M.reposition_window()
     M.resize()
-  end)
+  end
 end
 
-function M.win_open(opts)
+function M.abandon_current_window()
+  local tab = a.nvim_get_current_tabpage()
+  BUFNR_PER_TAB[tab] = nil
+  M.View.tabpages[tab] = { winnr = nil }
+end
+
+function M.is_visible(opts)
   if opts and opts.any_tabpage then
     for _, v in pairs(M.View.tabpages) do
       if a.nvim_win_is_valid(v.winnr) then
@@ -216,119 +248,35 @@ function M.win_open(opts)
       end
     end
     return false
-  else
-    return M.get_winnr() ~= nil and a.nvim_win_is_valid(M.get_winnr())
   end
+
+  return M.get_winnr() ~= nil and a.nvim_win_is_valid(M.get_winnr())
 end
 
 function M.set_cursor(opts)
-  if M.win_open() then
+  if M.is_visible() then
     pcall(a.nvim_win_set_cursor, M.get_winnr(), opts)
+    -- patch until https://github.com/neovim/neovim/issues/17395 is fixed
+    require("nvim-tree.renderer").draw()
   end
 end
 
 function M.focus(winnr, open_if_closed)
   local wnr = winnr or M.get_winnr()
 
-  if a.nvim_win_get_tabpage(wnr) ~= a.nvim_win_get_tabpage(0) then
+  if a.nvim_win_get_tabpage(wnr or 0) ~= a.nvim_win_get_tabpage(0) then
     M.close()
     M.open()
     wnr = M.get_winnr()
-  elseif open_if_closed and not M.win_open() then
+  elseif open_if_closed and not M.is_visible() then
     M.open()
   end
 
   a.nvim_set_current_win(wnr)
 end
 
-local function get_width()
-  if type(M.View.width) == "number" then
-    return M.View.width
-  end
-  local width_as_number = tonumber(M.View.width:sub(0, -2))
-  local percent_as_decimal = width_as_number / 100
-  return math.floor(vim.o.columns * percent_as_decimal)
-end
-
-function M.resize()
-  if vim.g.nvim_tree_auto_resize == 0 or not a.nvim_win_is_valid(M.get_winnr()) then
-    return
-  end
-
-  a.nvim_win_set_width(M.get_winnr(), get_width())
-end
-
-local move_tbl = {
-  left = 'H',
-  right = 'L',
-  bottom = 'J',
-  top = 'K',
-}
-
--- TODO: remove this once they fix https://github.com/neovim/neovim/issues/14670
-local function set_local(opt, value)
-  local cmd
-  if value == true then
-    cmd = string.format('setlocal %s', opt)
-  elseif value == false then
-    cmd = string.format('setlocal no%s', opt)
-  else
-    cmd = string.format('setlocal %s=%s', opt, value)
-  end
-  vim.cmd(cmd)
-end
-
-function M.replace_window()
-  local move_to = move_tbl[M.View.side]
-  a.nvim_command("wincmd "..move_to)
-  a.nvim_command("vertical resize "..get_width())
-end
-
-local function open_window()
-  a.nvim_command("vsp")
-  M.replace_window()
-  local winnr = a.nvim_get_current_win()
-  local tabpage = a.nvim_get_current_tabpage()
-  M.View.tabpages[tabpage] = vim.tbl_extend("force", M.View.tabpages[tabpage] or {help = false}, {winnr = winnr})
-end
-
-function M.open(options)
-	options = options or { focus_tree = true }
-  if not a.nvim_buf_is_valid(M.View.bufnr) then
-    HAS_LOADED = false
-  end
-
-  if not HAS_LOADED then
-    M.setup()
-    HAS_LOADED = true
-  end
-
-  if not M.win_open() then
-    open_window()
-  end
-
-  vim.cmd("buffer "..M.View.bufnr)
-  for k, v in pairs(M.View.winopts) do
-    set_local(k, v)
-  end
-  vim.cmd ":wincmd ="
-	if not options.focus_tree then
-		vim.cmd("wincmd p")
-	end
-end
-
-function M.close()
-  if not M.win_open() then return end
-  if #a.nvim_list_wins() == 1 then
-    local ans = vim.fn.input(
-      '[NvimTree] this is the last open window, are you sure you want to quit nvim ? y/n: '
-    )
-    if ans == 'y' then
-      vim.cmd "q!"
-    end
-    return
-  end
-  a.nvim_win_hide(M.get_winnr())
+function M.is_vertical()
+  return M.View.side == "left" or M.View.side == "right"
 end
 
 --- Returns the window number for nvim-tree within the tabpage specified
@@ -340,6 +288,12 @@ function M.get_winnr(tabpage)
   if tabinfo ~= nil then
     return tabinfo.winnr
   end
+end
+
+--- Returns the current nvim tree bufnr
+---@return number
+function M.get_bufnr()
+  return BUFNR_PER_TAB[a.nvim_get_current_tabpage()]
 end
 
 --- Checks if nvim-tree is displaying the help ui within the tabpage specified
@@ -356,6 +310,64 @@ end
 function M.toggle_help(tabpage)
   tabpage = tabpage or a.nvim_get_current_tabpage()
   M.View.tabpages[tabpage].help = not M.View.tabpages[tabpage].help
+end
+
+function M.is_buf_valid(bufnr)
+  return bufnr and a.nvim_buf_is_valid(bufnr) and a.nvim_buf_is_loaded(bufnr)
+end
+
+function M._prevent_buffer_override()
+  local view_winnr = M.get_winnr()
+  local view_bufnr = M.get_bufnr()
+
+  -- need to schedule to let the new buffer populate the window
+  -- because this event needs to be run on bufWipeout.
+  -- Otherwise the curwin/curbuf would match the view buffer and the view window.
+  vim.schedule(function()
+    local curwin = a.nvim_get_current_win()
+    local curbuf = a.nvim_win_get_buf(curwin)
+    local bufname = a.nvim_buf_get_name(curbuf)
+    if not bufname:match "NvimTree" then
+      M.View.tabpages = {}
+    end
+    if curwin ~= view_winnr or bufname == "" or curbuf == view_bufnr then
+      return
+    end
+
+    -- patch to avoid the overriding window to be fixed in size
+    -- might need a better patch
+    vim.cmd "setlocal nowinfixwidth"
+    vim.cmd "setlocal nowinfixheight"
+    M.open { focus_tree = false }
+    require("nvim-tree.renderer").draw()
+    require("nvim-tree").find_file(false)
+  end)
+end
+
+function M.is_root_folder_visible()
+  return core.get_cwd() ~= "/" and not M.View.hide_root_folder
+end
+
+local DEFAULT_CONFIG = {
+  width = 30,
+  height = 30,
+  side = "left",
+  preserve_window_proportions = false,
+  number = false,
+  relativenumber = false,
+  signcolumn = "yes",
+}
+
+function M.setup(opts)
+  local options = vim.tbl_deep_extend("force", DEFAULT_CONFIG, opts.view or {})
+  M.View.side = options.side
+  M.View.width = options.width
+  M.View.height = options.height
+  M.View.hide_root_folder = options.hide_root_folder
+  M.View.preserve_window_proportions = options.preserve_window_proportions
+  M.View.winopts.number = options.number
+  M.View.winopts.relativenumber = options.relativenumber
+  M.View.winopts.signcolumn = options.signcolumn
 end
 
 return M

@@ -92,27 +92,50 @@ M.strcharpart = (function()
   end
 end)()
 
-M.truncate = function(str, len, dots)
-  str = tostring(str) -- We need to make sure its an actually a string and not a number
-  dots = dots or "…"
+local truncate = function(str, len, dots, direction)
   if M.strdisplaywidth(str) <= len then
     return str
   end
-  local start = 0
+  local start = direction > 0 and 0 or str:len()
   local current = 0
   local result = ""
   local len_of_dots = M.strdisplaywidth(dots)
+  local concat = function(a, b, dir)
+    if dir > 0 then
+      return a .. b
+    else
+      return b .. a
+    end
+  end
   while true do
     local part = M.strcharpart(str, start, 1)
     current = current + M.strdisplaywidth(part)
     if (current + len_of_dots) > len then
-      result = result .. dots
+      result = concat(result, dots, direction)
       break
     end
-    result = result .. part
-    start = start + 1
+    result = concat(result, part, direction)
+    start = start + direction
   end
   return result
+end
+
+M.truncate = function(str, len, dots, direction)
+  str = tostring(str) -- We need to make sure its an actually a string and not a number
+  dots = dots or "…"
+  direction = direction or 1
+  if direction ~= 0 then
+    return truncate(str, len, dots, direction)
+  else
+    if M.strdisplaywidth(str) <= len then
+      return str
+    end
+    local len1 = math.floor((len + M.strdisplaywidth(dots)) / 2)
+    local s1 = truncate(str, len1, dots, 1)
+    local len2 = len - M.strdisplaywidth(s1) + M.strdisplaywidth(dots)
+    local s2 = truncate(str, len2, dots, -1)
+    return s1 .. s2:sub(dots:len() + 1)
+  end
 end
 
 M.align_str = function(string, width, right_justify)

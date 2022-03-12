@@ -5,10 +5,9 @@ local ui = require("flutter-tools.ui")
 local Job = require("plenary.job")
 
 local fn = vim.fn
+local luv = vim.loop
 
-local M = {
-  dart_bin_name = "dart",
-}
+local M = {}
 
 local dart_sdk = path.join("cache", "dart-sdk")
 
@@ -45,6 +44,12 @@ local function _dart_sdk_root(paths)
   return ""
 end
 
+local function _flutter_sdk_dart_bin(flutter_sdk)
+  -- retrieve the Dart binary from the Flutter SDK
+  local binary_name = require("flutter-tools.utils.path").is_windows and "dart.bat" or "dart"
+  return path.join(flutter_sdk, "bin", binary_name)
+end
+
 ---Get paths for flutter and dart based on the binary locations
 ---@return table<string, string>
 local function get_default_binaries()
@@ -59,6 +64,10 @@ end
 ---@type table<string, string>
 local _paths = nil
 
+function M.reset_paths()
+  _paths = nil
+end
+
 ---Execute user's lookup command and pass it to the job callback
 ---@param lookup_cmd string
 ---@param callback fun(p: string, t: table<string, string>)
@@ -71,13 +80,16 @@ local function path_from_lookup_cmd(lookup_cmd, callback)
 
   local job = Job:new({ command = cmd, args = args })
   job:after_failure(vim.schedule_wrap(function()
-    ui.notify({ string.format("Error running %s", lookup_cmd) })
+    ui.notify(
+      { string.format("Error running %s", lookup_cmd) },
+      { timeout = 5000, level = ui.ERROR }
+    )
   end))
   job:after_success(vim.schedule_wrap(function(j, _)
     local result = j:result()
     local flutter_sdk_path = result[1]
     if flutter_sdk_path then
-      paths.dart_bin = path.join(flutter_sdk_path, "bin", "dart")
+      paths.dart_bin = _flutter_sdk_dart_bin(flutter_sdk_path)
       paths.flutter_bin = path.join(flutter_sdk_path, "bin", "flutter")
       paths.flutter_sdk = flutter_sdk_path
       callback(paths)
@@ -95,16 +107,34 @@ end
 ---@return nil
 function M.get(callback)
   local conf = require("flutter-tools.config").get()
+
   if _paths then
     return callback(_paths)
   end
 
+  if conf.fvm then
+    local flutter_bin_symlink = path.join(luv.cwd(), ".fvm", "flutter_sdk", "bin", "flutter")
+    local flutter_bin = luv.fs_realpath(flutter_bin_symlink)
+    if path.exists(flutter_bin_symlink) and path.exists(flutter_bin) then
+      _paths = {
+        flutter_bin = flutter_bin,
+        flutter_sdk = _flutter_sdk_root(flutter_bin),
+        fvm = true,
+      }
+      _paths.dart_sdk = _dart_sdk_root(_paths)
+      _paths.dart_bin = _flutter_sdk_dart_bin(_paths.flutter_sdk)
+      return callback(_paths)
+    end
+  end
+
   if conf.flutter_path then
+    local flutter_path = fn.resolve(conf.flutter_path)
     _paths = {
-      flutter_bin = conf.flutter_path,
-      flutter_sdk = _flutter_sdk_root(conf.flutter_path),
+      flutter_bin = flutter_path,
+      flutter_sdk = _flutter_sdk_root(flutter_path),
     }
     _paths.dart_sdk = _dart_sdk_root(_paths)
+    _paths.dart_bin = _flutter_sdk_dart_bin(_paths.flutter_sdk)
     return callback(_paths)
   end
 
@@ -119,6 +149,9 @@ function M.get(callback)
   if not _paths then
     _paths = get_default_binaries()
     _paths.dart_sdk = _dart_sdk_root(_paths)
+    if _paths.flutter_sdk then
+      _paths.dart_bin = _flutter_sdk_dart_bin(_paths.flutter_sdk)
+    end
   end
 
   return callback(_paths)

@@ -57,11 +57,12 @@ local function createOpts()
 end
 -- callback for lsp actions that returns symbols
 -- (for symbols see :h lsp)
-local function symbol_handler(_, _, result, _, bufnr)
+local function symbol_handler(_,  result, ctx, _)
     if action.popup then
 	print 'Busy in some other LSP popup'
 	return
     end
+    local bufnr = ctx.bufnr
     if not result or vim.tbl_isempty(result) then return end
     local filename = vim.api.nvim_buf_get_name(bufnr)
     action.items = vim.lsp.util.symbols_to_items(result, bufnr)

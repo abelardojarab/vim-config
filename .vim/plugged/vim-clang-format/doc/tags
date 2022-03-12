@@ -4,7 +4,10 @@
 clang-format.txt	clang-format.txt	/*clang-format.txt*
 clang_format#format()	clang-format.txt	/*clang_format#format()*
 clang_format#replace()	clang-format.txt	/*clang_format#replace()*
+g:clang_format#auto_filetypes	clang-format.txt	/*g:clang_format#auto_filetypes*
 g:clang_format#auto_format	clang-format.txt	/*g:clang_format#auto_format*
+g:clang_format#auto_format_git_diff	clang-format.txt	/*g:clang_format#auto_format_git_diff*
+g:clang_format#auto_format_git_diff_fallback	clang-format.txt	/*g:clang_format#auto_format_git_diff_fallback*
 g:clang_format#auto_format_on_insert_leave	clang-format.txt	/*g:clang_format#auto_format_on_insert_leave*
 g:clang_format#auto_formatexpr	clang-format.txt	/*g:clang_format#auto_formatexpr*
 g:clang_format#code_style	clang-format.txt	/*g:clang_format#code_style*
@@ -13,6 +16,7 @@ g:clang_format#detect_style_file	clang-format.txt	/*g:clang_format#detect_style_
 g:clang_format#enable_fallback_style	clang-format.txt	/*g:clang_format#enable_fallback_style*
 g:clang_format#extra_args	clang-format.txt	/*g:clang_format#extra_args*
 g:clang_format#filetype_style_options	clang-format.txt	/*g:clang_format#filetype_style_options*
+g:clang_format#git	clang-format.txt	/*g:clang_format#git*
 g:clang_format#style_options	clang-format.txt	/*g:clang_format#style_options*
 vim-clang-format	clang-format.txt	/*vim-clang-format*
 vim-clang-format-commands	clang-format.txt	/*vim-clang-format-commands*

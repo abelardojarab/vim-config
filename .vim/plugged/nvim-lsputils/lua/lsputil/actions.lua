@@ -45,7 +45,7 @@ function M.selection_handler(index)
     if startPoint <= 0 then
 	startPoint = item.lnum
     end
-    local cmd = string.format('bat %s --color=always --paging=always --plain -n --pager="less -RS" -H %s -r %s:', item.filename, item.lnum, startPoint)
+    local cmd = string.format('bat "%s" --color=always --paging=always --plain -n --pager="less -RS" -H %s -r %s:', item.filename, item.lnum, startPoint)
     return {
 	cmd = cmd
     }

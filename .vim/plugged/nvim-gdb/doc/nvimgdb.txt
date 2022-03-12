@@ -35,6 +35,11 @@ or alternatively `:GdbStartLLDB` with LLDB launch string as parameter: >
 
     :GdbStartLLDB lldb a.out
 
+The two commands above support command-completion which uses CMake and `find`
+to locate executables associated with the current buffer, and `find` which
+locates all executables in the current path or below. This behavior can be
+disabled by the user via variables. See the |NvimgdbVariables| section below.
+
 To debug Python programs, execute `:GdbStartPDB` and specify the python launch
 command as parameter: >
 
@@ -79,6 +84,9 @@ Section 2: Commands                                          *NvimgdbCommands*
 :GdbDebugStop           Quit the debugging session. This command is implicitly
                         executed if you close either of the windows created by
                         the debugger.
+
+                                                                        *:Gdb*
+:Gdb [cmd]              Execute any given debugger command [cmd].
 
                                                         *:GdbBreakpointToggle*
                                                       *:GdbBreakpointClearAll*
@@ -172,6 +180,8 @@ The following variables could be defined to change the plugin configuration: >
 
     nvimgdb_config
     nvimgdb_config_override
+    nvimgdb_use_find_executables
+    nvimgdb_use_cmake_to_find_executables
 <
 These variables are dictionaries with the keys described below. While the
 first redefines the default configuration completely, the second one merely
@@ -217,6 +227,15 @@ The key `sign_breakpoint_priority` defines the sign priority for the
 breakpoint. The sign priority for the current line is always one greater than
 breakpoint's.
 
+The `find` program will be used to locate all executables and populate the
+|:command-completion-custom| for `:GdbStart` and `:GdbStartLLDB`. To disable
+this set `g:nvimgdb_use_find_executables` to 0.
+
+This plugin will also search for any executables associated with the current
+buffer via the CMake API if there is a CMake directory present and the `cmake`
+executable is available. To disable this set
+`g:nvimgdb_use_cmake_to_find_executables` to 0.
+
 ------------------------------------------------------------------------------
 Section 4.1 Keymaps                                  *NvimgdbVariablesKeymaps*
 
@@ -228,7 +247,7 @@ You can call the default handler from within the hook and/or define your own
 very specific terminal keymaps.  The keys `set_keymaps` and `unset_keymaps`
 are called every time when the source code windows is entered and left.  The
 first one can be used to define source window-specific keymaps and the latter
-to carefully cleanup them.  See `test/init.vim` for an example.
+to carefully cleanup them.  See `test/keymap_hooks.vim` for an example.
 
 The key `jump_bottom_gdb_buf` enables jumping to the bottom of the gdb terminal
 buffer when focus is moved to a different window.

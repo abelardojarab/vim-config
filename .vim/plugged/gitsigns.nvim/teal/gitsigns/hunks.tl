@@ -2,43 +2,52 @@ local Sign = require('gitsigns.signs').Sign
 local StatusObj = require('gitsigns.status').StatusObj
 
 local record M
-  record Hunk
-    enum Type
-      "add"
-      "change"
-      "delete"
-    end
+  enum Type
+    "add"
+    "change"
+    "delete"
+  end
 
+  record Node
+    start: integer
+    count: integer
+    lines: {string}
+  end
+
+  -- For internal use
+  record Hunk
     type: Type
     head: string
-    lines: {string}
-
-    record Node
-      start: integer
-      count: integer
-    end
-
     added: Node
     removed: Node
-
-    -- API unstable
     start: integer
     dend: integer
     vend: integer
+  end
+
+  record Hunk_Public
+    type: Type
+    head: string
+    lines: {string}
+    added: Node
+    removed: Node
   end
 end
 
 local Hunk = M.Hunk
 
 function M.create_hunk(start_a: integer, count_a: integer, start_b: integer, count_b: integer): Hunk
-  local removed = { start = start_a, count = count_a }
-  local added   = { start = start_b, count = count_b }
+  local removed = { start = start_a, count = count_a, lines = {} }
+  local added   = { start = start_b, count = count_b, lines = {} }
 
   local hunk: Hunk = {
     start   = added.start,
-    lines   = {},
     removed = removed,
-    added   = added
+    added   = added,
+    head = ('@@ -%d%s +%d%s @@'):format(
+      start_a, count_a > 0 and ',' .. count_a or '',
+      start_b, count_b > 0 and ',' .. count_b or ''
+    )
   }
 
   if added.count == 0 then
@@ -61,6 +70,58 @@ function M.create_hunk(start_a: integer, count_a: integer, start_b: integer, cou
   return hunk
 end
 
+function M.create_partial_hunk(hunks: {Hunk}, top: integer, bot: integer): Hunk
+  local pretop, precount = top, bot - top + 1
+  for _, h in ipairs(hunks) do
+    local added_in_hunk = h.added.count - h.removed.count
+
+    local added_in_range = 0
+    if h.start >= top and h.vend <= bot then
+      -- Range contains hunk
+      added_in_range = added_in_hunk
+    else
+      local added_above_bot = math.max(0, bot + 1 - (h.start + h.removed.count))
+      local added_above_top = math.max(0, top - (h.start + h.removed.count))
+
+      if h.start >= top and h.start <= bot then
+        -- Range top intersects hunk
+        added_in_range = added_above_bot
+      elseif h.vend >= top and h.vend <= bot then
+        -- Range bottom intersects hunk
+        added_in_range = added_in_hunk - added_above_top
+        pretop = pretop - added_above_top
+      elseif h.start <= top and h.vend >= bot then
+        -- Range within hunk
+        added_in_range = added_above_bot - added_above_top
+        pretop = pretop - added_above_top
+      end
+
+      if top > h.vend then
+        pretop = pretop - added_in_hunk
+      end
+    end
+
+    precount = precount - added_in_range
+  end
+
+  if precount == 0 then
+    pretop = pretop - 1
+  end
+
+  return M.create_hunk(pretop, precount, top, bot - top + 1)
+end
+
+function M.patch_lines(hunk: Hunk): {string}
+  local lines: {string} = {}
+  for _, l in ipairs(hunk.removed.lines) do
+    lines[#lines+1] = '-'..l
+  end
+  for _, l in ipairs(hunk.added.lines) do
+    lines[#lines+1] = '+'..l
+  end
+  return lines
+end
+
 function M.parse_diff_line(line: string): Hunk
   local diffkey = vim.trim(vim.split(line, '@@', true)[2])
 
@@ -79,29 +140,34 @@ function M.parse_diff_line(line: string): Hunk
   return hunk
 end
 
-function M.process_hunks(hunks: {Hunk}): {integer:Sign}
+function M.calc_signs(hunk: Hunk): {Sign}
   local signs = {}
-  for _, hunk in ipairs(hunks) do
-    local count = hunk.type == 'add' and hunk.added.count or hunk.removed.count
-    for i = hunk.start, hunk.dend do
-      local topdelete = hunk.type == 'delete' and i == 0
-      local changedelete = hunk.type == 'change' and hunk.removed.count > hunk.added.count and i == hunk.dend
-      -- topdelete signs get placed one row lower
-      signs[topdelete and 1 or i] = {
-        type = topdelete and 'topdelete' or changedelete and 'changedelete' or hunk.type,
-        count = i == hunk.start and count
-      }
-    end
-    if hunk.type == "change" then
-      local add, remove = hunk.added.count, hunk.removed.count
-      if add > remove then
-        local count_diff = add - remove
-        for i = 1, count_diff do
-          signs[hunk.dend + i] = {
-            type = 'add',
-            count = i == 1 and count_diff
-          }
-        end
+  local count = hunk.type == 'add' and hunk.added.count or
+                                       hunk.removed.count
+  for i = hunk.start, hunk.dend do
+    local topdelete = hunk.type == 'delete' and i == 0
+    local changedelete = hunk.type == 'change' and
+                         hunk.removed.count > hunk.added.count and
+                         i == hunk.dend
+    -- topdelete signs get placed one row lower
+    signs[#signs+1] = {
+      type = topdelete    and 'topdelete'    or
+             changedelete and 'changedelete' or
+                               hunk.type,
+      count = i == hunk.start and count,
+      lnum = topdelete and 1 or i
+    }
+  end
+  if hunk.type == "change" then
+    local add, remove = hunk.added.count, hunk.removed.count
+    if add > remove then
+      local count_diff = add - remove
+      for i = 1, count_diff do
+        signs[#signs+1] = {
+          type = 'add',
+          count = i == 1 and count_diff,
+          lnum = hunk.dend + i
+        }
       end
     end
   end
@@ -129,24 +195,20 @@ function M.create_patch(relpath: string, hunks: {Hunk}, mode_bits: string, inver
       start = start + 1
     end
 
-    local lines = process_hunk.lines
+    local pre_lines = process_hunk.removed.lines
+    local now_lines = process_hunk.added.lines
 
     if invert then
       pre_count, now_count = now_count, pre_count
-
-      lines = vim.tbl_map(function(l: string): string
-        if vim.startswith(l, '+') then
-          l = '-'..string.sub(l, 2, -1)
-        elseif vim.startswith(l, '-') then
-          l = '+'..string.sub(l, 2, -1)
-        end
-        return l
-      end, lines) as {string}
+      pre_lines, now_lines = now_lines, pre_lines
     end
 
     table.insert(results, string.format('@@ -%s,%s +%s,%s @@', start, pre_count, start + offset, now_count))
-    for _, line in ipairs(lines) do
-      table.insert(results, line)
+    for _, l in ipairs(pre_lines) do
+      results[#results+1] = '-'..l
+    end
+    for _, l in ipairs(now_lines) do
+      results[#results+1] = '+'..l
     end
 
     process_hunk.removed.start = start + offset
@@ -217,21 +279,13 @@ function M.find_nearest_hunk(lnum: number, hunks: {Hunk}, forwards: boolean, wra
   return ret, index
 end
 
-function M.extract_removed(hunk: Hunk): {string}
-  return vim.tbl_map(function(l: string): string
-    return string.sub(l, 2, -1)
-  end, vim.tbl_filter(function(l: string): boolean
-    return vim.startswith(l, '-')
-  end, hunk.lines)) as {string}
-end
-
 function M.compare_heads(a: {Hunk}, b: {Hunk}): boolean
   if (a == nil) ~= (b == nil) then
     return true
   elseif a and #a ~= #b then
     return true
   end
-  for i, ah in ipairs(a) do
+  for i, ah in ipairs(a or {}) do
     if b[i].head ~= ah.head then
       return true
     end

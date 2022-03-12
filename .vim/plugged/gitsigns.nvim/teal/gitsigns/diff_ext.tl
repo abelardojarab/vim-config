@@ -1,4 +1,4 @@
-local git = require('gitsigns.git')
+local git_diff = require('gitsigns.git').diff
 
 local gs_hunks = require("gitsigns.hunks")
 local Hunk = gs_hunks.Hunk
@@ -7,7 +7,7 @@ local scheduler = require('plenary.async.util').scheduler
 
 local record M
   -- Async function
-  run_diff: function({string}, {string}, string): {Hunk}
+  run_diff: function({string}, {string}, string, boolean): {Hunk}
 end
 
 local function write_to_file(path: string, text: {string})
@@ -25,12 +25,13 @@ end
 M.run_diff = function(
   text_cmp: {string},
   text_buf: {string},
-  diff_algo: string
+  diff_algo: string,
+  indent_heuristic: boolean
 ): {Hunk}
   local results: {Hunk} = {}
 
-  if not util.is_unix then
-    -- tmpname must not be called in a callback on windows
+  -- tmpname must not be called in a callback
+  if vim.in_fast_event() then
     scheduler()
   end
 
@@ -56,24 +57,21 @@ M.run_diff = function(
   -- We can safely ignore the warning, we turn it off by passing the '-c
   -- "core.safecrlf=false"' argument to git-diff.
 
-  git.command({
-      '-c', 'core.safecrlf=false',
-      'diff',
-      '--color=never',
-      '--diff-algorithm='..diff_algo,
-      '--patch-with-raw',
-      '--unified=0',
-      file_cmp,
-      file_buf,
-    }, {
-    on_stdout = function(_, line: string)
-      if vim.startswith(line, '@@') then
-        table.insert(results, gs_hunks.parse_diff_line(line))
-      elseif #results > 0 then
-        table.insert(results[#results].lines, line)
+  local out = git_diff(file_cmp, file_buf, indent_heuristic, diff_algo)
+
+  for _, line in ipairs(out) do
+    if vim.startswith(line, '@@') then
+      results[#results+1] = gs_hunks.parse_diff_line(line)
+    elseif #results > 0 then
+      local r = results[#results]
+      if line:sub(1, 1) == '-' then
+        r.removed.lines[#r.removed.lines+1] = line:sub(2)
+      elseif line:sub(1, 1) == '+' then
+        r.added.lines[#r.added.lines+1] = line:sub(2)
       end
     end
-  })
+  end
+
   os.remove(file_buf)
   os.remove(file_cmp)
   return results

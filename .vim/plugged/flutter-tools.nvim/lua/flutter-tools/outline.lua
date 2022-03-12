@@ -372,7 +372,7 @@ local function request_code_actions()
   local line = fn.line(".")
   local uri = vim.b.outline_uri
   if not uri then
-    return utils.notify("Sorry! code actions not available")
+    return ui.notify({ "Sorry! code actions not available" })
   end
   local outline = M.outlines[uri]
   local item = outline[line]
@@ -385,29 +385,34 @@ local function request_code_actions()
   local code_win = find_code_window(uri)
   local outline_win = api.nvim_get_current_win()
 
-  lsp.buf_request(params.bufnr, "textDocument/codeAction", params, function(_, _, actions)
-    code_actions.create_popup(actions, function(buf, win)
-      utils.map(
-        "n",
-        "<CR>",
-        select_code_action(actions, win, code_buf, code_win, outline_win),
-        { buffer = buf }
-      )
+  lsp.buf_request(
+    params.bufnr,
+    "textDocument/codeAction",
+    params,
+    utils.lsp_handler(function(_, actions, _)
+      code_actions.create_popup(actions, function(buf, win)
+        utils.map(
+          "n",
+          "<CR>",
+          select_code_action(actions, win, code_buf, code_win, outline_win),
+          { buffer = buf }
+        )
+      end)
+      vim.api.nvim_win_set_cursor(code_win, { item.start_line + 1, item.start_col + 1 })
     end)
-    vim.api.nvim_win_set_cursor(code_win, { item.start_line + 1, item.start_col + 1 })
-  end)
+  )
 end
 
 local function select_outline_item()
   local line = fn.line(".")
   local uri = vim.b.outline_uri
   if not uri then
-    return utils.notify([[Sorry! this item can't be opened]])
+    return ui.notify({ [[Sorry! this item can't be opened]] }, { level = ui.WARN })
   end
   local outline = M.outlines[uri]
   local item = outline[line]
   if not item then
-    return utils.notify([[Sorry! this item can't be opened]])
+    return ui.notify({ [[Sorry! this item can't be opened]] }, { level = ui.WARN })
   end
   vim.cmd("drop " .. vim.uri_to_fname(uri))
   api.nvim_win_set_cursor(0, { item.start_line + 1, item.start_col + 1 })
@@ -465,7 +470,7 @@ function M.open(opts)
   opts = opts or {}
   local ok, lines, highlights, outline = get_outline_content()
   if not ok then
-    utils.notify("Sorry! There is no outline for this file")
+    ui.notify({ "Sorry! There is no outline for this file" })
     return
   end
   local parent_win = api.nvim_get_current_win()
@@ -487,7 +492,7 @@ function M.open(opts)
   end
 end
 
-function M.document_outline(_, _, data, _)
+function M.document_outline(_, data, _, _)
   local outline = data.outline or {}
   local result = {}
   if not outline.children or #outline.children == 0 then

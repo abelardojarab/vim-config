@@ -1,33 +1,9 @@
-local Job = require('plenary.job')
-
-local gsd = require("gitsigns.debug")
-
 local M = {}
 
 
 
-
-
-M.job_cnt = 0
-
 function M.path_exists(path)
    return vim.loop.fs_stat(path) and true or false
-end
-
-function M.run_job(job_spec)
-   if gsd.debug_mode then
-      local cmd = job_spec.command .. ' ' .. table.concat(job_spec.args, ' ')
-      gsd.dprint(cmd)
-   end
-   Job:new(job_spec):start()
-   M.job_cnt = M.job_cnt + 1
-end
-
-function M.get_jit_os()
-   if jit then
-      return jit.os:lower()
-   end
-   return
 end
 
 local jit_os
@@ -36,12 +12,13 @@ if jit then
    jit_os = jit.os:lower()
 end
 
-M.is_unix = (function()
-   if jit_os == 'linux' or jit_os == 'osx' or jit_os == 'bsd' then
-      return true
-   end
-   return false
-end)()
+local is_unix = false
+if jit_os then
+   is_unix = jit_os == 'linux' or jit_os == 'osx' or jit_os == 'bsd'
+else
+   local binfmt = package.cpath:match("%p[\\|/]?%p(%a+)")
+   is_unix = binfmt ~= "dll"
+end
 
 function M.dirname(file)
    return file:match(string.format('^(.+)%s[^%s]+', M.path_sep, M.path_sep))
@@ -55,18 +32,21 @@ function M.file_lines(file)
    return text
 end
 
-M.path_sep = (function()
-   if jit_os then
-      if M.is_unix then
-         return '/'
+M.path_sep = package.config:sub(1, 1)
+
+function M.buf_lines(bufnr)
+
+   local buftext = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+   if vim.bo[bufnr].fileformat == 'dos' then
+      for i = 1, #buftext do
+         buftext[i] = buftext[i] .. '\r'
       end
-      return '\\'
    end
-   return package.config:sub(1, 1)
-end)()
+   return buftext
+end
 
 function M.tmpname()
-   if M.is_unix then
+   if is_unix then
       return os.tmpname()
    end
    return vim.fn.tempname()
@@ -108,6 +88,14 @@ function M.get_relative_time(timestamp)
    else
       return to_relative_string(elapsed, year_seconds, 'year')
    end
+end
+
+function M.copy_array(x)
+   local r = {}
+   for i, e in ipairs(x) do
+      r[i] = e
+   end
+   return r
 end
 
 return M

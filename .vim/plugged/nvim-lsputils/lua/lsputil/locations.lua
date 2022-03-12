@@ -55,7 +55,7 @@ local function createOpts()
   return opts
 end
 -- callback for lsp references handler
-local function references_handler(_, _, locations,_,bufnr)
+local function references_handler(_, locations, ctx, _)
     if locations == nil or vim.tbl_isempty(locations) then
 	print "No references found"
 	return
@@ -64,6 +64,7 @@ local function references_handler(_, _, locations,_,bufnr)
 	print 'Busy with some LSP popup'
 	return
     end
+    local bufnr = ctx.bufnr
     local data = {}
     local filename = vim.api.nvim_buf_get_name(bufnr)
     action.items = vim.lsp.util.locations_to_items(locations)
@@ -96,10 +97,11 @@ local function references_handler(_, _, locations,_,bufnr)
 end
 
 -- callback for lsp definition, implementation and declaration handler
-local definition_handler = function(_,_,locations, _, bufnr)
+local definition_handler = function(_,locations, ctx, _)
     if locations == nil or vim.tbl_isempty(locations) then
 	return
     end
+    local bufnr = ctx.bufnr
     if vim.tbl_islist(locations) then
 	if #locations > 1 then
 	    if action.popup then

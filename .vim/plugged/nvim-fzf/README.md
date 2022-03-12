@@ -16,9 +16,10 @@ Some handcrafted useful commands at
 * [`fzf-lua`](https://github.com/ibhagwan/fzf-lua)
 * [`nvim-fzf-commands`](https://github.com/vijaymarupudi/nvim-fzf-commands).
 
+Tested on Linux, MacOS, and Windows.
+
 ## Requirements
 
-* Linux, MacOS, BSD
 * `fzf` binary
 
 ## Usage
@@ -58,8 +59,7 @@ Plug 'vijaymarupudi/nvim-fzf'
 
 ## Important information
 
-**You should run all the functions in this module in a coroutine. This
-allows for an easy api**
+**All `fzf` functions should be run in a coroutine.**
 
 Example:
 
@@ -192,7 +192,7 @@ respected. You can override them using command line switches or
     local result = fzf({1, 2, "item"})
     ```
 
-  * if **function**: calls the function with a callback function to
+  * if **function**: `nvim-fzf` calls the function with a callback function to
     write vals to the fzf pipe. This api is asynchronous, making it
     possible to use fzf for long running applications and making the
     user interface snappy. Callbacks can be concurrent.
@@ -223,40 +223,56 @@ respected. You can override them using command line switches or
     end)
     ```
 
+    The function is also called with two other optional arguments for more
+    advanced usage.
+
+    * The 2nd argument is a variant of the callback function (which is
+      passed as the 1st argument), but it does not add newlines to the
+      elements. This is useful to pass through information directly to
+      the pipe.
+
+    * The 3rd argument is the `vim.loop` / `luv` pipe to FZF. Use as you
+      see fit!
+
 * `fzf_cli_args`: **string**, A list of command line arguments for fzf.
 
     Can use to expect different key bindings (e.g. `--expect
     ctrl-t,ctrl-v`), previews, and coloring.
 
+* **return values**
 
-* **return value**: **table**, the lines that fzf returns in the shell
-  as a table. If not lines are returned by fzf, the function returns nil
-  for an easy conditional check.
+  * **table**, the lines that fzf returns in the shell
+    as a table. If not lines are returned by fzf, the function returns nil
+    for an easy conditional check.
 
-  ```lua
-  local result = fzf("fd")
-  if result then
-    -- do something with result[1]
-  end
-  ```
-
-  ```lua
-  local result = fzf("fd", "--multi")
-  if result then
-    -- do something with result[1] to result[#result]
-  end
-  ```
-
-  ```lua
-  local result = fzf("fd", "--expect=ctrl-t")
-  if result then
-    if result[1] == "ctrl-t" then
-      -- do something with result[2]
-    else
-      -- do something with result[2]
+    ```lua
+    local result = fzf("fd")
+    if result then
+      -- do something with result[1]
     end
-  end
-  ```
+    ```
+
+    ```lua
+    local result = fzf("fd", "--multi")
+    if result then
+      -- do something with result[1] to result[#result]
+    end
+    ```
+
+    ```lua
+    local result = fzf("fd", "--expect=ctrl-t")
+    if result then
+      if result[1] == "ctrl-t" then
+        -- do something with result[2]
+      else
+        -- do something with result[2]
+      end
+    end
+    ```
+
+  * **number**: Representing fzf's exit code.
+
+
 
 ## Action API (fzf Previews, Bindings, Actions in Lua)
 
@@ -288,7 +304,7 @@ end)()
 
 ![](gifs/example_2.gif)
 
-`require("fzf.actions").action(fn)`
+`require("fzf.actions").action(fn, [fzf_field_expression])`
 
 * `fn(selections, fzf_lines, fzf_cols)`: A function that takes a
   selection, performs an action, and optionally returns either a `table`
@@ -301,11 +317,15 @@ end)()
   * `fzf_cols`: number of cols in the preview window i.e.
     `$FZF_PREVIEW_COLS`
 
+* `fzf_field_expression` (string, optional, default: `"{+}"`): This fzf
+  field expression determines what items are sent to the action
+  function.
+
 * **return value**: a shell-escaped string to append to the `fzf` command
   line arguments (`fzf_cli_args`) for `fzf` to run.
 
 
-`require("fzf.actions").raw_action(fn)`
+`require("fzf.actions").raw_action(fn, [fzf_field_expression])`
 
 * Same as above, except it is not shell-escaped, so you can use it for
   complicated `--bind` functions. Take care to escape the result of
@@ -328,7 +348,7 @@ end)()
   end)()
   ```
 
-`require("fzf.actions").async_action(fn)`
+`require("fzf.actions").async_action(fn, [fzf_field_expression])`
 
 
 * `fn(pipe, selections, fzf_lines, fzf_cols)`: Similar to `action(...)`,
@@ -340,7 +360,7 @@ end)()
   This function can be used for previews that take a long time to render
   and calculate from neovim.
 
-`require("fzf.actions").raw_async_action(fn)`
+`require("fzf.actions").raw_async_action(fn, [fzf_field_expression])`
 
 * Same as above, except it is not shell-escaped, so you can use it for
   complicated `--bind` functions. Take care to escape the result of
@@ -363,6 +383,8 @@ into `fzf`.
     * `cmd.cmd` (string): the shell command to transform
     * `cmd.cwd` (string, optional): the working directory to run the
       shell script in.
+    * `cmd.pid_cb` (function, optional): a callback called with the pid
+      of the shell command when available.
 * `fn` (function): a function that takes as input a line from the shell
   command (string) and returns a new line to be sent to `fzf` (string).
 
@@ -383,7 +405,8 @@ coroutine.wrap(function()
 end)()
 ```
 
-`require("fzf.helpers").choices_to_shell_cmd_previewer(fn)`
+`require("fzf.helpers").choices_to_shell_cmd_previewer(fn,
+[fzf_field_expression])`
 
 * `fn(items, fzf_lines, fzf_cols)`: A function that is expected to
   return a shell cmd string to run asynchronously and feed to `fzf`.
@@ -402,6 +425,8 @@ end)()
     fzf.fzf("seq 1 1000", "--preview=" .. action)
   end)()
   ```
+
+* `fzf_field_expression`: See above
 
 ## Examples
 
@@ -590,14 +615,8 @@ end)()
 
 ## How it works
 
-This plugin uses the `mkfifo` posix program to get a temporary named
-pipe, and uses it to communicate to `fzf`.
-
-Contributions welcome to make this compatible with Windows. I do not
-have a Windows machine, so I cannot test it. It should be possible using
-the Luajit FFI and the
-[`CreateNamedPipeA`](https://docs.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-createnamedpipea)
-function from the win32 api.
+This plugin uses a temporary named pipe, and uses it to communicate to
+`fzf`.
 
 ## FAQ
 

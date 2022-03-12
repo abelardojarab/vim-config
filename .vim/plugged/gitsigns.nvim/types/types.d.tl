@@ -1,5 +1,7 @@
 global _: any
 
+global _TEST: boolean
+
 global loadstring: function(string): (function(): any)
 
 global unpack: function<T>({T}, number, number): T...
@@ -7,17 +9,39 @@ global unpack: function<T>({T}, number, number): T...
 global getfenv: function(function): table
 
 global record jit
-    arch: string
-    os: string
-    version: string
-    version_num: number
-    off: function()
-    off: function(function)
-    on: function()
-    status: function(): boolean
+  arch: string
+  os: string
+  version: string
+  version_num: number
+  off: function()
+  off: function(function)
+  on: function()
+  status: function(): boolean
 end
 
 local record api
+  record UserCmdParams
+    args: string
+    bang: boolean
+    line1: integer
+    line2: integer
+    range: integer
+    count: number
+    reg: string
+    mods: string
+  end
+  record UserCmdOpts
+    nargs: string|integer
+    range: boolean|string|integer
+    count: boolean|integer
+    addr: string
+    bang: boolean
+    bar: boolean
+    register: boolean
+    force: boolean
+    complete: string|function(arglead: string, line: string): {string}
+  end
+  nvim_add_user_command: function(string, function(UserCmdParams), UserCmdOpts)
   nvim_buf_add_highlight: function(number, number, string, number, number, number): number
   nvim_buf_attach: function(number, boolean, {string:any}): boolean
   nvim_buf_call: function(number, function)
@@ -29,7 +53,7 @@ local record api
   nvim_buf_detach: function(number): boolean
   nvim_buf_get_changedtick: function(number): number
   nvim_buf_get_commands: function(number, {string:any}): {string:any}
-  nvim_buf_get_extmark_by_id: function(number, number, number): {number}
+  nvim_buf_get_extmark_by_id: function(number, number, number, table): {number}
   nvim_buf_get_extmarks: function(number, number, any, any, {string:any}): any
   nvim_buf_get_keymap: function(number, string): {{string:any}}
   nvim_buf_get_lines: function(number, number, number, boolean): {string}
@@ -55,6 +79,25 @@ local record api
   nvim_command: function(string)
   nvim_create_buf: function(boolean, boolean): integer
   nvim_create_namespace: function(string): integer
+
+  record AugroupOpts
+    clear: boolean
+  end
+
+  nvim_create_augroup: function(string, AugroupOpts): integer
+
+  record AutoCmdOpts
+    callback: function()
+    command: string
+    group: string
+    pattern: string|{string}
+    once: boolean
+    nested: boolean
+    desc: string
+    buffer: integer
+  end
+
+  nvim_create_autocmd: function(string|{string}, AutoCmdOpts): integer
   nvim_del_current_line: function()
   nvim_del_keymap: function(string, string)
   nvim_del_var: function(string)
@@ -110,6 +153,7 @@ local record api
   nvim_set_current_tabpage: function(any)
   nvim_set_current_win: function(number)
   nvim_set_decoration_provider: function(number, {string:function})
+  nvim_set_hl: function(integer, string, {string:any})
   nvim_set_keymap: function(string, string, string, {string:any})
   nvim_set_option: function(string, any)
   nvim_set_var: function(string, any)
@@ -164,6 +208,7 @@ global record vim
     getpos: function(string): {integer}
     executable: function(string): integer
     expand: function(string): string
+    getcwd: function(): string
 
     record QFItem
       bufnr: integer
@@ -227,6 +272,8 @@ global record vim
 
   deepcopy: function<T>(T): T
 
+  defer_fn: function(function, integer): loop.Timer
+
   diff: function(string|{string}, string|{string}, table)
 
   record o
@@ -236,13 +283,38 @@ global record vim
     shortmess: string
   end
 
-
   record wo
     diff: boolean
   end
 
+  record BufOption
+    {BufOption}
+    fileformat: string
+  end
+
+  bo: BufOption
+
+  record BufVar
+    {BufVar}
+    changedtick: integer
+  end
+
+  b: BufVar
+
   record v
     vim_did_enter: integer
+  end
+
+
+  record opt
+    record Opt<T>
+      get: function<T>(Opt<T>): T
+    end
+
+    diffopt: Opt<{string}>
+    foldopen: Opt<{string}>
+    shortmess: Opt<{string:boolean}>
+    wrapscan: Opt<boolean>
   end
 
   record lsp
@@ -252,6 +324,7 @@ global record vim
   end
 
   record loop
+    cwd: function(): string
     record Timer
       start: function(Timer, number, number, function): number
       stop: function(Timer): number
@@ -312,11 +385,49 @@ global record vim
     new_tcp: function()
 
     sleep: function(integer)
+
+    record Pipe
+      close: function(Pipe)
+      is_closing: function(Pipe): boolean | string
+      read_start: function(Pipe, err: any, data: string)
+      read_stop: function(Pipe)
+      write: function(Pipe, string, function())
+
+      open: function(any)
+    end
+
+    record Process
+      userdata
+    end
+
+    record SpawnOpts
+      stdio: {Pipe, Pipe, Pipe}
+      args: {string}
+      cwd: string
+      env: {string}
+    end
+
+    spawn: function(string, SpawnOpts, function(integer, integer)): Process, integer
+
+    read_start: function(Pipe, function)
+    new_pipe: function(boolean): Pipe
+    shutdown: function(any, function)
+    close: function(any, function)
   end
 
   in_fast_event: function(): boolean
 
-  list_extend: function({any}, {any}, integer, integer)
+  list_extend: function<T>({T}, {T}, integer, integer): {T}
+  list_slice: function<T>({T}, integer, integer): {T}
+
+  record keymap
+    record Options
+      buffer: boolean|integer
+      expr: boolean
+    end
+    set: function(string|{string}, string, string|function, Options)
+  end
+
   record log
     record levels
       WARN: integer
@@ -332,6 +443,7 @@ global record vim
   gsplit: function(string, string, boolean): function(): string
 
   startswith: function(string, string): boolean
+  endswith: function(string, string): boolean
 
   schedule_wrap: function(function(...:any): any...): function(...:any): any...
   schedule: function(function)
@@ -358,6 +470,8 @@ global record vim
 
   tbl_isempty: function(table): boolean
 
+  tbl_islist: function(table): boolean
+
   tbl_contains: function(table, any): boolean
 
   record InspectOptions
@@ -374,5 +488,16 @@ global record vim
   end
 
   wait: function(number, function, number, boolean)
+
+  record VersionDetails
+    api_compatible: integer
+    api_level: integer
+    api_prerelease: boolean
+    major: integer
+    minor: integer
+    patch: integer
+  end
+
+  version: function(): VersionDetails
 
 end
