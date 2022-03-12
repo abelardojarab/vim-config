@@ -287,9 +287,6 @@ Plug 'Shougo/neosnippet.vim',
 Plug 'Shougo/neosnippet-snippets'
 
 " Search
-if (!has('nvim-0.6'))
-    Plug 'jremmen/vim-ripgrep'
-endif
 Plug 'mileszs/ack.vim'
 if (has('nvim-0.5'))
     " Plug 'kevinhwang91/nvim-hlslens'
