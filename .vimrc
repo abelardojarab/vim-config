@@ -604,7 +604,7 @@ let g:airline_powerline_fonts             = 0
 let g:airline#extensions#tabline#enabled  = 1
 let g:airline#extensions#tabline#fnamemod = ':t'
 let g:airline#extensions#tabline#formatter='unique_tail'
-let g:airline_section_b = '%{getcwd()}' 
+let g:airline_section_b = '%{getcwd()}'
 let g:airline_section_d = airline#section#create_left(['hunks'])
 let g:airline_section_x = airline#section#create(['branch', 'ffenc'])
 let g:airline_section_y = airline#section#create(['filetype'])
@@ -1040,5 +1040,6 @@ if (has('nvim'))
     autocmd TermOpen * setlocal nonumber norelativenumber
 endif
 
-" vim:foldmethod=marker:foldlevel=0:textwidth=79
+au BufNewFile,BufRead Jenkinsfile setf groovy
 
+" vim:foldmethod=marker:foldlevel=0:textwidth=79
