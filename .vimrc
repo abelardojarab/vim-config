@@ -588,16 +588,6 @@ map <leader>d <plug>NERDTreeToggle<CR>
 " Open files in new tabs in Nerdtree
 let NERDTreeMapOpenInTab='\r'
 
-" --- Move between buffers ---
-map <C-Left> <Esc>:bprev<CR>
-map <C-Right> <Esc>:bnext<CR>
-
-map <C-PageUp> :bprevCR>
-map <C-PageDown> :bnext<CR>
-
-map <C-P> :bprevCR>
-map <C-N> :bnext<CR>
-
 " --- Statusbar ---
 let g:airline_theme                       = 'one'
 let g:airline_powerline_fonts             = 0
@@ -641,6 +631,16 @@ let g:BufstopLeader = ""
 let g:BufstopAutoSpeedToggle = 1
 
 nnoremap <leader>b :Bufstop<CR>
+nnoremap <Leader>1 :1b<CR>
+nnoremap <Leader>2 :2b<CR>
+nnoremap <Leader>3 :3b<CR>
+nnoremap <Leader>4 :4b<CR>
+nnoremap <Leader>5 :5b<CR>
+nnoremap <Leader>6 :6b<CR>
+nnoremap <Leader>7 :7b<CR>
+nnoremap <Leader>8 :8b<CR>
+nnoremap <Leader>9 :9b<CR>
+nnoremap <Leader>0 :10b<CR>
 
 " --- Sessions ---
 let g:session_autosave  = 'yes'
