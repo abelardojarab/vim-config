@@ -20,6 +20,7 @@ g:vista_enable_centering_jump	vista.txt	/*g:vista_enable_centering_jump*
 g:vista_enable_markdown_extension	vista.txt	/*g:vista_enable_markdown_extension*
 g:vista_executive_for	vista.txt	/*g:vista_executive_for*
 g:vista_finder_alternative_executives	vista.txt	/*g:vista_finder_alternative_executives*
+g:vista_floating_border	vista.txt	/*g:vista_floating_border*
 g:vista_floating_delay	vista.txt	/*g:vista_floating_delay*
 g:vista_fold_toggle_icons	vista.txt	/*g:vista_fold_toggle_icons*
 g:vista_fzf_opt	vista.txt	/*g:vista_fzf_opt*

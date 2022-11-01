@@ -56,11 +56,11 @@
  (#match? @function "^([A-Z])@!.*$"))
 
 (call
-  function: (identifier) @function)
+  function: (identifier) @function.call)
 
 (call
   function: (attribute
-              attribute: (identifier) @method))
+              attribute: (identifier) @method.call))
 
 ((call
    function: (identifier) @constructor)
@@ -134,17 +134,26 @@
 [(true) (false)] @boolean
 ((identifier) @variable.builtin
  (#eq? @variable.builtin "self"))
+((identifier) @variable.builtin
+ (#eq? @variable.builtin "cls"))
 
 (integer) @number
 (float) @float
 
-(comment) @comment
+(comment) @comment @spell
+
+((module . (comment) @preproc)
+  (#match? @preproc "^#!/"))
+
 (string) @string
 [
   (escape_sequence)
   "{{"
   "}}"
 ] @string.escape
+
+; doc-strings
+(expression_statement (string) @spell)
 
 ; Tokens
 
@@ -209,15 +218,11 @@
   "async"
   "await"
   "class"
-  "except"
   "exec"
-  "finally"
   "global"
   "nonlocal"
   "pass"
   "print"
-  "raise"
-  "try"
   "with"
   "as"
 ] @keyword
@@ -226,13 +231,31 @@
   "return"
   "yield"
 ] @keyword.return
+(yield "from" @keyword.return)
 
-["from" "import"] @include
+(future_import_statement "from" @include "__future__" @constant.builtin)
+(import_from_statement "from" @include)
+"import" @include
+
 (aliased_import "as" @include)
 
 ["if" "elif" "else" "match" "case"] @conditional
 
 ["for" "while" "break" "continue"] @repeat
+
+[
+  "try"
+  "except"
+  "except*"
+  "raise"
+  "finally"
+] @exception
+
+(raise_statement "from" @exception)
+
+(try_statement
+  (else_clause
+    "else" @exception))
 
 ["(" ")" "[" "]" "{" "}"] @punctuation.bracket
 
@@ -274,16 +297,6 @@
     (function_definition
       name: (identifier) @constructor)))
  (#any-of? @constructor "__new__" "__init__"))
-
-; First parameter of a classmethod is cls.
-((class_definition
-  body: (block
-          (decorated_definition
-            (decorator (identifier) @_decorator)
-            definition: (function_definition
-              parameters: (parameters . (identifier) @variable.builtin)))))
- (#eq? @variable.builtin "cls")
- (#eq? @_decorator "classmethod"))
 
 ;; Error
 (ERROR) @error

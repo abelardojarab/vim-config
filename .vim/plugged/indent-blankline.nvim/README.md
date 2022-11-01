@@ -19,11 +19,9 @@ Use your favourite plugin manager to install.
 
 ```lua
 -- init.lua
-require("packer").startup(
-    function()
-        use "lukas-reineke/indent-blankline.nvim"
-    end
-)
+require("packer").startup(function()
+    use "lukas-reineke/indent-blankline.nvim"
+end)
 ```
 
 #### Example with Plug
@@ -62,7 +60,7 @@ All screenshots use [my custom onedark color scheme](https://github.com/lukas-re
 
 ```lua
 vim.opt.list = true
-vim.opt.listchars:append("eol:↴")
+vim.opt.listchars:append "eol:↴"
 
 require("indent_blankline").setup {
     show_end_of_line = true,
@@ -75,8 +73,8 @@ require("indent_blankline").setup {
 
 ```lua
 vim.opt.list = true
-vim.opt.listchars:append("space:⋅")
-vim.opt.listchars:append("eol:↴")
+vim.opt.listchars:append "space:⋅"
+vim.opt.listchars:append "eol:↴"
 
 require("indent_blankline").setup {
     show_end_of_line = true,
@@ -98,8 +96,8 @@ vim.cmd [[highlight IndentBlanklineIndent5 guifg=#61AFEF gui=nocombine]]
 vim.cmd [[highlight IndentBlanklineIndent6 guifg=#C678DD gui=nocombine]]
 
 vim.opt.list = true
-vim.opt.listchars:append("space:⋅")
-vim.opt.listchars:append("eol:↴")
+vim.opt.listchars:append "space:⋅"
+vim.opt.listchars:append "eol:↴"
 
 require("indent_blankline").setup {
     space_char_blankline = " ",
@@ -143,8 +141,8 @@ require("indent_blankline").setup {
 
 ```lua
 vim.opt.list = true
-vim.opt.listchars:append("space:⋅")
-vim.opt.listchars:append("eol:↴")
+vim.opt.listchars:append "space:⋅"
+vim.opt.listchars:append "eol:↴"
 
 require("indent_blankline").setup {
     space_char_blankline = " ",
@@ -153,7 +151,11 @@ require("indent_blankline").setup {
 }
 ```
 
-<img width="900" src="https://user-images.githubusercontent.com/12900252/140518531-522aa67a-b377-498c-ad39-85113b2b56df.png" alt="Screenshot" />
+<img width="900" src="https://user-images.githubusercontent.com/12900252/188080732-5b7d98b9-3cb8-4789-b28d-67cad0bfbcde.png" alt="Screenshot" />
+
+`show_current_context_start` uses underline, so to achieve the best result you
+might need to tweak the underline position. In Kitty terminal for example you
+can do that with [modify_font](https://sw.kovidgoyal.net/kitty/conf/#opt-kitty.modify_font)
 
 ## Thanks
 

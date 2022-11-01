@@ -93,11 +93,11 @@ fun! vm#init_buffer(cmd_type) abort
                 call vm#themes#search_highlight()
             endif
             hi clear Search
-            exe g:Vm.Search
+            exe 'hi! ' . g:Vm.Search
         endif
 
         if !v:hlsearch && a:cmd_type != 2
-            call feedkeys("\<Plug>(VM-Hls)")
+            call s:enable_hls()
         endif
 
         call s:V.Funcs.set_statusline(0)
@@ -116,12 +116,22 @@ fun! vm#init_buffer(cmd_type) abort
     endtry
 endfun
 
+fun! s:enable_hls()
+    if mode(1) == 'n'
+        call feedkeys("\<Plug>(VM-Hls)")
+    else
+        call timer_start(50, { t -> s:enable_hls() })
+    endif
+endfun
 
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 " Reset
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 
 fun! vm#reset(...)
+    if !exists('b:visual_multi')
+        return {}
+    endif
     call vm#variables#reset()
     call vm#commands#regex_reset()
 
@@ -146,7 +156,7 @@ fun! vm#reset(...)
 
     if !empty(g:VM_highlight_matches)
         hi clear Search
-        exe g:Vm.search_hi
+        exe 'hi! ' . g:Vm.search_hi
     endif
 
     if g:Vm.oldupdate && &updatetime != g:Vm.oldupdate
@@ -183,7 +193,7 @@ endfun
 fun! vm#clearmatches() abort
     for m in getmatches()
         if m.group == 'VM_Extend' || m.group == 'MultiCursor'
-            call matchdelete(m.id)
+            silent! call matchdelete(m.id)
         endif
     endfor
 endfun

@@ -168,6 +168,12 @@ describe("Path", function()
   end)
 
   describe(":normalize", function()
+    it("can take path that has one character directories", function()
+      local orig = "/home/j/./p//path.lua"
+      local final = Path:new(orig):normalize()
+      assert.are.same(final, "/home/j/p/path.lua")
+    end)
+
     it("can take paths with double separators change them to single separators", function()
       local orig = "/lua//plenary/path.lua"
       local final = Path:new(orig):normalize()
@@ -206,12 +212,12 @@ describe("Path", function()
       assert.are.same("/tmp/lua/plenary/path.lua", p:normalize())
     end)
 
-    it("can normalize ~ when file is within home directory (traling slash)", function()
+    it("can normalize ~ when file is within home directory (trailing slash)", function()
       local home = "/home/test/"
       local p = Path:new { home, "./test_file" }
       p.path.home = home
       p._cwd = "/tmp/lua"
-      assert.are.same("~/./test_file", p:normalize())
+      assert.are.same("~/test_file", p:normalize())
     end)
 
     it("can normalize ~ when file is within home directory (no trailing slash)", function()
@@ -219,7 +225,21 @@ describe("Path", function()
       local p = Path:new { home, "./test_file" }
       p.path.home = home
       p._cwd = "/tmp/lua"
-      assert.are.same("~//./test_file", p:normalize())
+      assert.are.same("~/test_file", p:normalize())
+    end)
+
+    it("handles usernames with a dash at the end", function()
+      local home = "/home/mattr-"
+      local p = Path:new { home, "test_file" }
+      p.path.home = home
+      p._cwd = "/tmp/lua"
+      assert.are.same("~/test_file", p:normalize())
+    end)
+
+    it("handles filenames with the same prefix as the home directory", function()
+      local p = Path:new "/home/test.old/test_file"
+      p.path.home = "/home/test"
+      assert.are.same("/home/test.old/test_file", p:normalize())
     end)
   end)
 
@@ -681,6 +701,22 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.]]
+      assert.are.same(should, data)
+    end)
+  end)
+
+  describe("readbyterange", function()
+    it("should read bytes at given offset", function()
+      local p = Path:new "LICENSE"
+      local data = p:readbyterange(13, 10)
+      local should = "Copyright "
+      assert.are.same(should, data)
+    end)
+
+    it("supports negative offset", function()
+      local p = Path:new "LICENSE"
+      local data = p:readbyterange(-10, 10)
+      local should = "SOFTWARE.\n"
       assert.are.same(should, data)
     end)
   end)

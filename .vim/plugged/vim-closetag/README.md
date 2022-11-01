@@ -1,7 +1,7 @@
 closetag.vim
-================
+============
 
-#### Usage
+### Usage
 
 The current content:
 
@@ -30,7 +30,7 @@ The following tags will not be closed:
 <input>, <keygen>, <link>, <meta>, <param>, <source>, <track>, <wbr>,<menuitem>
 ```
 
-#### Installation
+### Installation
 
 * Just put the files into ~/.vim/ or &lt;HOMEDIR&gt;\vimfiles\ (for Windows).
 
@@ -42,7 +42,17 @@ Plugin 'alvan/vim-closetag'
 
 * Use other package manager.
 
-#### Options
+### Commands
+
+Use these commands to toggle/enable/disable this function for the current buffer:
+
+```vim
+:CloseTagToggleBuffer
+:CloseTagEnableBuffer
+:CloseTagDisableBuffer
+```
+
+### Options
 
 Set in your vimrc:
 
@@ -91,12 +101,32 @@ let g:closetag_shortcut = '>'
 let g:closetag_close_shortcut = '<leader>>'
 ```
 
-#### Commands
+### Note about React fragments
 
-Use these commands to toggle enable/disable this function for current buffer:
+By default, React fragments are automatically closed **only** when a React file is open.
+
+When editing a `.html` file you will get:
+
+```
+<|
+<>|
+```
+
+When editing a `.{t,j}sx` file you will get:
+```
+<|
+<>|</>
+```
+
+To override this behavior, you can set the global `g:closetag_enable_react_fragment` in your `.vimrc`:
 
 ```vim
-:CloseTagToggleBuffer
-:CloseTagEnableBuffer
-:CloseTagDisableBuffer
+" integer value [0|1]
+" Enables closing tags for React fragments -> <></> for all supported file types
+"
+let g:closetag_enable_react_fragment = 1
+" Disable closing tags for React fragments -> <></> for all supported file types
+"
+let g:closetag_enable_react_fragment = 0
 ```
+

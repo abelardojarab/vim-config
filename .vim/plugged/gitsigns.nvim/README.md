@@ -16,42 +16,42 @@ Super fast git decorations implemented purely in lua/teal.
 ## Features
 
 - Signs for added, removed, and changed lines
-- Asynchronous using [luv](https://github.com/luvit/luv/blob/master/docs.md)
+- Asynchronous using [luv]
 - Navigation between hunks
 - Stage hunks (with undo)
 - Preview diffs of hunks (with word diff)
-- Customisable (signs, highlights, mappings, etc)
+- Customizable (signs, highlights, mappings, etc)
 - Status bar integration
 - Git blame a specific line using virtual text.
 - Hunk text object
 - Automatically follow files moved in the index.
 - Live intra-line word diff
 - Ability to display deleted/changed lines via virtual lines.
-- Support for [yadm](https://yadm.io/)
+- Support for [yadm]
+- Support for detached working trees.
 
 ## Requirements
 
-- Neovim >= 0.5.0 
+- Neovim >= 0.7.0
 
-  Note: If you are running a development version of Neovim (aka `master`), then breakage may occur if your build is behind latest.
+  **Note:** If your version of Neovim is too old, then you can use a past [release].
+
+  **Note:** If you are running a development version of Neovim (aka `master`), then breakage may occur if your build is behind latest.
+
 - Newish version of git. Older versions may not work with some features.
 
 ## Installation
 
-[packer.nvim](https://github.com/wbthomason/packer.nvim):
+[packer.nvim]:
 ```lua
 use {
   'lewis6991/gitsigns.nvim',
-  requires = {
-    'nvim-lua/plenary.nvim'
-  },
-  -- tag = 'release' -- To use the latest release
+  -- tag = 'release' -- To use the latest release (do not use this if you run Neovim nightly or dev builds!)
 }
 ```
 
-[vim-plug](https://github.com/junegunn/vim-plug):
+[vim-plug]:
 ```vim
-Plug 'nvim-lua/plenary.nvim'
 Plug 'lewis6991/gitsigns.nvim'
 ```
 
@@ -62,15 +62,12 @@ For basic setup with all batteries included:
 require('gitsigns').setup()
 ```
 
-If using [packer.nvim](https://github.com/wbthomason/packer.nvim) gitsigns can
+If using [packer.nvim] gitsigns can
 be setup directly in the plugin spec:
 
 ```lua
 use {
   'lewis6991/gitsigns.nvim',
-  requires = {
-    'nvim-lua/plenary.nvim'
-  },
   config = function()
     require('gitsigns').setup()
   end
@@ -109,7 +106,7 @@ require('gitsigns').setup {
   sign_priority = 6,
   update_debounce = 100,
   status_formatter = nil, -- Use default
-  max_file_length = 40000,
+  max_file_length = 40000, -- Disable if file is longer than this (in lines)
   preview_config = {
     -- Options passed to nvim_open_win
     border = 'single',
@@ -124,8 +121,7 @@ require('gitsigns').setup {
 }
 ```
 
-For information on configuring neovim via lua please see
-[nvim-lua-guide](https://github.com/nanotee/nvim-lua-guide).
+For information on configuring Neovim via lua please see [nvim-lua-guide].
 
 ### Keymaps
 
@@ -146,8 +142,17 @@ require('gitsigns').setup{
     end
 
     -- Navigation
-    map('n', ']c', "&diff ? ']c' : '<cmd>Gitsigns next_hunk<CR>'", {expr=true})
-    map('n', '[c', "&diff ? '[c' : '<cmd>Gitsigns prev_hunk<CR>'", {expr=true})
+    map('n', ']c', function()
+      if vim.wo.diff then return ']c' end
+      vim.schedule(function() gs.next_hunk() end)
+      return '<Ignore>'
+    end, {expr=true})
+
+    map('n', '[c', function()
+      if vim.wo.diff then return '[c' end
+      vim.schedule(function() gs.prev_hunk() end)
+      return '<Ignore>'
+    end, {expr=true})
 
     -- Actions
     map({'n', 'v'}, '<leader>hs', ':Gitsigns stage_hunk<CR>')
@@ -211,13 +216,15 @@ require('gitsigns').setup {
 
 ## Non-Goals
 
-### Implement every feature in [vim-fugitive](https://github.com/tpope/vim-fugitive)
+### Implement every feature in [vim-fugitive]
 
-This plugin is actively developed and by one of the most well regarded vim plugin developers. Gitsigns will only implement features of this plugin if: it is simple, or, the technologies leveraged by Gitsigns (LuaJIT, Libuv, Neovim's API, etc) can provide a better experience.
+This plugin is actively developed and by one of the most well regarded vim plugin developers.
+Gitsigns will only implement features of this plugin if: it is simple, or, the technologies leveraged by Gitsigns (LuaJIT, Libuv, Neovim's API, etc) can provide a better experience.
 
 ### Support for other VCS
 
-There aren't any active developers of this plugin who use other kinds of VCS, so adding support for them isn't feasible. However a well written PR with a commitment of future support could change this.
+There aren't any active developers of this plugin who use other kinds of VCS, so adding support for them isn't feasible.
+However a well written PR with a commitment of future support could change this.
 
 ## Status Line
 
@@ -232,9 +239,9 @@ set statusline+=%{get(b:,'gitsigns_status','')}
 
 For the current branch use the variable `b:gitsigns_head`.
 
-## Comparison with [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
+## Comparison with [vim-gitgutter]
 
-Feature                                                  | gitsigns             | gitgutter                                     | Note
+Feature                                                  | gitsigns.nvim        | vim-gitgutter                                 | Note
 ---------------------------------------------------------|----------------------|-----------------------------------------------|--------
 Shows signs for added, modified, and removed lines       | :white_check_mark:   | :white_check_mark:                            |
 Asynchronous                                             | :white_check_mark:   | :white_check_mark:                            |
@@ -271,19 +278,16 @@ Automatically follows open files moved with `git mv`     | :white_check_mark:   
 CLI with completion                                      | :white_check_mark:   | *                                             | * Provides individual commands for some actions
 Open diffview with any revision/commit                   | :white_check_mark:   |                                               |
 
-As of 2021-07-05
+As of 2022-09-01
 
 ## Integrations
 
-### [vim-repeat](https://github.com/tpope/vim-repeat)
+### [vim-fugitive]
 
-If installed, `stage_hunk()` and `reset_hunk()` are repeatable with the `.` (dot) operator.
+When viewing revisions of a file (via `:0Gclog` for example), Gitsigns will attach to the fugitive buffer with the base set to the commit immediately before the commit of that revision.
+This means the signs placed in the buffer reflect the changes introduced by that revision of the file.
 
-### [vim-fugitive](https://github.com/tpope/vim-fugitive)
-
-When viewing revisions of a file (via `:0Gclog` for example), Gitsigns will attach to the fugitive buffer with the base set to the commit immediately before the commit of that revision. This means the signs placed in the buffer reflect the changes introduced by that revision of the file.
-
-### [null-ls](https://github.com/jose-elias-alvarez/null-ls.nvim)
+### [null-ls]
 
 Null-ls can provide code actions from Gitsigns. To setup:
 
@@ -299,14 +303,27 @@ null_ls.setup {
 ```
 
 Will enable `:lua vim.lsp.buf.code_action()` to retrieve code actions from Gitsigns.
-Alternatively if you have [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) installed, you can use `:Telescope lsp_code_actions`.
 
-### [trouble.nvim](https://github.com/folke/trouble.nvim)
+### [trouble.nvim]
 
 If installed and enabled (via `config.trouble`; defaults to true if installed), `:Gitsigns setqflist` or `:Gitsigns seqloclist` will open Trouble instead of Neovim's built-in quickfix or location list windows.
 
 ## Similar plugins
 
-- [coc-git](https://github.com/neoclide/coc-git)
-- [vim-gitgutter](https://github.com/airblade/vim-gitgutter)
-- [vim-signify](https://github.com/mhinz/vim-signify)
+- [coc-git]
+- [vim-gitgutter]
+- [vim-signify]
+
+<!-- links -->
+[coc-git]: https://github.com/neoclide/coc-git
+[luv]: https://github.com/luvit/luv/blob/master/docs.md
+[null-ls]: https://github.com/jose-elias-alvarez/null-ls.nvim
+[nvim-lua-guide]: https://github.com/nanotee/nvim-lua-guide
+[packer.nvim]: https://github.com/wbthomason/packer.nvim
+[release]: https://github.com/lewis6991/gitsigns.nvim/releases
+[trouble.nvim]: https://github.com/folke/trouble.nvim
+[vim-fugitive]: https://github.com/tpope/vim-fugitive
+[vim-gitgutter]: https://github.com/airblade/vim-gitgutter
+[vim-plug]: https://github.com/junegunn/vim-plug
+[vim-signify]: https://github.com/mhinz/vim-signify
+[yadm]: https://yadm.io

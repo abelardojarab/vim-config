@@ -30,13 +30,15 @@ function M.should_ignore(path)
     end
   end
 
-  if not M.config.filter_ignored then
+  if not M.config.filter_custom then
     return false
   end
 
   local relpath = utils.path_relative(path, vim.loop.cwd())
-  if M.ignore_list[relpath] == true or M.ignore_list[basename] == true then
-    return true
+  for pat, _ in pairs(M.ignore_list) do
+    if vim.fn.match(relpath, pat) ~= -1 or vim.fn.match(basename, pat) ~= -1 then
+      return true
+    end
   end
 
   local idx = path:match ".+()%.[^.]+$"
@@ -50,18 +52,19 @@ function M.should_ignore(path)
 end
 
 function M.should_ignore_git(path, status)
-  return M.config.filter_ignored
+  return M.config.filter_git_ignored
     and (M.config.filter_git_ignored and status and status[path] == "!!")
     and not is_excluded(path)
 end
 
 function M.setup(opts)
   M.config = {
-    filter_ignored = true,
+    filter_custom = true,
     filter_dotfiles = opts.filters.dotfiles,
     filter_git_ignored = opts.git.ignore,
   }
 
+  M.ignore_list = {}
   M.exclude_list = opts.filters.exclude
 
   local custom_filter = opts.filters.custom

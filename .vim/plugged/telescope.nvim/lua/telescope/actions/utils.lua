@@ -1,4 +1,5 @@
 ---@tag telescope.actions.utils
+---@config { ["module"] = "telescope.actions.utils", ["name"] = "ACTIONS_UTILS" }
 
 ---@brief [[
 --- Utilities to wrap functions around picker selections and entries.
@@ -12,7 +13,7 @@ local utils = {}
 
 --- Apply `f` to the entries of the current picker.
 --- - Notes:
----   - Mapped entries may include results not visible in the results popup.
+---   - Mapped entries include all currently filtered results, not just the visible onces.
 ---   - Indices are 1-indexed, whereas rows are 0-indexed.
 --- - Warning: `map_entries` has no return value.
 ---   - The below example showcases how to collect results
@@ -95,11 +96,56 @@ function utils.get_registered_mappings(prompt_bufnr)
   for _, mode in ipairs { "n", "i" } do
     local mode_mappings = vim.api.nvim_buf_get_keymap(prompt_bufnr, mode)
     for _, mapping in ipairs(mode_mappings) do
-      local funcid = findnth(mapping.rhs, 2)
-      table.insert(ret, { mode = mode, keybind = mapping.lhs, func = __TelescopeKeymapStore[prompt_bufnr][funcid] })
+      -- ensure only telescope mappings
+      if mapping.rhs and string.find(mapping.rhs, [[require%('telescope.mappings'%).execute_keymap]]) then
+        local funcid = findnth(mapping.rhs, 2)
+        table.insert(ret, { mode = mode, keybind = mapping.lhs, func = __TelescopeKeymapStore[prompt_bufnr][funcid] })
+      end
     end
   end
   return ret
+end
+
+-- Best effort to infer function names for actions.which_key
+function utils._get_anon_function_name(func_ref)
+  local Path = require "plenary.path"
+  local info = debug.getinfo(func_ref)
+  local fname
+  -- if fn defined in string (ie loadstring) source is string
+  -- if fn defined in file, source is file name prefixed with a `@´
+  local path = Path:new((info.source:gsub("@", "")))
+  if not path:exists() then
+    return "<anonymous>"
+  end
+  for i, line in ipairs(path:readlines()) do
+    if i == info.linedefined then
+      fname = line
+      break
+    end
+  end
+
+  -- test if assignment or named function, otherwise anon
+  if (fname:match "=" == nil) and (fname:match "function %S+%(" == nil) then
+    return "<anonymous>"
+  else
+    local patterns = {
+      { "function", "" }, -- remove function
+      { "local", "" }, -- remove local
+      { "[%s=]", "" }, -- remove whitespace and =
+      { [=[%[["']]=], "" }, -- remove left-hand bracket of table assignment
+      { [=[["']%]]=], "" }, -- remove right-ahnd bracket of table assignment
+      { "%((.+)%)", "" }, -- remove function arguments
+      { "(.+)%.", "" }, -- remove TABLE. prefix if available
+    }
+    for _, tbl in ipairs(patterns) do
+      fname = (fname:gsub(tbl[1], tbl[2])) -- make sure only string is returned
+    end
+    -- not sure if this can happen, catch all just in case
+    if fname == nil or fname == "" then
+      return "<anonymous>"
+    end
+    return fname
+  end
 end
 
 return utils

@@ -18,6 +18,7 @@
 :GdbStartBashDB	nvimgdb.txt	/*:GdbStartBashDB*
 :GdbStartLLDB	nvimgdb.txt	/*:GdbStartLLDB*
 :GdbStartPDB	nvimgdb.txt	/*:GdbStartPDB*
+:GdbStartRR	nvimgdb.txt	/*:GdbStartRR*
 :GdbStep	nvimgdb.txt	/*:GdbStep*
 :GdbUntil	nvimgdb.txt	/*:GdbUntil*
 GdbCustomCommand()	nvimgdb.txt	/*GdbCustomCommand()*
@@ -36,6 +37,7 @@ NvimgdbGDB	nvimgdb.txt	/*NvimgdbGDB*
 NvimgdbLimitations	nvimgdb.txt	/*NvimgdbLimitations*
 NvimgdbLogging	nvimgdb.txt	/*NvimgdbLogging*
 NvimgdbMappings	nvimgdb.txt	/*NvimgdbMappings*
+NvimgdbRR	nvimgdb.txt	/*NvimgdbRR*
 NvimgdbTrivia	nvimgdb.txt	/*NvimgdbTrivia*
 NvimgdbUsage	nvimgdb.txt	/*NvimgdbUsage*
 NvimgdbVariables	nvimgdb.txt	/*NvimgdbVariables*

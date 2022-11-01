@@ -11,6 +11,7 @@ CONTENTS                                                  *vim-lsp-contents*
       Configure                             |vim-lsp-configure|
       vim-lsp-settings                      |vim-lsp-settings_plugin|
       Wiki                                  |vim-lsp-configure-wiki|
+      Health Check                          |vim-lsp-healthcheck|
     Options                               |vim-lsp-options|
       g:lsp_auto_enable                     |g:lsp_auto_enable|
       g:lsp_preview_keep_focus              |g:lsp_preview_keep_focus|
@@ -53,9 +54,16 @@ CONTENTS                                                  *vim-lsp-contents*
 			     |g:lsp_document_code_actions_signs_enabled|
       g:lsp_document_code_action_signs_delay
 			     |g:lsp_document_code_actions_signs_delay|
+      g:lsp_inlay_hints_enabled
+			     |g:lsp_inlay_hints_enabled|
+      g:lsp_inlay_hints_delay
+			     |g:lsp_inlay_hints_delay|
+      g:lsp_inlay_hints_mode
+			     |g:lsp_inlay_hints_mode|
       g:lsp_tree_incoming_prefix            |g:lsp_tree_incoming_prefix|
       g:lsp_format_sync_timeout             |g:lsp_format_sync_timeout|
       g:lsp_use_event_queue                 |g:lsp_use_event_queue|
+      g:lsp_max_buffer_size                 |g:lsp_max_buffer_size|
       g:lsp_document_highlight_enabled      |g:lsp_document_highlight_enabled|
       g:lsp_document_highlight_delay        |g:lsp_document_highlight_delay|
       g:lsp_get_supported_capabilities      |g:lsp_get_supported_capabilities|
@@ -70,6 +78,7 @@ CONTENTS                                                  *vim-lsp-contents*
       g:lsp_log_file                        |g:lsp_log_file|
       g:lsp_log_verbose                     |g:lsp_log_verbose|
       g:lsp_semantic_enabled                |g:lsp_semantic_enabled|
+      g:lsp_semantic_delay                  |g:lsp_semantic_delay|
       g:lsp_text_document_did_save_delay    |g:lsp_text_document_did_save_delay|
       g:lsp_snippet_expand                  |g:lsp_snippet_expand|
       g:lsp_completion_resolve_timeout      |g:lsp_completion_resolve_timeout|
@@ -92,6 +101,7 @@ CONTENTS                                                  *vim-lsp-contents*
       lsp#get_buffer_diagnostics_counts() |lsp#get_buffer_diagnostics_counts()|
       lsp#get_buffer_first_error_line()   |lsp#get_buffer_first_error_line()|
       lsp#get_progress()                  |lsp#get_progress()|
+      lsp#document_hover_preview_winid()  |lsp#document_hover_preview_winid()|
     Commands                              |vim-lsp-commands|
       LspAddTreeCallHierarchyIncoming       |:LspAddTreeCallHierarchyIncoming|
       LspCallHierarchyIncoming              |:LspCallHierarchyIncoming|
@@ -126,7 +136,7 @@ CONTENTS                                                  *vim-lsp-contents*
       LspImplementation                     |:LspImplementation|
       LspReferences                         |:LspReferences|
       LspRename                             |:LspRename|
-      LspSemanticScopes                     |:LspSemanticScopes|
+      LspSemanticHighlightGroups            |:LspSemanticHighlightGroups|
       LspTypeDefinition                     |:LspTypeDefinition|
       LspTypeHierarchy                      |:LspTypeHierarchy|
       LspWorkspaceSymbol                    |:LspWorkspaceSymbol|
@@ -208,19 +218,19 @@ vim-lsp doesn't ship with any language servers. The user is responsible for
 configuring the language servers correctly.
 
 Here is an example of configuring the python language server protocol based
-on pyls (https://github.com/palantir/python-language-server)
+on pylsp (https://github.com/python-lsp/python-lsp-server)
 
 1. Make sure the language server is available locally in the machine.
    For python, pip package manager can be used to install the language server.
 >
-	pip install python-language-server
+	pip install python-lsp-server
 
 2. Register the language server in your .vimrc
 >
-	if (executable('pyls'))
+	if (executable('pylsp'))
 	    au User lsp_setup call lsp#register_server({
-		\ 'name': 'pyls',
-		\ 'cmd': {server_info->['pyls']},
+		\ 'name': 'pylsp',
+		\ 'cmd': {server_info->['pylsp']},
 		\ 'allowlist': ['python']
 		\ })
 	endif
@@ -260,6 +270,13 @@ to automatically register various language servers.
 >
 	Plug 'prabirshrestha/vim-lsp'
 	Plug 'mattn/vim-lsp-settings'
+
+HEALTH CHECK						*vim-lsp-healthcheck*
+vim-lsp supports the |:CheckHealth| command which can be useful when debugging
+lsp configuration issues.
+
+This command is included in neovim and implemented in vim with the
+[vim-healthcheck](https://github.com/rhysd/vim-healthcheck) plugin. 
 
 WIKI                                               *vim-lsp-configure-wiki*
 For documentation on how to configure other language servers refer
@@ -324,7 +341,7 @@ g:lsp_preview_float                         *g:lsp_preview_float*
 <
     After opening an autocmd User event lsp_float_opened is issued, as well as
     and lsp_float_closed upon closing. This can be used to alter the preview
-    window (using lsp#ui#vim#output#getpreviewwinid() to get the window id),
+    window (using |lsp#document_hover_preview_winid()| to get the window id),
     setup custom bindings while a preview is open, or change the highlighting
     of the window.
 
@@ -342,12 +359,12 @@ g:lsp_preview_float                         *g:lsp_preview_float*
 	    autocmd!
 	    if !has('nvim')
 		autocmd User lsp_float_opened
-		    \ call setwinvar(lsp#ui#vim#output#getpreviewwinid(),
+		    \ call setwinvar(lsp#document_hover_preview_winid(),
 		    \		       '&wincolor', 'PopupWindow')
 	    else
 		autocmd User lsp_float_opened
 		    \ call nvim_win_set_option(
-		    \   lsp#ui#vim#output#getpreviewwinid(),
+		    \   lsp#document_hover_preview_winid(),
 		    \   'winhighlight', 'Normal:PopupWindow')
 	    endif
 	augroup end
@@ -725,6 +742,54 @@ g:lsp_document_code_action_signs_delay
 	let g:lsp_document_code_action_signs_delay = 200
 	let g:lsp_document_code_action_signs_delay = 1000
 >
+g:lsp_inlay_hints_enabled
+				      *g:lsp_inlay_hints_enabled*
+    Type: |Number|
+    Default: `0`
+
+    Enables inlay-hints. Requires Vim9 with |virtualtext|.
+    patch 9.0.0167 or newer.
+
+    Example: >
+	let g:lsp_inlay_hints_enabled = 1
+	let g:lsp_inlay_hints_enabled = 0
+<
+    To change the style of the inlay-hints, you can set or link the
+    `lspInlayHintsType` and `lspInlayHintsParameter` highlight group.
+
+    Example: >
+    highlight lspInlayHintsType ctermfg=red guifg=red
+    \ ctermbg=green guibg=green
+    highlight lspInlayHintsParameter ctermfg=red guifg=red
+    \ ctermbg=green guibg=green
+
+g:lsp_inlay_hints_delay
+					*g:lsp_inlay_hints_delay*
+    Type: |Number|
+    Default: `350`
+
+    Delay milliseconds to update inlay-hints. Requires
+    |g:lsp_inlay_hints_enabled|.
+
+    Example: >
+	let g:lsp_inlay_hints_delay = 200
+	let g:lsp_inlay_hints_delay = 1000
+>
+g:lsp_inlay_hints_mode
+					*g:lsp_inlay_hints_mode*
+    Type: |Dict|
+    Default: `{}`
+
+    This mode currently only include "curline" and "!curline".
+
+    Example: >
+	let g:lsp_inlay_hints_mode = {
+	\  'normal': ['curline'],
+	\}
+<
+    "curline" show hint only for current line. "!curline" show hints except
+    current line. Default show all hints.
+>
 g:lsp_tree_incoming_prefix                          *g:lsp_tree_incoming_prefix*
     Type: |String|
     Default: `"<= "`
@@ -746,6 +811,22 @@ g:lsp_use_event_queue                               *g:lsp_use_event_queue*
 	let g:lsp_use_event_queue = 1
 	let g:lsp_use_event_queue = 0
 
+g:lsp_max_buffer_size                               *g:lsp_max_buffer_size*
+    Type: |Number|
+    Default: `5000000`
+
+    To improve performance, if a buffer is larger than
+    `g:lsp_max_buffer_size` (measured in bytes), the following features
+    are disabled:
+    * Semantic highlighting
+    
+    This functionality can be disabled by setting `g:lsp_max_buffer_size`
+    to a negative value.
+
+    Example: >
+	let g:max_buffer_size = 10000000
+	let g:max_buffer_size = -1
+
 g:lsp_document_highlight_enabled      *g:lsp_document_highlight_enabled*
     Type: |Number|
     Default: `1` for neovim or vim with patch-8.1.1035
@@ -759,7 +840,7 @@ g:lsp_document_highlight_enabled      *g:lsp_document_highlight_enabled*
 <
 
     To change the style of the highlighting, you can set or link the
-   `lspReference` highlight group.
+    `lspReference` highlight group.
 
     Example: >
     highlight lspReference ctermfg=red guifg=red ctermbg=green guibg=green
@@ -869,7 +950,7 @@ g:lsp_hover_ui                                                *g:lsp_hover_ui*
     Type: |String|
     Default: `''`
 
-    Controls deafult UI behavior for |LspHover|.
+    Controls default UI behavior for |LspHover|.
     If empty string, defaults to `float` if popup is supported in vim or
     floating window is supported in neovim else uses |preview-window|.
 
@@ -918,6 +999,14 @@ g:lsp_semantic_enabled                             *g:lsp_semantic_enabled*
 
     Determines whether or not semantic highlighting is enabled globally. Set
     to `1` to enable sending requests.
+
+g:lsp_semantic_delay                                      *g:lsp_semantic_delay*
+    Type: |Number|
+    Default: `500`
+
+    Modifications which occur within |g:lsp_semantic_delay| of one another are
+    lumped into a single `semanticTokens` request. Sets the maximum rate at
+    which the semantic highlighting can update.
 
 g:lsp_text_document_did_save_delay   *g:lsp_text_document_did_save_delay*
     Type: |Number|
@@ -1004,7 +1093,7 @@ Used to register the language server with vim-lsp. This method takes
 one parameter which is a vim |dict| and is referred to as |vim-lsp-server_info|
 
     Example: >
-	if (executable('pyls'))
+	if (executable('pylsp'))
 	    au User lsp_setup call lsp#register_server({
 		\ 'name': 'name-of-server',
 		\ 'cmd': {server_info->['server-exectuable']},
@@ -1056,7 +1145,7 @@ The vim |dict| containing information about the server.
     can be determined statically and |vim-lsp-server_info| is not necessary.
 
     Example: >
-	'cmd': ['pyls']
+	'cmd': ['pylsp']
 <
     Function can be complex based on custom requirements.
     For example:
@@ -1109,7 +1198,7 @@ The vim |dict| containing information about the server.
     initialization. Configuration settings are language-server specific.
 
     Example: >
-	'workspace_config': {'pyls': {'plugins': \
+	'workspace_config': {'pylsp': {'plugins': \
 		{'pydocstyle': {'enabled': v:true}}}}
 <
   * languageId:
@@ -1451,6 +1540,11 @@ lsp#get_progress()                       *lsp#get_progress()*
 	Type: |Number|
 	0 - 100 or not exist
 
+lsp#document_hover_preview_winid()      *lsp#document_hover_preview_winid()*
+
+    Returns |windowid| of the current hover preview window or |v:null| if it does not
+    exist.
+
 lsp#scroll(count)                                             *lsp#scroll()*
 
     Scroll current displayed floating/popup window with specified count.
@@ -1475,7 +1569,7 @@ LspCallHierarchyOutgoing                         *:LspCallHierarchyOutgoing*
 
 Find outgoing call hierarchy for the symbol under cursor.
 
-LspCodeAction [{CodeActionKind}]                            *:LspCodeAction*
+LspCodeAction [--ui=float|preview] [{CodeActionKind}]       *:LspCodeAction*
 
 Gets a list of possible commands that can be applied to a file so it can be
 fixed (quick fix).
@@ -1483,7 +1577,7 @@ fixed (quick fix).
 If the optional {CodeActionKind} specified, will invoke code action
 immediately when matched code action is one only.
 
-LspCodeActionSync [{CodeActionKind}]                    *:LspCodeActionSync*
+LspCodeActionSync [--ui=float|preview] [{CodeActionKind}] *:LspCodeActionSync*
 
 Same as |:LspCodeAction| but synchronous. Useful when running |:autocmd|
 commands such as organize imports before save.
@@ -1665,13 +1759,9 @@ LspRename                                                       *:LspRename*
 
 Rename the symbol.
 
-LspSemanticScopes                                       *:LspSemanticScopes*
+LspSemanticHighlightGroups                     *:LspSemanticHighlightGroups*
 
-Prints the scope tree for the current buffer. Each scope is highlighted with
-the highlight group vim-lsp will use for this scope. An optional argument can
-be supplied to limit the maximum depth of the tree that will be printed.
-
-Also see |vim-lsp-semantic|.
+List the highlight groups provided by the current semantic tokens server.
 
 LspTypeDefinition                                       *:LspTypeDefinition*
 
@@ -1696,7 +1786,9 @@ Servers may choose to return empty results if the search query is empty.
 
 LspStatus                                                       *:LspStatus*
 
-Prints the status of all registered servers.
+Prints the status of all registered servers. Use `:verbose LspStatus` to
+additionally show each server's workspace_config.
+See also |vim-lsp-healthcheck|.
 
 LspStopServer                                                *:LspStopServer*
 
@@ -1791,6 +1883,8 @@ Available plug mappings are following:
   nnoremap <plug>(lsp-call-hierarchy-incoming)
   nnoremap <plug>(lsp-call-hierarchy-outgoing)
   nnoremap <plug>(lsp-code-action)
+  nnoremap <plug>(lsp-code-action-float)
+  nnoremap <plug>(lsp-code-action-preview)
   nnoremap <plug>(lsp-code-lens)
   nnoremap <plug>(lsp-declaration)
   nnoremap <plug>(lsp-peek-declaration)
@@ -1942,79 +2036,64 @@ Semantic highlighting                                      *vim-lsp-semantic*
 To use semantic highlighting, you need Neovim highlights, or Vim with the
 |textprop| feature enabled at compile time.
 
-You can check if semantic highlighting is enabled by running: >
+To enable semantic highlighting, |g:lsp_semantic_enabled| should be set to `1`
+(it is `0` by default). You can check if semantic highlighting is enabled
+by running: >
     echo lsp#ui#vim#semantic#is_enabled()
-<
-Before you can use the semantic highlighting feature, you will also need to
-link language server semantic scopes to Vim highlight groups. For example, you
-have to specify that function calls need to be highlighted using the
-|Identifier| Vim group.
 
-To find out the available scopes for your language server, you can open a
-buffer of the correct filetype and run :|LspSemanticScopes|. This will display
-a tree representation of the available scopes, along with their highlight
-group, if any.
+vim-lsp provides |highlight| groups for each of the token types supported by
+the current LSP server. This includes highlight groups for each of the
+standard set of token types:
+* `LspSemanticType`
+* `LspSemanticClass`
+* `LspSemanticEnum`
+* `LspSemanticInterface`
+* `LspSemanticStruct`
+* `LspSemanticTypeParameter`
+* `LspSemanticParameter`
+* `LspSemanticVariable`
+* `LspSemanticProperty`
+* `LspSemanticEnumMember`
+* `LspSemanticEvents`
+* `LspSemanticFunction`
+* `LspSemanticMethod`
+* `LspSemanticKeyword`
+* `LspSemanticModifier`
+* `LspSemanticComment`
+* `LspSemanticString`
+* `LspSemanticNumber`
+* `LspSemanticRegexp`
+* `LspSemanticOperator`
+as well as additional highlight groups for any further types supported by the
+server. For example, clangd provides `LspNamespace`.
 
-For example, consider this excerpt from the Eclipse Java language server: >
-    entity.name.function.java
-        meta.function-call.java
-            meta.method.body.java
-                meta.method.java
-                    meta.class.body.java
-                        meta.class.java
-                            source.java
-        meta.method.identifier.java
-            meta.function-call.java
-                meta.method.java
-                    meta.class.body.java
-                        meta.class.java
-                            source.java
-            meta.method.java
-                meta.class.body.java
-                    meta.class.java
-                        source.java
-    entity.name.type.class.java
-        meta.class.identifier.java
-            meta.class.java
-                source.java
-    ...
-<
-`entity.name.type.class.java` is a top-level scope.
-`entity.name.function.java` is also a top-level scope, which itself contains
-two subscopes `meta.function-call.java` and `meta.method.identifier.java`.
+The standard set of token types have sensible defaults provided, however
+any other types require manual configuration. The types provided by the
+current buffer's semantic tokens server can be found by running
+|:LspSemanticTokenTypes|.
 
-The mapping from scopes to highlight groups is done in the server
-configuration options.
+LSP servers may also provide modifiers for each of the tokens. The standard
+set is:
+* `Declaration`
+* `Definition`
+* `Readonly`
+* `Static`
+* `Deprecated`
+* `Abstract`
+* `Async`
+* `Modification`
+* `Documentation`
+* `DefaultLibrary`
+Servers may also provide their own modifiers. The full set of types provided
+by the current buffer's semantic tokens server can be found by running
+|:LspSemanticTokenModifiers|.
 
-Suppose we want to highlight classes using |Identifier| and functions using
-|Label|. The language server registration for Eclipse LS will look like: >
-    autocmd User lsp_setup call lsp#register_server({
-        \ 'name': 'eclipse.jdt.ls',
-        \ 'cmd': {server_info->[...]},
-        \ 'allowlist': ['java'],
-        \ 'semantic_highlight': {
-        \       'entity.name.type.class.java': 'Identifier',
-        \       'entity.name.function.java': 'Label'
-        \ }
-        \ })
-<
-You can also be more specific by replacing the highlight group string with
-another |Dict|, containing subkeys for the subscopes. For example, suppose we
-want function calls to still use the |Label| group, but use |Identifier| for
-`meta.method.identifier.java`. This can be accomplished as follows: >
-    autocmd User lsp_setup call lsp#register_server({
-        \ 'name': 'eclipse.jdt.ls',
-        \ 'cmd': {server_info->[...]},
-        \ 'allowlist': ['java'],
-        \ 'semantic_highlight': {
-        \       'entity.name.type.class.java': 'Identifier',
-        \       'entity.name.function.java': {
-        \           'meta.function-call.java': 'Label',
-        \           'meta.method.identifier.java': 'Identifier'
-        \       }
-        \ }
-        \ })
-<
+If modifiers are applied to a token, the name of the |highlight| group will
+be prepended with each of the modifier names, for example a static default
+library function will use the highlight group
+`LspSemanticStaticDefaultLibraryFunction`. By default, any modified highlight
+groups are linked to their unmodified equivalent.
+
 ==============================================================================
 Popup Formatting                                      *vim-lsp-popup-format*
 

@@ -1,5 +1,4 @@
 local api = vim.api
-local icons = require "nvim-tree.renderer.icons"
 
 local M = {}
 
@@ -52,6 +51,10 @@ local function get_hl_groups()
     GitNew = { fg = colors.yellow },
 
     WindowPicker = { gui = "bold", fg = "#ededed", bg = "#4493c8" },
+    LiveFilterPrefix = { gui = "bold", fg = colors.purple },
+    LiveFilterValue = { gui = "bold", fg = "#fff" },
+
+    Bookmark = { fg = colors.green },
   }
 end
 
@@ -63,8 +66,11 @@ local function get_links()
     Normal = "Normal",
     NormalNC = "NvimTreeNormal",
     EndOfBuffer = "EndOfBuffer",
+    CursorLineNr = "CursorLineNr",
+    LineNr = "LineNr",
     CursorLine = "CursorLine",
     VertSplit = "VertSplit",
+    WinSeparator = "NvimTreeVertSplit",
     CursorColumn = "CursorColumn",
     FileDirty = "NvimTreeGitDirty",
     FileNew = "NvimTreeGitNew",
@@ -72,6 +78,7 @@ local function get_links()
     FileMerge = "NvimTreeGitMerge",
     FileStaged = "NvimTreeGitStaged",
     FileDeleted = "NvimTreeGitDeleted",
+    FileIgnored = "NvimTreeGitIgnored",
     Popup = "Normal",
     GitIgnored = "Comment",
     StatusLine = "StatusLine",
@@ -81,9 +88,6 @@ local function get_links()
 end
 
 function M.setup()
-  if icons.get_config().show_file_icon and icons.get_config().has_devicons then
-    require("nvim-web-devicons").setup()
-  end
   local higlight_groups = get_hl_groups()
   for k, d in pairs(higlight_groups) do
     local gui = d.gui and " gui=" .. d.gui or ""

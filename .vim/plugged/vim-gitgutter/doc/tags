@@ -34,6 +34,7 @@ gitgutter-:GitGutterAll	gitgutter.txt	/*gitgutter-:GitGutterAll*
 gitgutter-:GitGutterBufferDisable	gitgutter.txt	/*gitgutter-:GitGutterBufferDisable*
 gitgutter-:GitGutterBufferEnable	gitgutter.txt	/*gitgutter-:GitGutterBufferEnable*
 gitgutter-:GitGutterBufferToggle	gitgutter.txt	/*gitgutter-:GitGutterBufferToggle*
+gitgutter-:GitGutterDiffOrig	gitgutter.txt	/*gitgutter-:GitGutterDiffOrig*
 gitgutter-:GitGutterDisable	gitgutter.txt	/*gitgutter-:GitGutterDisable*
 gitgutter-:GitGutterEnable	gitgutter.txt	/*gitgutter-:GitGutterEnable*
 gitgutter-:GitGutterFold	gitgutter.txt	/*gitgutter-:GitGutterFold*

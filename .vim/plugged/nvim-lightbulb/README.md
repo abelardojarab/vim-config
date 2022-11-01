@@ -15,6 +15,7 @@ This makes code actions both [discoverable and efficient](https://rust-analyzer.
 
 ### Prerequisites
 - [neovim](https://github.com/neovim/neovim) with LSP capabilities.
+- The [FixCursorHold.nvim plugin](https://github.com/antoinemadec/FixCursorHold.nvim) is strongly recommended to work around existing Neovim issues surrounding the `CursorHold` and `CursorHoldI` autocmd events.
 
 ### Installation
 Just like any other plugin.
@@ -22,6 +23,15 @@ Just like any other plugin.
 Example using [vim-plug](https://github.com/junegunn/vim-plug):
 ```vim
 Plug 'kosayoda/nvim-lightbulb'
+Plug 'antoinemadec/FixCursorHold.nvim'
+```
+
+Example using [packer.nvim](https://github.com/wbthomason/packer.nvim):
+```lua
+use {
+    'kosayoda/nvim-lightbulb',
+    requires = 'antoinemadec/FixCursorHold.nvim',
+}
 ```
 
 ### Usage
@@ -29,14 +39,21 @@ Call `require('nvim-lightbulb').update_lightbulb()` whenever you want to show a 
 
 VimScript:
 ```vim
-autocmd CursorHold,CursorHoldI * lua require'nvim-lightbulb'.update_lightbulb()
+autocmd CursorHold,CursorHoldI * lua require('nvim-lightbulb').update_lightbulb()
 ```
 
 Lua:
 ```lua
-vim.cmd [[autocmd CursorHold,CursorHoldI * lua require'nvim-lightbulb'.update_lightbulb()]]
+vim.cmd [[autocmd CursorHold,CursorHoldI * lua require('nvim-lightbulb').update_lightbulb()]]
 ```
 
+It is also possible to let the plugin create this autocommand for you. This can be enabled using the `setup` function:
+
+```lua
+require('nvim-lightbulb').setup({autocmd = {enabled = true}})
+```
+
+For all options, see the Configuration section.
 
 ### Configuration
 
@@ -46,7 +63,7 @@ Configuration can be passed to the setup function.
 
 ```lua
 -- Showing defaults
-require'nvim-lightbulb'.setup {
+require('nvim-lightbulb').setup({
     -- LSP client names to ignore
     -- Example: {"sumneko_lua", "null-ls"}
     ignore = {},
@@ -88,9 +105,17 @@ require'nvim-lightbulb'.setup {
         text = "💡",
         -- Text to provide when no actions are available
         text_unavailable = ""
+    },
+    autocmd = {
+        enabled = false,
+        -- see :help autocmd-pattern
+        pattern = {"*"},
+        -- see :help autocmd-events
+        events = {"CursorHold", "CursorHoldI"}
     }
-}
+})
 ```
+
 ##### Per-call configuration
 
 You can overwrite the defaults by passing options to the `update_lightbulb` function.
@@ -141,5 +166,5 @@ vim.api.nvim_command('highlight LightBulbVirtualText ctermfg= ctermbg= guifg= gu
 ##### Status-line text usage
 
 With the status_text option enabled you can access the current lightbulb state
-through the lua function `require'nvim-lightbulb'.get_status_text()`. This
+through the lua function `require('nvim-lightbulb').get_status_text()`. This
 allows easy integration with multiple different status line plugins.

@@ -117,11 +117,16 @@ neogit.setup {
   auto_refresh = true,
   disable_builtin_notifications = false,
   use_magit_keybindings = false,
-  commit_popup = {
-      kind = "split",
-  },
   -- Change the default way of opening neogit
   kind = "tab",
+  -- Change the default way of opening the commit popup
+  commit_popup = {
+    kind = "split",
+  },
+  -- Change the default way of opening popups
+  popup = {
+    kind = "split",
+  },
   -- customize displayed signs
   signs = {
     -- { CLOSED, OPENED }
@@ -251,15 +256,31 @@ Set `disable_insert_on_commit = true` in your call to [`setup`](#configuration) 
 
 ## Events
 
-Neogit emits a `NeogitStatusRefreshed` event whenever the status gets reloaded.
+Neogit emits the following events:
 
-You can listen to the event using the following code:
+| Event                   | Description                      |
+|-------------------------|----------------------------------|
+| `NeogitStatusRefreshed` | Status has been reloaded         |
+| `NeogitCommitComplete`  | Commit has been created          |
+| `NeogitPushComplete`    | Push has completed               |
+| `NeogitPullComplete`    | Pull has completed               |
+
+You can listen to the events using the following code:
 
 ```vim
 autocmd User NeogitStatusRefreshed echom "Hello World!"
 ```
 
-Further information can be found under `:h autocmd`.
+Or, if you prefer to configure autocommands via Lua:
+
+```lua
+local group = vim.api.nvim_create_augroup('MyCustomNeogitEvents', { clear = true })
+vim.api.nvim_create_autocmd('User', {
+  pattern = 'NeogitPushComplete',
+  group = group,
+  callback = require('neogit').close,
+})
+```
 
 ## Magit-style Keybindings
 

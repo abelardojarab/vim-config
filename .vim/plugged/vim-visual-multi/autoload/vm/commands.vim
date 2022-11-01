@@ -735,6 +735,22 @@ fun! vm#commands#invert_direction(...) abort
     call s:G.select_region(s:v.index)
 endfun
 
+function! vm#commands#reset_direction(...) abort
+    " Resets regions facing.
+    if s:F.no_regions() || s:v.auto | return | endif
+
+    let s:v.direction = 1
+    for r in s:R()
+        let r.dir = 1
+        let r.k = r.a
+        let r.K = r.A
+    endfor
+
+    if !a:0 | return | endif
+    call s:G.update_highlight()
+    call s:G.select_region(s:v.index)
+endfunction
+
 
 fun! vm#commands#split_lines() abort
     " Split regions so that they don't cross line boundaries.
@@ -828,13 +844,13 @@ fun! vm#commands#shrink_or_enlarge(shrink) abort
 endfun
 
 
-fun! vm#commands#increase_or_decrease(increase, all_types, count)
+fun! vm#commands#increase_or_decrease(increase, all_types, count, g)
     let oldnr = &nrformats
     if a:all_types
         setlocal nrformats+=alpha
     endif
     let map = a:increase ? "\<c-a>" : "\<c-x>"
-    call s:V.Edit.run_normal(map, {'count': a:count, 'recursive': 0})
+    call s:V.Edit.run_normal(map, {'count': a:count, 'recursive': 0, 'gcount': a:g})
     if a:all_types
         let &l:nrformats = oldnr
     endif

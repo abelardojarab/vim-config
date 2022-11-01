@@ -1,7 +1,9 @@
 :Sleuth	sleuth.txt	/*:Sleuth*
 SleuthIndicator()	sleuth.txt	/*SleuthIndicator()*
 g:sleuth_automatic	sleuth.txt	/*g:sleuth_automatic*
+g:sleuth_heuristics	sleuth.txt	/*g:sleuth_heuristics*
 g:sleuth_no_filetype_indent_on	sleuth.txt	/*g:sleuth_no_filetype_indent_on*
+g:sleuth_{filetype}_heuristics	sleuth.txt	/*g:sleuth_{filetype}_heuristics*
 sleuth	sleuth.txt	/*sleuth*
 sleuth-configuration	sleuth.txt	/*sleuth-configuration*
 sleuth-interface	sleuth.txt	/*sleuth-interface*

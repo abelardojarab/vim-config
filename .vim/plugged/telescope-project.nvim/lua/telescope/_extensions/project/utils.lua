@@ -20,7 +20,7 @@ M.init_files = function()
 end
 
 -- Fetches project information to be passed to picker
-M.get_projects = function()
+M.get_projects = function(order_by)
   local filtered_projects = {}
   for _, project in pairs(M.get_project_objects()) do
     local is_activated = tonumber(project.activated) == 1
@@ -28,9 +28,19 @@ M.get_projects = function()
       table.insert(filtered_projects, project)
     end
   end
+
   table.sort(filtered_projects, function(a,b)
-    return a.last_accessed > b.last_accessed
+    if order_by == "asc" then
+        return a.title:lower() > b.title:lower()
+    elseif order_by == "desc" then
+        return a.title:lower() < b.title:lower()
+    else
+      if a.last_accessed_time and b.last_accessed_time then
+        return a.last_accessed_time > b.last_accessed_time
+      end
+    end
   end)
+
   return filtered_projects
 end
 
@@ -55,7 +65,7 @@ end
 
 -- Extracts information from telescope projects line
 M.parse_project_line = function(line)
-  local title, path, workspace, activated = line:match("^(.-)=(.-)=(.-)=(.-)$")
+  local title, path, workspace, activated, last_accessed_time = line:match("^(.-)=(.-)=(.-)=(.-)=(.-)$")
   if not workspace then
     title, path = line:match("^(.-)=(.-)$")
     workspace = 'w0'
@@ -68,7 +78,7 @@ M.parse_project_line = function(line)
     title = title,
     path = path,
     workspace = workspace,
-    last_accessed = M.get_last_accessed_time(path),
+    last_accessed_time = last_accessed_time,
     activated = activated
   }
 end
@@ -76,23 +86,19 @@ end
 -- Parses path into project object (activated by default)
 M.get_project_from_path = function(path)
     -- `tostring` to use plenary path and paths defined as strings
-    local title = tostring(path):match("[^/]+$")
+    local title = tostring(path):match("[^/]+/?$")
     local workspace = 'w0'
     local activated = 1
     local line = title .. "=" .. path .. "=" .. workspace .. "=" .. activated
     return M.parse_project_line(line)
 end
 
--- Checks the last time a directory was last accessed
-M.get_last_accessed_time = function(path)
-  local expanded_path = vim.fn.expand(path)
-  local fs_stat = vim.loop.fs_stat(expanded_path)
-  return fs_stat and fs_stat.atime.sec or 0
-end
-
 -- Standardized way of storing project to file
 M.store_project = function(file, project)
   local line = project.title .. "=" .. project.path .. "=" .. project.workspace .. "=" .. project.activated .. "\n"
+  if project.last_accessed_time then
+    line = project.title .. "=" .. project.path .. "=" .. project.workspace .. "=" .. project.activated .. "=" .. project.last_accessed_time .. "\n"
+  end
   file:write(line)
 end
 
@@ -116,10 +122,38 @@ M.string_starts_with = function(text, start)
    return string.sub(text, 1, string.len(start)) == start
 end
 
+M.open_in_nvim_tree = function(project_path)
+    local status_ok, nvim_tree = pcall(require, "nvim-tree")
+    if status_ok then
+      nvim_tree.change_dir(project_path)
+      nvim_tree.open(project_path)
+      vim.cmd('wincmd p')
+    end
+end
+
+-- Update last accessed time on project change
+M.update_last_accessed_project_time = function(project_path)
+  local projects = M.get_project_objects()
+  local file = io.open(M.telescope_projects_file, "w")
+  for _, project in pairs(projects) do
+    if project.path == project_path then
+      project.last_accessed_time = os.time()
+    end
+    M.store_project(file, project)
+  end
+
+  io.close(file)
+end
+
 -- Change directory only when path exists
 M.change_project_dir = function(project_path)
   if Path:new(project_path):exists() then
+    M.update_last_accessed_project_time(project_path)
     vim.fn.execute("cd " .. project_path, "silent")
+    if sync_with_nvim_tree then
+      M.open_in_nvim_tree(project_path)
+    end
+
     return true
   else
     print("The path '" .. project_path .. "' does not exist")

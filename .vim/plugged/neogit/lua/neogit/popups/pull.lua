@@ -1,27 +1,29 @@
 local popup = require("neogit.lib.popup")
-local status = require 'neogit.status'
-local input = require 'neogit.lib.input'
+local status = require("neogit.status")
+local input = require("neogit.lib.input")
 local notif = require("neogit.lib.notification")
 local git = require("neogit.lib.git")
-local pull_lib = require 'neogit.lib.git.pull'
-local a = require 'plenary.async'
+local pull_lib = require("neogit.lib.git.pull")
+local a = require("plenary.async")
 
 local M = {}
 
 local function pull_from(popup, name, remote, branch)
   notif.create("Pulling from " .. name)
 
-  local res = pull_lib.pull_interactive(remote, branch, popup:to_cli())
+  local res = pull_lib.pull_interactive(remote, branch, popup:get_arguments())
 
-  if res.code == 0 then
+  if res and res.code == 0 then
     a.util.scheduler()
     notif.create("Pulled from " .. name)
-    status.refresh(true)
+    vim.cmd("do <nomodeline> User NeogitPullComplete")
   end
+  status.refresh(true, "pull_from")
 end
 
 function M.create()
-  local p = popup.builder()
+  local p = popup
+    .builder()
     :name("NeogitPullPopup")
     :switch("r", "rebase", "Rebase local commits", false)
     :action("p", "Pull from pushremote", function(popup)

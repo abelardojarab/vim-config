@@ -1,24 +1,17 @@
-local has_notify, notify = pcall(require, "notify")
-
 local a = vim.api
 local uv = vim.loop
 
-local M = {}
+local Iterator = require "nvim-tree.iterators.node-iterator"
+
+local M = {
+  debouncers = {},
+}
 
 M.is_windows = vim.fn.has "win32" == 1 or vim.fn.has "win32unix" == 1
+M.is_wsl = vim.fn.has "wsl" == 1
 
 function M.path_to_matching_str(path)
   return path:gsub("(%-)", "(%%-)"):gsub("(%.)", "(%%.)"):gsub("(%_)", "(%%_)")
-end
-
-function M.warn(msg)
-  vim.schedule(function()
-    if has_notify then
-      notify(msg, vim.log.levels.WARN, { title = "NvimTree" })
-    else
-      vim.notify("[NvimTree] " .. msg, vim.log.levels.WARN)
-    end
-  end)
 end
 
 function M.str_find(haystack, needle)
@@ -84,68 +77,157 @@ end
 
 M.path_separator = path_separator
 
-function M.clear_prompt()
-  vim.api.nvim_command "normal! :"
-end
-
-function M.get_user_input_char()
-  local c = vim.fn.getchar()
-  while type(c) ~= "number" do
-    c = vim.fn.getchar()
-  end
-  return vim.fn.nr2char(c)
-end
-
--- get the node from the tree that matches the predicate
+-- get the node and index of the node from the tree that matches the predicate.
+-- The explored nodes are those displayed on the view.
 -- @param nodes list of node
 -- @param fn    function(node): boolean
-function M.find_node(_nodes, _fn)
-  local function iter(nodes, fn)
-    local i = 1
-    for _, node in ipairs(nodes) do
-      if fn(node) then
-        return node, i
-      end
-      if node.open and #node.nodes > 0 then
-        local n, idx = iter(node.nodes, fn)
-        i = i + idx
-        if n then
-          return n, i
-        end
-      else
-        i = i + 1
-      end
-    end
-    return nil, i
-  end
-  local node, i = iter(_nodes, _fn)
-  i = require("nvim-tree.view").View.hide_root_folder and i - 1 or i
+function M.find_node(nodes, fn)
+  local node, i = Iterator.builder(nodes)
+    :matcher(fn)
+    :recursor(function(node)
+      return node.open and #node.nodes > 0 and node.nodes
+    end)
+    :iterate()
+  i = require("nvim-tree.view").is_root_folder_visible() and i or i - 1
+  i = require("nvim-tree.live-filter").filter and i + 1 or i
   return node, i
+end
+
+-- get the node in the tree state depending on the absolute path of the node
+-- (grouped or hidden too)
+function M.get_node_from_path(path)
+  local explorer = require("nvim-tree.core").get_explorer()
+
+  -- tree may not yet be loaded
+  if not explorer then
+    return
+  end
+
+  if explorer.absolute_path == path then
+    return explorer
+  end
+
+  return Iterator.builder(explorer.nodes)
+    :hidden()
+    :matcher(function(node)
+      return node.absolute_path == path or node.link_to == path
+    end)
+    :recursor(function(node)
+      if node.group_next then
+        return { node.group_next }
+      end
+      if node.nodes then
+        return node.nodes
+      end
+    end)
+    :iterate()
+end
+
+-- get the highest parent of grouped nodes
+function M.get_parent_of_group(node_)
+  local node = node_
+  while node.parent and node.parent.group_next do
+    node = node.parent
+  end
+  return node
+end
+
+-- return visible nodes indexed by line
+-- @param nodes_all list of node
+-- @param line_start first index
+---@return table
+function M.get_nodes_by_line(nodes_all, line_start)
+  local nodes_by_line = {}
+  local line = line_start
+
+  Iterator.builder(nodes_all)
+    :applier(function(node)
+      nodes_by_line[line] = node
+      line = line + 1
+    end)
+    :recursor(function(node)
+      return node.open == true and node.nodes
+    end)
+    :iterate()
+
+  return nodes_by_line
 end
 
 ---Matching executable files in Windows.
 ---@param ext string
 ---@return boolean
-local PATHEXT = vim.env.PATHEXT or ""
-local wexe = vim.split(PATHEXT:gsub("%.", ""), ";")
-local pathexts = {}
-for _, v in pairs(wexe) do
-  pathexts[v] = true
-end
-
 function M.is_windows_exe(ext)
-  return pathexts[ext:upper()]
+  if not M.pathexts then
+    if not vim.env.PATHEXT then
+      return false
+    end
+
+    local wexe = vim.split(vim.env.PATHEXT:gsub("%.", ""), ";")
+    M.pathexts = {}
+    for _, v in pairs(wexe) do
+      M.pathexts[v] = true
+    end
+  end
+
+  return M.pathexts[ext:upper()]
 end
 
-function M.rename_loaded_buffers(old_name, new_name)
+--- Check whether path maps to Windows filesystem mounted by WSL
+-- @param path string
+-- @return boolean
+function M.is_wsl_windows_fs_path(path)
+  -- Run 'wslpath' command to try translating WSL path to Windows path.
+  -- Consume stderr output as well because 'wslpath' can produce permission
+  -- errors on some files (e.g. temporary files in root of system drive).
+  local handle = io.popen('wslpath -w "' .. path .. '" 2>/dev/null')
+  if handle then
+    local output = handle:read "*a"
+    handle:close()
+
+    return string.find(output, "^\\\\wsl$\\") == nil
+  end
+
+  return false
+end
+
+--- Check whether extension is Windows executable under WSL
+-- @param ext string
+-- @return boolean
+function M.is_wsl_windows_fs_exe(ext)
+  if not vim.env.PATHEXT then
+    -- Extract executable extensions from within WSL.
+    -- Redirect stderr to null to silence warnings when
+    -- Windows command is executed from Linux filesystem:
+    -- > CMD.EXE was started with the above path as the current directory.
+    -- > UNC paths are not supported. Defaulting to Windows directory.
+    local handle = io.popen 'cmd.exe /c "echo %PATHEXT%" 2>/dev/null'
+    if handle then
+      vim.env.PATHEXT = handle:read "*a"
+      handle:close()
+    end
+  end
+
+  return M.is_windows_exe(ext)
+end
+
+function M.rename_loaded_buffers(old_path, new_path)
   for _, buf in pairs(a.nvim_list_bufs()) do
     if a.nvim_buf_is_loaded(buf) then
-      if a.nvim_buf_get_name(buf) == old_name then
-        a.nvim_buf_set_name(buf, new_name)
-        -- to avoid the 'overwrite existing file' error message on write
-        vim.api.nvim_buf_call(buf, function()
-          vim.cmd "silent! w!"
-        end)
+      local buf_name = a.nvim_buf_get_name(buf)
+      local exact_match = buf_name == old_path
+      local child_match = (
+        buf_name:sub(1, #old_path) == old_path and buf_name:sub(#old_path + 1, #old_path + 1) == path_separator
+      )
+      if exact_match or child_match then
+        a.nvim_buf_set_name(buf, new_path .. buf_name:sub(#old_path + 1))
+        -- to avoid the 'overwrite existing file' error message on write for
+        -- normal files
+        if a.nvim_buf_get_option(buf, "buftype") == "" then
+          a.nvim_buf_call(buf, function()
+            vim.cmd "silent! write!"
+            vim.cmd "edit"
+          end)
+        end
       end
     end
   end
@@ -169,15 +251,15 @@ end
 
 -- Create empty sub-tables if not present
 -- @param tbl to create empty inside of
--- @param sub dot separated string of sub-tables
+-- @param path dot separated string of sub-tables
 -- @return deepest sub-table
-function M.table_create_missing(tbl, sub)
+function M.table_create_missing(tbl, path)
   if tbl == nil then
     return nil
   end
 
   local t = tbl
-  for s in string.gmatch(sub, "([^%.]+)%.*") do
+  for s in string.gmatch(path, "([^%.]+)%.*") do
     if t[s] == nil then
       t[s] = {}
     end
@@ -185,6 +267,47 @@ function M.table_create_missing(tbl, sub)
   end
 
   return t
+end
+
+-- Move a value from src to dst if value is nil on dst
+-- @param src to copy from
+-- @param src_path dot separated string of sub-tables
+-- @param src_pos value pos
+-- @param dst to copy to
+-- @param dst_path dot separated string of sub-tables, created when missing
+-- @param dst_pos value pos
+function M.move_missing_val(src, src_path, src_pos, dst, dst_path, dst_pos)
+  local ok, err = pcall(vim.validate, {
+    src = { src, "table" },
+    src_path = { src_path, "string" },
+    src_pos = { src_pos, "string" },
+    dst = { dst, "table" },
+    dst_path = { dst_path, "string" },
+    dst_pos = { dst_pos, "string" },
+  })
+  if not ok then
+    M.notify.warn("move_missing_val: " .. (err or "invalid arguments"))
+  end
+
+  for pos in string.gmatch(src_path, "([^%.]+)%.*") do
+    if src[pos] and type(src[pos]) == "table" then
+      src = src[pos]
+    else
+      src = nil
+      break
+    end
+  end
+  local src_val = src and src[src_pos]
+  if src_val == nil then
+    return
+  end
+
+  dst = M.table_create_missing(dst, dst_path)
+  if dst[dst_pos] == nil then
+    dst[dst_pos] = src_val
+  end
+
+  src[src_pos] = nil
 end
 
 function M.format_bytes(bytes)
@@ -200,6 +323,150 @@ function M.format_bytes(bytes)
   pow = pow + 1
 
   return (units[pow] == nil) and (bytes .. "B") or (value .. units[pow])
+end
+
+function M.key_by(tbl, key)
+  local keyed = {}
+  for _, val in ipairs(tbl) do
+    keyed[val[key]] = val
+  end
+  return keyed
+end
+
+function M.bool_record(tbl, key)
+  local keyed = {}
+  for _, val in ipairs(tbl) do
+    keyed[val[key]] = true
+  end
+  return keyed
+end
+
+local function timer_stop_close(timer)
+  if timer:is_active() then
+    timer:stop()
+  end
+  if not timer:is_closing() then
+    timer:close()
+  end
+end
+
+---Execute callback timeout ms after the latest invocation with context.
+---Waiting invocations for that context will be discarded.
+---Invocation will be rescheduled while a callback is being executed.
+---Caller must ensure that callback performs the same or functionally equivalent actions.
+---
+---@param context string identifies the callback to debounce
+---@param timeout number ms to wait
+---@param callback function to execute on completion
+function M.debounce(context, timeout, callback)
+  -- all execution here is done in a synchronous context; no thread safety required
+
+  M.debouncers[context] = M.debouncers[context] or {}
+  local debouncer = M.debouncers[context]
+
+  -- cancel waiting or executing timer
+  if debouncer.timer then
+    timer_stop_close(debouncer.timer)
+  end
+
+  local timer = uv.new_timer()
+  debouncer.timer = timer
+  timer:start(timeout, 0, function()
+    timer_stop_close(timer)
+
+    -- reschedule when callback is running
+    if debouncer.executing then
+      M.debounce(context, timeout, callback)
+      return
+    end
+
+    -- call back at a safe time
+    debouncer.executing = true
+    vim.schedule(function()
+      callback()
+      debouncer.executing = false
+
+      -- no other timer waiting
+      if debouncer.timer == timer then
+        M.debouncers[context] = nil
+      end
+    end)
+  end)
+end
+
+function M.focus_file(path)
+  local _, i = M.find_node(require("nvim-tree.core").get_explorer().nodes, function(node)
+    return node.absolute_path == path
+  end)
+  require("nvim-tree.view").set_cursor { i + 1, 1 }
+end
+
+function M.get_win_buf_from_path(path)
+  for _, w in pairs(vim.api.nvim_tabpage_list_wins(0)) do
+    local b = vim.api.nvim_win_get_buf(w)
+    if vim.api.nvim_buf_get_name(b) == path then
+      return w, b
+    end
+  end
+  return nil, nil
+end
+
+function M.clear_prompt()
+  if vim.opt.cmdheight._value ~= 0 then
+    vim.cmd "normal! :"
+  end
+end
+
+-- return a new table with values from array
+function M.array_shallow_clone(array)
+  local to = {}
+  for _, v in ipairs(array) do
+    table.insert(to, v)
+  end
+  return to
+end
+
+-- remove item from array if it exists
+function M.array_remove(array, item)
+  for i, v in ipairs(array) do
+    if v == item then
+      table.remove(array, i)
+      break
+    end
+  end
+end
+
+function M.array_remove_nils(array)
+  return vim.tbl_filter(function(v)
+    return v ~= nil
+  end, array)
+end
+
+function M.inject_node(f)
+  return function()
+    f(require("nvim-tree.lib").get_node_at_cursor())
+  end
+end
+
+---Is the buffer named NvimTree_[0-9]+ a tree? filetype is "NvimTree" or not readable file.
+---This is cheap, as the readable test should only ever be needed when resuming a vim session.
+---@param bufnr number may be 0 or nil for current
+---@return boolean
+function M.is_nvim_tree_buf(bufnr)
+  if bufnr == nil then
+    bufnr = 0
+  end
+  if vim.fn.bufexists(bufnr) then
+    local bufname = a.nvim_buf_get_name(bufnr)
+    if vim.fn.fnamemodify(bufname, ":t"):match "^NvimTree_[0-9]+$" then
+      if vim.bo[bufnr].filetype == "NvimTree" then
+        return true
+      elseif vim.fn.filereadable(bufname) == 0 then
+        return true
+      end
+    end
+  end
+  return false
 end
 
 return M

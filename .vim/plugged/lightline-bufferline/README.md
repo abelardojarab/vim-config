@@ -89,6 +89,27 @@ The indicator to use for a modified buffer. Default is `' +'`.
 
 The indicator to use when there are buffers that are not shown on the bufferline because they didn't fit the available space. Default is `...`.
 
+##### `g:lightline#bufferline#max_width`
+
+The *more buffers* functionality determines the available space for the bufferline and calculates
+how many buffers can be shown until the *more buffers* indicator is displayed.
+The default function to calculate the available space for the buffers returns the number of columns: `&columns`.
+To customize the available space calculation this option can be set to the name of a custom function which will be used instead.
+
+The function receives no parameters and should return the amount of available space for the bufferline.
+For example if you know that you have exactly 80 columns space for the bufferline you can specify the following function:
+```viml
+function LightlineBufferlineMaxWidth()
+  return 80
+endfunction
+
+let g:lightline#bufferline#max_width = "LightlineBufferlineMaxWidth"
+```
+
+##### `g:lightline#bufferline#disable_more_buffers_indicator`
+
+Disables the more buffers indicator so that all buffers are always shown on the bufferline even if they don't fit the available space. Default is `0`.
+
 ##### `g:lightline#bufferline#read_only`
 
 The indicator to use for a read-only buffer. Default is `' -'`.
@@ -109,35 +130,38 @@ Valid values are:
 - `0`: No numbers
 - `1`: Buffer number as shown by the `:ls` command
 - `2`: Ordinal number (buffers are numbered from _1_ to _n_ sequentially)
-- `3`: Both buffer number and ordinal number next to each other
-- `4`: Both buffer number and ordinal number next to each other, where the oridinal number is shown before buffer number
+- `3`: Buffer number followed by ordinal number
+- `4`: Ordinal number followed by buffer number
 
-For ordinal number in option `2`, `3` and `4`, number maps `g:lightline#bufferline#number_map` and `g:lightline#bufferline#composed_number_map` are used as described below.
+The separator between ordinal and regular buffer number can be configured using the option `g:lightline#bufferline#ordinal_separator`.
+The separator between the buffer numbers and the buffer name can be configured using the option `g:lightline#bufferline#number_separator`.
 
-##### `g:lightline#bufferline#composed_number_map`
+For option `2`, `3` and `4` the number maps `g:lightline#bufferline#ordinal_number_map` and `g:lightline#bufferline#composed_ordinal_number_map` are used for ordinal numbers. For regular buffer numbers the number maps `g:lightline#bufferline#buffer_number_map` and `g:lightline#bufferline#composed_buffer_number_map` are used. The number maps are described below.
+
+##### `g:lightline#bufferline#composed_ordinal_number_map`
 
 Dictionary mapping ordinal numbers to their alternative character representations. Default is `{}`.
 
-For example, to use parenthized unicode numbers taken from [Enclosed Alphanumerics Unicode block](https://unicode.org/charts/nameslist/c_2460.html):
+For example, to use parenthesized unicode numbers taken from [Enclosed Alphanumerics Unicode block](https://unicode.org/charts/nameslist/c_2460.html):
 
 ```viml
-let g:lightline#bufferline#composed_number_map = {
+let g:lightline#bufferline#composed_ordinal_number_map = {
 \ 1:  '⑴ ', 2:  '⑵ ', 3:  '⑶ ', 4:  '⑷ ', 5:  '⑸ ',
 \ 6:  '⑹ ', 7:  '⑺ ', 8:  '⑻ ', 9:  '⑼ ', 10: '⑽ ',
 \ 11: '⑾ ', 12: '⑿ ', 13: '⒀ ', 14: '⒁ ', 15: '⒂ ',
 \ 16: '⒃ ', 17: '⒄ ', 18: '⒅ ', 19: '⒆ ', 20: '⒇ '}
 ```
 
-_Note: The option only applies when `g:lightline#bufferline#show_number` is set to `2` or `3`._
+_Note: The option only applies when `g:lightline#bufferline#show_number` is set to `2`, `3` or `4`._
 
-##### `g:lightline#bufferline#number_map`
+##### `g:lightline#bufferline#ordinal_number_map`
 
-Fallback dictionary mapping digits (0-9) which are used in ordinal number composing if the number is not mapped in `g:lightline#bufferline#composed_number_map`. Default is `{}`.
+Fallback dictionary mapping digits (0-9) which are used in ordinal number composing if the number is not mapped in `g:lightline#bufferline#composed_ordinal_number_map`. Default is `{}`.
 
 For example, to use unicode superscript numerals:
 
 ```viml
-let g:lightline#bufferline#number_map = {
+let g:lightline#bufferline#ordinal_number_map = {
 \ 0: '⁰', 1: '¹', 2: '²', 3: '³', 4: '⁴',
 \ 5: '⁵', 6: '⁶', 7: '⁷', 8: '⁸', 9: '⁹'}
 ```
@@ -145,12 +169,28 @@ let g:lightline#bufferline#number_map = {
 ... or unicode subscript numerals:
 
 ```viml
-let g:lightline#bufferline#number_map = {
+let g:lightline#bufferline#ordinal_number_map = {
 \ 0: '₀', 1: '₁', 2: '₂', 3: '₃', 4: '₄',
 \ 5: '₅', 6: '₆', 7: '₇', 8: '₈', 9: '₉'}
 ```
 
-_Note: The option only applies when `g:lightline#bufferline#show_number` is set to `2` or `3`._
+_Note: The option only applies when `g:lightline#bufferline#show_number` is set to `2`, `3` or `4`._
+
+##### `g:lightline#bufferline#composed_buffer_number_map`
+
+Dictionary mapping regular buffer numbers to their alternative character representations. Default is `{}`.
+
+See `g:lightline#bufferline#composed_ordinal_number_map` for example values.
+
+_Note: The option only applies when `g:lightline#bufferline#show_number` is set to `2`, `3` or `4`._
+
+##### `g:lightline#bufferline#buffer_number_map`
+
+Fallback dictionary mapping digits (0-9) which are used in regular buffer number composing if the number is not mapped in `g:lightline#bufferline#composed_buffer_number_map`. Default is `{}`.
+
+See `g:lightline#bufferline#ordinal_number_map` for example values.
+
+_Note: The option only applies when `g:lightline#bufferline#show_number` is set to `2`, `3` or `4`._
 
 ##### `g:lightline#bufferline#number_separator`
 
@@ -158,7 +198,7 @@ Defines the string which is used to separate the buffer number (if enabled) and 
 
 ##### `g:lightline#bufferline#ordinal_separator`
 
-Defines the string which is used to separate the buffer number and the oridinal number. Default is `''`.
+Defines the string which is used to separate the buffer number and the ordinal number. Default is `''`.
 
 ##### `g:lightline#bufferline#unnamed`
 
@@ -217,6 +257,19 @@ This option can be useful if you are also displaying tabs in the lightline tabli
 When more than one tab is opened, only buffers that are open in a window within the current tab are shown. When there
 is only one tab, all buffers are shown. Default is `0`.
 This option can be useful if you are also displaying tabs in the lightline tabline.
+
+##### `g:lightline#bufferline#buffer_filter`
+
+This can be set to the name of a custom buffer filter function which will be used in addition to the standard buffer filtering.
+The function receives the buffer number as parameter and should return `1` to include the buffer and `0` to hide the buffer in the bufferline.
+For example to hide all neovim terminal buffers use this code in your vim config:
+```viml
+function LightlineBufferlineFilter(buffer)
+  return getbufvar(a:buffer, '&buftype') !=# 'terminal'
+endfunction
+
+let g:lightline#bufferline#buffer_filter = "LightlineBufferlineFilter"
+```
 
 ##### `g:lightline#bufferline#margin_left`
 

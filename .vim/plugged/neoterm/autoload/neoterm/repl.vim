@@ -1,11 +1,26 @@
 let g:neoterm.repl = { 'loaded': 0 }
 
+function! s:has_same_shell(shell)
+  if !exists('g:neoterm_repl_same_shell') || g:neoterm_repl_same_shell <= 0
+    return 1
+  endif
+
+  for val in values(g:neoterm.instances)
+    if has_key(val, 'shell') && a:shell == val['shell']
+      return 1
+    endif
+  endfor
+
+  return 0
+endfunction
+
 function! g:neoterm.repl.instance() abort
   if !has_key(l:self, 'instance_id')
-    if !g:neoterm.has_any()
+    let l:shell = s:shell()
+    if !g:neoterm.has_any() || !s:has_same_shell(l:shell)
       call neoterm#new({
             \ 'handlers': neoterm#repl#handlers(),
-            \ 'shell': s:shell()
+            \ 'shell': l:shell
             \ })
     end
 
@@ -94,6 +109,10 @@ function! g:neoterm.repl.exec(command) abort
   catch /^Vim\%((\a\+)\)\=:E117/
     call g:neoterm.repl.instance().exec(add(l:command, g:neoterm_eof))
   endtry
+
+  if exists('*g:neoterm_callbacks.after_repl_exec')
+    call g:neoterm_callbacks.after_repl_exec()
+  endif
 endfunction
 
 function! s:bracketed_paste(command)

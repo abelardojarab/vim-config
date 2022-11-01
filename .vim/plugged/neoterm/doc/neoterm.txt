@@ -260,6 +260,11 @@ When set, the `%` will always be expanded to the file relative path instead of
 its absolute path.
 Default value: 0
 
+                                                     *g:neoterm_repl_same_shell*
+
+When set, neoterm will send REPL to instance with same shell command.
+Default value: `0`.
+
                                                            *g:neoterm_repl_ruby*
 
 Sets what ruby REPL will be used.
@@ -416,6 +421,20 @@ Save all buffers before executing a command
       wall
     endfunction
 <
+                                         *g:neoterm_callbacks.after_repl_exec()*
+
+This callback is called after neoterm sends a repl command to its terminal.
+
+- Example of usage:
+
+Avoid in insert mode once has autocmd like: `autocmd BufEnter term://* startinsert`
+>
+    let g:neoterm_callbacks = {}
+    function! g:neoterm_callbacks.after_repl_exec()
+      stopinsert
+    endfunction
+<
+
 ===============================================================================
 5. Operators                                                 *neoterm-operators*
 

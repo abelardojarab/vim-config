@@ -6,12 +6,10 @@ local _ = require("nui.utils")._
 local defaults = require("nui.utils").defaults
 local is_type = require("nui.utils").is_type
 
-local function prepare_items(items)
+local function calculate_initial_max_width(items)
   local max_width = 0
 
-  for index, item in ipairs(items) do
-    item._index = index
-
+  for _, item in ipairs(items) do
     local width = 0
     if is_type("string", item.text) then
       width = vim.api.nvim_strwidth(item.text)
@@ -24,7 +22,7 @@ local function prepare_items(items)
     end
   end
 
-  return items, max_width
+  return max_width
 end
 
 local default_keymap = {
@@ -83,14 +81,25 @@ local function make_default_prepare_node(menu)
 
   ---@type nui_menu_prepare_item
   local function default_prepare_node(node)
-    local text = is_type("string", node.text) and Text(node.text) or node.text
+    ---@type NuiText|NuiLine
+    local content = is_type("string", node.text) and Text(node.text) or node.text
 
     if node._type == "item" then
-      if text:width() > max_width then
-        text:set(_.truncate_text(text:content(), max_width))
+      if content:width() > max_width then
+        if is_type("function", content.set) then
+          ---@cast content NuiText
+          _.truncate_nui_text(content, max_width)
+        else
+          ---@cast content NuiLine
+          _.truncate_nui_line(content, max_width)
+        end
       end
 
-      return Line({ text })
+      local line = Line()
+
+      line:append(content)
+
+      return line
     end
 
     if node._type == "separator" then
@@ -99,14 +108,20 @@ local function make_default_prepare_node(menu)
 
       local sep_max_width = max_width - sep_char:width() * 2
 
-      if text:width() > sep_max_width then
-        text:set(_.truncate_text(text:content(), sep_max_width))
+      if content:width() > sep_max_width then
+        if is_type("function", content.set) then
+          ---@cast content NuiText
+          _.truncate_nui_text(content, sep_max_width)
+        else
+          ---@cast content NuiLine
+          _.truncate_nui_line(content, sep_max_width)
+        end
       end
 
       local left_gap_width, right_gap_width = _.calculate_gap_width(
         defaults(sep_text_align, "center"),
         sep_max_width,
-        text:width()
+        content:width()
       )
 
       local line = Line()
@@ -117,7 +132,7 @@ local function make_default_prepare_node(menu)
         line:append(Text(sep_char):set(string.rep(sep_char:content(), left_gap_width)))
       end
 
-      line:append(text)
+      line:append(content)
 
       if right_gap_width > 0 then
         line:append(Text(sep_char):set(string.rep(sep_char:content(), right_gap_width)))
@@ -141,20 +156,20 @@ local function focus_item(menu, direction, current_linenr)
   local next_linenr = nil
 
   if direction == "next" then
-    if curr_linenr == #menu._tree.nodes.root_ids then
+    if curr_linenr == #menu.tree.nodes.root_ids then
       next_linenr = 1
     else
       next_linenr = curr_linenr + 1
     end
   elseif direction == "prev" then
     if curr_linenr == 1 then
-      next_linenr = #menu._tree.nodes.root_ids
+      next_linenr = #menu.tree.nodes.root_ids
     else
       next_linenr = curr_linenr - 1
     end
   end
 
-  local next_node = menu._tree:get_node(next_linenr)
+  local next_node = menu.tree:get_node(next_linenr)
 
   if menu._.should_skip_item(next_node) then
     return focus_item(menu, direction, next_linenr)
@@ -166,15 +181,61 @@ local function focus_item(menu, direction, current_linenr)
   end
 end
 
----@param class NuiMenu
+--luacheck: push no max line length
+
+---@alias nui_menu_prepare_item nui_tree_prepare_node
+---@alias nui_menu_should_skip_item fun(node: NuiTreeNode): boolean
+---@alias nui_menu_internal nui_popup_internal|{ items: NuiTreeNode[], keymap: table<string,string[]>, sep: { char?: string|NuiText, text_align?: nui_t_text_align }, prepare_item: nui_menu_prepare_item, should_skip_item: nui_menu_should_skip_item }
+
+--luacheck: pop
+
+---@class NuiMenu: NuiPopup
+---@field private _ nui_menu_internal
+local Menu = Popup:extend("NuiMenu")
+
+---@param content? string|NuiText|NuiLine
+---@param options? { char?: string|NuiText, text_align?: nui_t_text_align }
+---@return NuiTreeNode
+function Menu.separator(content, options)
+  options = options or {}
+  return Tree.Node({
+    _id = tostring(math.random()),
+    _type = "separator",
+    _char = options.char,
+    _text_align = options.text_align,
+    text = defaults(content, ""),
+  })
+end
+
+---@param content string|NuiText|NuiLine
+---@param data? table
+---@return NuiTreeNode
+function Menu.item(content, data)
+  if not data then
+    ---@diagnostic disable-next-line: undefined-field
+    if is_type("table", content) and content.text then
+      ---@cast content table
+      data = content
+    else
+      data = { text = content }
+    end
+  else
+    data.text = content
+  end
+
+  data._type = "item"
+  data._id = data.id or tostring(math.random())
+
+  return Tree.Node(data)
+end
+
 ---@param popup_options table
 ---@param options table
----@return NuiMenu
-local function init(class, popup_options, options)
-  local items, max_width = prepare_items(options.lines)
+function Menu:init(popup_options, options)
+  local max_width = calculate_initial_max_width(options.lines)
 
   local width = math.max(math.min(max_width, defaults(options.max_width, 256)), defaults(options.min_width, 4))
-  local height = math.max(math.min(#items, defaults(options.max_height, 256)), defaults(options.min_height, 1))
+  local height = math.max(math.min(#options.lines, defaults(options.max_height, 256)), defaults(options.min_height, 1))
 
   popup_options = vim.tbl_deep_extend("force", {
     enter = true,
@@ -189,10 +250,9 @@ local function init(class, popup_options, options)
     },
   }, popup_options)
 
-  ---@type NuiMenu
-  local self = class.super.init(class, popup_options)
+  Menu.super.init(self, popup_options)
 
-  self._.items = items
+  self._.items = options.lines
   self._.keymap = parse_keymap(options.keymap)
 
   ---@param node NuiTreeNode
@@ -213,7 +273,7 @@ local function init(class, popup_options, options)
   local props = self.menu_props
 
   props.on_submit = function()
-    local item = self._tree:get_node()
+    local item = self.tree:get_node()
 
     self:unmount()
 
@@ -237,67 +297,10 @@ local function init(class, popup_options, options)
   props.on_focus_prev = function()
     focus_item(self, "prev")
   end
-
-  return self
-end
-
---luacheck: push no max line length
-
----@alias nui_menu_prepare_item nui_tree_prepare_node
----@alias nui_menu_should_skip_item fun(node: NuiTreeNode): boolean
----@alias nui_menu_internal nui_popup_internal|{ items: NuiTreeNode[], keymap: table<string,string[]>, sep: { char?: string|NuiText, text_align?: nui_t_text_align }, prepare_item: nui_menu_prepare_item, should_skip_item: nui_menu_should_skip_item }
-
---luacheck: pop
-
----@class NuiMenu: NuiPopup
----@field private super NuiPopup
----@field private _ nui_menu_internal
-local Menu = setmetatable({
-  super = Popup,
-}, {
-  __call = init,
-  __index = Popup,
-  __name = "NuiMenu",
-})
-
----@param text? string|NuiText
----@returns table NuiTreeNode
-function Menu.separator(text, options)
-  options = options or {}
-  return Tree.Node({
-    _type = "separator",
-    _char = options.char,
-    _text_align = options.text_align,
-    text = defaults(text, ""),
-  })
-end
-
----@param text string|NuiText
----@param data? table
----@returns table NuiTreeNode
-function Menu.item(text, data)
-  if not data then
-    ---@diagnostic disable-next-line: undefined-field
-    if is_type("table", text) and text.text then
-      data = text
-    else
-      data = { text = text }
-    end
-  else
-    data.text = text
-  end
-
-  data._type = "item"
-
-  return Tree.Node(data)
-end
-
-function Menu:new(popup_options, options)
-  return init(self, popup_options, options)
 end
 
 function Menu:mount()
-  self.super.mount(self)
+  Menu.super.mount(self)
 
   local props = self.menu_props
 
@@ -317,23 +320,26 @@ function Menu:mount()
     self:map("n", key, props.on_submit, { noremap = true, nowait = true })
   end
 
-  self._tree = Tree({
+  self.tree = Tree({
     winid = self.winid,
     ns_id = self.ns_id,
     nodes = self._.items,
     get_node_id = function(node)
-      return node._index
+      return node._id
     end,
     prepare_node = self._.prepare_item,
   })
 
-  self._tree:render()
+  ---@deprecated
+  self._tree = self.tree
+
+  self.tree:render()
 
   -- focus first item
-  for _, node_id in ipairs(self._tree.nodes.root_ids) do
-    local node = self._tree:get_node(node_id)
+  for linenr = 1, #self.tree.nodes.root_ids do
+    local node, target_linenr = self.tree:get_node(linenr)
     if not self._.should_skip_item(node) then
-      vim.api.nvim_win_set_cursor(self.winid, { node_id, 0 })
+      vim.api.nvim_win_set_cursor(self.winid, { target_linenr, 0 })
       self._.on_change(node)
       break
     end

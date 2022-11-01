@@ -42,6 +42,8 @@ local query_buf_var_name = "TSPlaygroundForBuf"
 local playground_ns = api.nvim_create_namespace "nvim-treesitter-playground"
 local query_hl_ns = api.nvim_create_namespace "nvim-treesitter-playground-query"
 
+local augroup = vim.api.nvim_create_augroup("TSPlayground", {})
+
 local function get_node_at_cursor(options)
   options = options or {}
 
@@ -179,30 +181,31 @@ local function setup_buf(for_buf)
   api.nvim_buf_set_option(buf, "filetype", "tsplayground")
   api.nvim_buf_set_var(buf, query_buf_var_name, for_buf)
 
-  vim.cmd(string.format("augroup TreesitterPlayground_%d", buf))
-  vim.cmd "au!"
-  vim.cmd(
-    string.format(
-      [[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.highlight_node(%d)]],
-      buf,
-      for_buf
-    )
-  )
-  vim.cmd(
-    string.format(
-      [[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_highlights(%d)]],
-      buf,
-      for_buf
-    )
-  )
-  vim.cmd(
-    string.format(
-      [[autocmd BufWinEnter <buffer=%d> lua require'nvim-treesitter-playground.internal'.update(%d)]],
-      buf,
-      for_buf
-    )
-  )
-  vim.cmd "augroup END"
+  vim.api.nvim_clear_autocmds { group = augroup, buffer = buf }
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    group = augroup,
+    buffer = buf,
+    callback = function()
+      require("nvim-treesitter-playground.internal").highlight_node(for_buf)
+    end,
+    desc = "TSPlayground: highlight node",
+  })
+  vim.api.nvim_create_autocmd("BufLeave", {
+    group = augroup,
+    buffer = buf,
+    callback = function()
+      require("nvim-treesitter-playground.internal").clear_highlights(for_buf)
+    end,
+    desc = "TSPlayground: clear highlights",
+  })
+  vim.api.nvim_create_autocmd("BufWinEnter", {
+    group = augroup,
+    buffer = buf,
+    callback = function()
+      require("nvim-treesitter-playground.internal").update(for_buf)
+    end,
+    desc = "TSPlayground: update",
+  })
 
   local config = configs.get_module "playground"
 
@@ -256,21 +259,23 @@ local function setup_query_editor(bufnr)
   api.nvim_buf_set_option(buf, "filetype", "query")
   api.nvim_buf_set_var(buf, query_buf_var_name, bufnr)
 
-  vim.cmd(
-    string.format(
-      [[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'.on_query_cursor_move(%d)]],
-      buf,
-      bufnr
-    )
-  )
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    group = augroup,
+    buffer = buf,
+    callback = function()
+      require("nvim-treesitter-playground.internal").on_query_cursor_move(bufnr)
+    end,
+    desc = "TSPlayground: on query cursor move",
+  })
 
-  api.nvim_buf_set_keymap(
-    buf,
-    "n",
-    "R",
-    string.format(':lua require "nvim-treesitter-playground.internal".update_query(%d, %d)<CR>', bufnr, buf),
-    { silent = true }
-  )
+  vim.keymap.set("n", "R", function()
+    require("nvim-treesitter-playground.internal").update_query(bufnr, buf)
+  end, {
+    silent = true,
+    buffer = buf,
+    desc = "TSPlayground: update query",
+  })
+
   api.nvim_buf_attach(buf, false, {
     on_lines = utils.debounce(function()
       M.update_query(bufnr, buf)
@@ -490,7 +495,11 @@ end
 
 function M.update_query(bufnr, query_bufnr)
   local query = table.concat(api.nvim_buf_get_lines(query_bufnr, 0, -1, false), "\n")
-  local matches = pl_query.parse(bufnr, query, M._entries[bufnr].focused_language_tree)
+  local ok, matches = pcall(pl_query.parse, bufnr, query, M._entries[bufnr].focused_language_tree)
+  if not ok then
+    vim.notify("playground: " .. vim.inspect(matches), vim.log.levels.ERROR)
+    return
+  end
   local capture_by_color = {}
   local index = 1
 
@@ -508,7 +517,7 @@ function M.update_query(bufnr, query_bufnr)
   for capture_match in ts_query.iter_group_results(query_bufnr, "captures") do
     table.insert(M._entries[bufnr].captures, capture_match.capture)
 
-    local capture = ts_utils.get_node_text(capture_match.capture.name.node)[1]
+    local capture = ts_utils.get_node_text(capture_match.capture.name.node, query_bufnr)[1]
 
     if not capture_by_color[capture] then
       capture_by_color[capture] = "TSPlaygroundCapture" .. index
@@ -743,28 +752,28 @@ function M.attach(bufnr)
     end, get_update_time)),
   })
 
-  vim.cmd(string.format("augroup TreesitterPlayground_%d", bufnr))
-  vim.cmd "au!"
-  vim.cmd(string.format(
-    -- luacheck: no max line length
-    [[autocmd CursorMoved <buffer=%d> lua require'nvim-treesitter-playground.internal'._highlight_playground_node_debounced(%d)]],
-    bufnr,
-    bufnr
-  ))
-  vim.cmd(
-    string.format(
-      [[autocmd BufLeave <buffer=%d> lua require'nvim-treesitter-playground.internal'.clear_playground_highlights(%d)]],
-      bufnr,
-      bufnr
-    )
-  )
-  vim.cmd "augroup END"
+  vim.api.nvim_clear_autocmds { group = augroup, buffer = bufnr }
+  vim.api.nvim_create_autocmd("CursorMoved", {
+    group = augroup,
+    buffer = bufnr,
+    callback = function()
+      require("nvim-treesitter-playground.internal")._highlight_playground_node_debounced(bufnr)
+    end,
+    desc = "TSPlayground: highlight playground node debounce",
+  })
+  vim.api.nvim_create_autocmd("BufLeave", {
+    group = augroup,
+    buffer = bufnr,
+    callback = function()
+      require("nvim-treesitter-playground.internal").clear_playground_highlights(bufnr)
+    end,
+    desc = "TSPlayground: clear playground highlights",
+  })
 end
 
 function M.detach(bufnr)
   clear_entry(bufnr)
-  vim.cmd(string.format("autocmd! TreesitterPlayground_%d CursorMoved", bufnr))
-  vim.cmd(string.format("autocmd! TreesitterPlayground_%d BufLeave", bufnr))
+  vim.api.nvim_clear_autocmds { group = augroup, buffer = bufnr, event = { "CursorMoved", "BufLeave" } }
 end
 
 return M

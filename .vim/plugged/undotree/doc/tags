@@ -16,6 +16,7 @@ undotree_HelpLine	undotree.txt	/*undotree_HelpLine*
 undotree_HighlightChangedText	undotree.txt	/*undotree_HighlightChangedText*
 undotree_HighlightSyntaxAdd	undotree.txt	/*undotree_HighlightSyntaxAdd*
 undotree_HighlightSyntaxChange	undotree.txt	/*undotree_HighlightSyntaxChange*
+undotree_HighlightSyntaxDel	undotree.txt	/*undotree_HighlightSyntaxDel*
 undotree_RelativeTimestamp	undotree.txt	/*undotree_RelativeTimestamp*
 undotree_SetFocusWhenToggle	undotree.txt	/*undotree_SetFocusWhenToggle*
 undotree_ShortIndicators	undotree.txt	/*undotree_ShortIndicators*

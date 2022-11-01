@@ -12,17 +12,30 @@
   (array)
   (argument_list)
   (case)
+  (while)
+  (until)
+  (for)
+  (begin)
+  (unless)
+  (assignment)
+  (parenthesized_statements)
 ] @indent
 
 [
-  "("
+  "end"
   ")"
-  "{"
+  "}"
+  "]"
+] @indent_end
+
+[
+  ")"
   "}"
   "["
   "]"
   (when)
   (elsif)
+  (else)
   "end"
 ] @branch
 

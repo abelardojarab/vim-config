@@ -114,7 +114,7 @@ Please note that no matter which mappings and menus you configure, your original
 ### Configuration
 
 - For neovim, [nvim-whichkey-setup.lua](https://github.com/AckslD/nvim-whichkey-setup.lua) provides a wrapper around vim-which-key to simplify configuration in lua.
-  It also solves issues (see #126) when the mapped command is more complex and makes it easy to also map `localleader` and keymaps in visual mode (see #155).
+  It also solves issues (see #126) when the mapped command is more complex and makes it easy to also map `localleader`.
 
 #### Minimal Configuration
 
@@ -177,6 +177,8 @@ nnoremap <leader>_b :echom '_b'<CR>
 let g:which_key_map['_'] = { 'name': 'which_key_ignore' }
 ```
 
+If you want to hide all mappings outside of the elements of the description dictionary, use: `let g:which_key_ignore_outside_mappings = 1`.
+
 #### Example
 
 You can configure a Dict for each prefix so that the display is more readable.
@@ -184,10 +186,16 @@ You can configure a Dict for each prefix so that the display is more readable.
 To make the guide pop up **Register the description dictionary for the prefix first**. Assuming `Space` is your leader key and the Dict for configuring `Space` is `g:which_key_map`:
 
 ```vim
-call which_key#register('<Space>', "g:which_key_map")
-
 nnoremap <silent> <leader> :<c-u>WhichKey '<Space>'<CR>
 vnoremap <silent> <leader> :<c-u>WhichKeyVisual '<Space>'<CR>
+
+call which_key#register('<Space>', "g:which_key_map")
+```
+
+The above registers the same description dictionary for both normal and visual modes. To use a separate description dictionary for each mode: add a third argument specifying which mode:
+```vim
+call which_key#register('<Space>', "g:which_key_map", 'n')
+call which_key#register('<Space>', "g:which_key_map_visual", 'v')
 ```
 
 The next step is to add items to `g:which_key_map`:
@@ -307,6 +315,28 @@ See more details about commands and options via `:h vim-which-key`.
 #### How to map some special keys like `<BS>`?
 
 See [#178](https://github.com/liuchengxu/vim-which-key/issues/178).
+
+#### How to set keybindings on filetype or other condition?
+
+You may use BufEnter/BufLeave [#132](https://github.com/liuchengxu/vim-which-key/issues/132), a `dictionary-function` [#209](https://github.com/liuchengxu/vim-which-key/pull/209), or *[experimental]* setup per buffer [#48](https://github.com/liuchengxu/vim-which-key/pull/48).
+
+#### How to map lua functions?
+
+This is possible via [nvim-whichkey-setup.lua](https://github.com/AckslD/nvim-whichkey-setup.lua). For example, if one wanted to map [spectre's](https://github.com/windwp/nvim-spectre) `open` to `<leader>S`, which in vimscipt would be `nnoremap <leader>S <cmd>lua require('spectre').open()<CR>`, one could use the following in one's `init.vim`:
+
+```vim
+lua<<EOF
+local wk = require('whichkey_setup')
+
+local keymap = {
+    S = {':lua require("spectre").open()<CR>', 'Search'},
+}
+
+wk.register_keymap('leader', keymap)
+EOF
+```
+
+NB that keymaps can only be registered once. The entirety of one's `vim-which-key` configuration must be ported to [nvim-whichkey-setup.lua](https://github.com/AckslD/nvim-whichkey-setup.lua) in order to enable this functionality.
 
 ## Credit
 

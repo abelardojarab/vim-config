@@ -1,3 +1,10 @@
+---@tag telescope.utils
+---@config { ["module"] = "telescope.utils" }
+
+---@brief [[
+--- Utilities for writing telescope pickers
+---@brief ]]
+
 local Path = require "plenary.path"
 local Job = require "plenary.job"
 
@@ -12,18 +19,6 @@ utils.get_separator = function()
   return Path.path.sep
 end
 
-utils.if_nil = function(x, was_nil, was_not_nil)
-  if x == nil then
-    return was_nil
-  else
-    return was_not_nil
-  end
-end
-
-utils.get_default = function(x, default)
-  return utils.if_nil(x, default, x)
-end
-
 utils.cycle = function(i, n)
   return i % n == 0 and n or i % n
 end
@@ -36,25 +31,6 @@ utils.get_lazy_default = function(x, defaulter, ...)
   end
 end
 
-local function reversedipairsiter(t, i)
-  i = i - 1
-  if i ~= 0 then
-    return i, t[i]
-  end
-end
-
-utils.reversed_ipairs = function(t)
-  return reversedipairsiter, t, #t + 1
-end
-
-utils.default_table_mt = {
-  __index = function(t, k)
-    local obj = {}
-    rawset(t, k, obj)
-    return obj
-  end,
-}
-
 utils.repeated_table = function(n, val)
   local empty_lines = {}
   for _ = 1, n do
@@ -63,40 +39,16 @@ utils.repeated_table = function(n, val)
   return empty_lines
 end
 
-utils.quickfix_items_to_entries = function(locations)
-  local results = {}
-
-  for _, entry in ipairs(locations) do
-    local vimgrep_str = entry.vimgrep_str
-      or string.format(
-        "%s:%s:%s: %s",
-        vim.fn.fnamemodify(entry.display_filename or entry.filename, ":."),
-        entry.lnum,
-        entry.col,
-        entry.text
-      )
-
-    table.insert(results, {
-      valid = true,
-      value = entry,
-      ordinal = vimgrep_str,
-      display = vimgrep_str,
-
-      start = entry.start,
-      finish = entry.finish,
-    })
-  end
-
-  return results
-end
-
 utils.filter_symbols = function(results, opts)
   local has_ignore = opts.ignore_symbols ~= nil
   local has_symbols = opts.symbols ~= nil
   local filtered_symbols
 
   if has_symbols and has_ignore then
-    error "Either opts.symbols or opts.ignore_symbols, can't process opposing options at the same time!"
+    utils.notify("filter_symbols", {
+      msg = "Either opts.symbols or opts.ignore_symbols, can't process opposing options at the same time!",
+      level = "ERROR",
+    })
     return
   elseif not (has_ignore or has_symbols) then
     return results
@@ -105,7 +57,10 @@ utils.filter_symbols = function(results, opts)
       opts.ignore_symbols = { opts.ignore_symbols }
     end
     if type(opts.ignore_symbols) ~= "table" then
-      print "Please pass ignore_symbols as either a string or a list of strings"
+      utils.notify("filter_symbols", {
+        msg = "Please pass ignore_symbols as either a string or a list of strings",
+        level = "ERROR",
+      })
       return
     end
 
@@ -118,7 +73,10 @@ utils.filter_symbols = function(results, opts)
       opts.symbols = { opts.symbols }
     end
     if type(opts.symbols) ~= "table" then
-      print "Please pass filtering symbols as either a string or a list of strings"
+      utils.notify("filter_symbols", {
+        msg = "Please pass filtering symbols as either a string or a list of strings",
+        level = "ERROR",
+      })
       return
     end
 
@@ -159,10 +117,16 @@ utils.filter_symbols = function(results, opts)
   -- print message that filtered_symbols is now empty
   if has_symbols then
     local symbols = table.concat(opts.symbols, ", ")
-    print(string.format("%s symbol(s) were not part of the query results", symbols))
+    utils.notify("filter_symbols", {
+      msg = string.format("%s symbol(s) were not part of the query results", symbols),
+      level = "WARN",
+    })
   elseif has_ignore then
     local symbols = table.concat(opts.ignore_symbols, ", ")
-    print(string.format("%s ignore_symbol(s) have removed everything from the query result", symbols))
+    utils.notify("filter_symbols", {
+      msg = string.format("%s ignore_symbol(s) have removed everything from the query result", symbols),
+      level = "WARN",
+    })
   end
 end
 
@@ -210,21 +174,23 @@ end)()
 
 utils.path_tail = (function()
   local os_sep = utils.get_separator()
-  local match_string = "[^" .. os_sep .. "]*$"
 
   return function(path)
-    return string.match(path, match_string)
+    for i = #path, 1, -1 do
+      if path:sub(i, i) == os_sep then
+        return path:sub(i + 1, -1)
+      end
+    end
+    return path
   end
 end)()
 
 utils.is_path_hidden = function(opts, path_display)
-  path_display = path_display or utils.get_default(opts.path_display, require("telescope.config").values.path_display)
+  path_display = path_display or vim.F.if_nil(opts.path_display, require("telescope.config").values.path_display)
 
   return path_display == nil
     or path_display == "hidden"
-    or type(path_display) ~= "table"
-    or vim.tbl_contains(path_display, "hidden")
-    or path_display.hidden
+    or type(path_display) == "table" and (vim.tbl_contains(path_display, "hidden") or path_display.hidden)
 end
 
 local is_uri = function(filename)
@@ -237,6 +203,16 @@ local calc_result_length = function(truncate_len)
   return type(truncate_len) == "number" and len - truncate_len or len
 end
 
+--- Transform path is a util function that formats a path based on path_display
+--- found in `opts` or the default value from config.
+--- It is meant to be used in make_entry to have a uniform interface for
+--- builtins as well as extensions utilizing the same user configuration
+--- Note: It is only supported inside `make_entry`/`make_display` the use of
+--- this function outside of telescope might yield to undefined behavior and will
+--- not be addressed by us
+---@param opts table: The opts the users passed into the picker. Might contains a path_display key
+---@param path string: The path that should be formated
+---@return string: The transformed path ready to be displayed
 utils.transform_path = function(opts, path)
   if path == nil then
     return
@@ -245,7 +221,7 @@ utils.transform_path = function(opts, path)
     return path
   end
 
-  local path_display = utils.get_default(opts.path_display, require("telescope.config").values.path_display)
+  local path_display = vim.F.if_nil(opts.path_display, require("telescope.config").values.path_display)
 
   local transformed_path = path
 
@@ -284,7 +260,10 @@ utils.transform_path = function(opts, path)
         if opts.__length == nil then
           opts.__length = calc_result_length(path_display.truncate)
         end
-        transformed_path = truncate(transformed_path, opts.__length, nil, -1)
+        if opts.__prefix == nil then
+          opts.__prefix = 0
+        end
+        transformed_path = truncate(transformed_path, opts.__length - opts.__prefix, nil, -1)
       end
     end
 
@@ -416,22 +395,30 @@ end
 
 function utils.get_os_command_output(cmd, cwd)
   if type(cmd) ~= "table" then
-    print "Telescope: [get_os_command_output]: cmd has to be a table"
+    utils.notify("get_os_command_output", {
+      msg = "cmd has to be a table",
+      level = "ERROR",
+    })
     return {}
   end
   local command = table.remove(cmd, 1)
   local stderr = {}
-  local stdout, ret = Job
-    :new({
-      command = command,
-      args = cmd,
-      cwd = cwd,
-      on_stderr = function(_, data)
-        table.insert(stderr, data)
-      end,
-    })
-    :sync()
+  local stdout, ret = Job:new({
+    command = command,
+    args = cmd,
+    cwd = cwd,
+    on_stderr = function(_, data)
+      table.insert(stderr, data)
+    end,
+  }):sync()
   return stdout, ret, stderr
+end
+
+function utils.win_set_buf_noautocmd(win, buf)
+  local save_ei = vim.o.eventignore
+  vim.o.eventignore = "all"
+  vim.api.nvim_win_set_buf(win, buf)
+  vim.o.eventignore = save_ei
 end
 
 local load_once = function(f)
@@ -459,13 +446,13 @@ utils.transform_devicons = load_once(function()
         return display
       end
 
-      local icon, icon_highlight = devicons.get_icon(filename, string.match(filename, "%a+$"), { default = true })
+      local icon, icon_highlight = devicons.get_icon(utils.path_tail(filename), nil, { default = true })
       local icon_display = (icon or " ") .. " " .. (display or "")
 
       if conf.color_devicons then
         return icon_display, icon_highlight
       else
-        return icon_display
+        return icon_display, nil
       end
     end
   else
@@ -489,11 +476,11 @@ utils.get_devicons = load_once(function()
         return ""
       end
 
-      local icon, icon_highlight = devicons.get_icon(filename, string.match(filename, "%a+$"), { default = true })
+      local icon, icon_highlight = devicons.get_icon(utils.path_tail(filename), nil, { default = true })
       if conf.color_devicons then
         return icon, icon_highlight
       else
-        return icon
+        return icon, nil
       end
     end
   else
@@ -502,5 +489,27 @@ utils.get_devicons = load_once(function()
     end
   end
 end)
+
+--- Telescope Wrapper around vim.notify
+---@param funname string: name of the function that will be
+---@param opts table: opts.level string, opts.msg string, opts.once bool
+utils.notify = function(funname, opts)
+  opts.once = vim.F.if_nil(opts.once, false)
+  local level = vim.log.levels[opts.level]
+  if not level then
+    error("Invalid error level", 2)
+  end
+  local notify_fn = opts.once and vim.notify_once or vim.notify
+  notify_fn(string.format("[telescope.%s]: %s", funname, opts.msg), level, {
+    title = "telescope.nvim",
+  })
+end
+
+utils.__warn_no_selection = function(name)
+  utils.notify(name, {
+    msg = "Nothing currently selected",
+    level = "WARN",
+  })
+end
 
 return utils

@@ -45,7 +45,11 @@
 ] @branch
 (statement_block "{" @branch)
 
+["}" "]"] @indent_end
+
 [
   (comment)
   (template_string)
 ] @ignore
+
+(ERROR) @auto

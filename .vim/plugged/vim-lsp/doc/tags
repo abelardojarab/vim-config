@@ -30,7 +30,7 @@
 :LspPreviousWarning	vim-lsp.txt	/*:LspPreviousWarning*
 :LspReferences	vim-lsp.txt	/*:LspReferences*
 :LspRename	vim-lsp.txt	/*:LspRename*
-:LspSemanticScopes	vim-lsp.txt	/*:LspSemanticScopes*
+:LspSemanticHighlightGroups	vim-lsp.txt	/*:LspSemanticHighlightGroups*
 :LspStatus	vim-lsp.txt	/*:LspStatus*
 :LspStopServer	vim-lsp.txt	/*:LspStopServer*
 :LspTypeDefinition	vim-lsp.txt	/*:LspTypeDefinition*
@@ -70,9 +70,13 @@ g:lsp_get_supported_capabilities	vim-lsp.txt	/*g:lsp_get_supported_capabilities*
 g:lsp_hover_conceal	vim-lsp.txt	/*g:lsp_hover_conceal*
 g:lsp_hover_ui	vim-lsp.txt	/*g:lsp_hover_ui*
 g:lsp_ignorecase	vim-lsp.txt	/*g:lsp_ignorecase*
+g:lsp_inlay_hints_delay	vim-lsp.txt	/*g:lsp_inlay_hints_delay*
+g:lsp_inlay_hints_enabled	vim-lsp.txt	/*g:lsp_inlay_hints_enabled*
+g:lsp_inlay_hints_mode	vim-lsp.txt	/*g:lsp_inlay_hints_mode*
 g:lsp_insert_text_enabled	vim-lsp.txt	/*g:lsp_insert_text_enabled*
 g:lsp_log_file	vim-lsp.txt	/*g:lsp_log_file*
 g:lsp_log_verbose	vim-lsp.txt	/*g:lsp_log_verbose*
+g:lsp_max_buffer_size	vim-lsp.txt	/*g:lsp_max_buffer_size*
 g:lsp_peek_alignment	vim-lsp.txt	/*g:lsp_peek_alignment*
 g:lsp_preview_autoclose	vim-lsp.txt	/*g:lsp_preview_autoclose*
 g:lsp_preview_doubletap	vim-lsp.txt	/*g:lsp_preview_doubletap*
@@ -80,6 +84,7 @@ g:lsp_preview_float	vim-lsp.txt	/*g:lsp_preview_float*
 g:lsp_preview_keep_focus	vim-lsp.txt	/*g:lsp_preview_keep_focus*
 g:lsp_preview_max_height	vim-lsp.txt	/*g:lsp_preview_max_height*
 g:lsp_preview_max_width	vim-lsp.txt	/*g:lsp_preview_max_width*
+g:lsp_semantic_delay	vim-lsp.txt	/*g:lsp_semantic_delay*
 g:lsp_semantic_enabled	vim-lsp.txt	/*g:lsp_semantic_enabled*
 g:lsp_show_message_log_level	vim-lsp.txt	/*g:lsp_show_message_log_level*
 g:lsp_show_message_request_enabled	vim-lsp.txt	/*g:lsp_show_message_request_enabled*
@@ -96,6 +101,7 @@ g:lsp_use_event_queue	vim-lsp.txt	/*g:lsp_use_event_queue*
 g:lsp_work_done_progress_enabled	vim-lsp.txt	/*g:lsp_work_done_progress_enabled*
 lsp#disable()	vim-lsp.txt	/*lsp#disable()*
 lsp#disable_diagnostics_for_buffer()	vim-lsp.txt	/*lsp#disable_diagnostics_for_buffer()*
+lsp#document_hover_preview_winid()	vim-lsp.txt	/*lsp#document_hover_preview_winid()*
 lsp#enable()	vim-lsp.txt	/*lsp#enable()*
 lsp#enable_diagnostic_for_buffer()	vim-lsp.txt	/*lsp#enable_diagnostic_for_buffer()*
 lsp#get_buffer_diagnostics_counts()	vim-lsp.txt	/*lsp#get_buffer_diagnostics_counts()*
@@ -134,6 +140,7 @@ vim-lsp-configure-wiki	vim-lsp.txt	/*vim-lsp-configure-wiki*
 vim-lsp-contents	vim-lsp.txt	/*vim-lsp-contents*
 vim-lsp-folding	vim-lsp.txt	/*vim-lsp-folding*
 vim-lsp-functions	vim-lsp.txt	/*vim-lsp-functions*
+vim-lsp-healthcheck	vim-lsp.txt	/*vim-lsp-healthcheck*
 vim-lsp-install	vim-lsp.txt	/*vim-lsp-install*
 vim-lsp-introduction	vim-lsp.txt	/*vim-lsp-introduction*
 vim-lsp-language-servers	vim-lsp.txt	/*vim-lsp-language-servers*

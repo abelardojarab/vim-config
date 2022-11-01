@@ -1,4 +1,4 @@
-# vim-airline 
+# vim-airline
 
 [![Say Thanks!](https://img.shields.io/badge/Say%20Thanks-!-1EAEDB.svg)](https://saythanks.io/to/cb%40256bit.org)
 [![reviewdog](https://github.com/vim-airline/vim-airline/workflows/reviewdog/badge.svg?branch=master&event=push)](https://github.com/vim-airline/vim-airline/actions?query=workflow%3Areviewdog+event%3Apush+branch%3Amaster)
@@ -309,7 +309,7 @@ If you are interested in becoming a maintainer (we always welcome more maintaine
 [MIT License][58]. Copyright (c) 2013-2021 Bailey Ling & Contributors.
 
 [1]: https://github.com/Lokaltog/vim-powerline
-[2]: https://github.com/Lokaltog/powerline
+[2]: https://github.com/powerline/powerline
 [3]: https://github.com/Lokaltog/powerline-fonts
 [4]: https://github.com/tpope/vim-fugitive
 [5]: https://github.com/scrooloose/syntastic

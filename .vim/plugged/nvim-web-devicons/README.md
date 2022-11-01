@@ -10,7 +10,13 @@ colors for each icon.
 ## Installation
 
 ```vim
-Plug 'kyazdani42/nvim-web-devicons'
+Plug 'nvim-tree/nvim-web-devicons'
+```
+
+or with [packer.nvim](https://github.com/wbthomason/packer.nvim)
+
+```
+use 'nvim-tree/nvim-web-devicons'
 ```
 
 ## Usage
@@ -35,6 +41,9 @@ require'nvim-web-devicons'.setup {
     name = "Zsh"
   }
  };
+ -- globally enable different highlight colors per icon (default to true)
+ -- if set to false all icons will have the default icon's color
+ color_icons = true;
  -- globally enable default icons (default to false)
  -- will get overriden by `get_icons` option
  default = true;
@@ -108,3 +117,18 @@ You can override the default icon with the `set_default_icon(icon, color)` funct
 ```lua
 require("nvim-web-devicons").set_default_icon('', '#6d8086')
 ```
+
+### Getting icons by filetype
+
+You can get the icon and colors associated with a filetype using the `by_filetype` functions:
+
+```lua
+require("nvim-web-devicons").get_icon_by_filetype(filetype, opts)
+require("nvim-web-devicons").get_icon_colors_by_filetype(filetype, opts)
+require("nvim-web-devicons").get_icon_color_by_filetype(filetype, opts)
+require("nvim-web-devicons").get_icon_cterm_color_by_filetype(filetype, opts)
+```
+
+These functions are the same as their counterparts without the `_by_filetype` suffix, but they take a filetype instead of a name/extension.
+
+You can also use `get_icon_name_by_filetype(filetype)` to get the icon name associated with the filetype.

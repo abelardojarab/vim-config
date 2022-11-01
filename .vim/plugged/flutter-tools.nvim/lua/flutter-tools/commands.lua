@@ -7,38 +7,32 @@ local executable = require("flutter-tools.executable")
 local dev_tools = require("flutter-tools.dev_tools")
 local lsp = require("flutter-tools.lsp")
 local job_runner = require("flutter-tools.runners.job_runner")
-local dap_runner = require("flutter-tools.runners.dap_runner")
+local debugger_runner = require("flutter-tools.runners.debugger_runner")
 local dev_log = require("flutter-tools.log")
 local dap_ok, dap = pcall(require, "dap")
 
 local M = {}
 
----@type table
+---@type table?
 local current_device = nil
 
 ---@class FlutterRunner
 ---@field is_running fun():boolean
----@field run fun(paths:table, args:table, cwd:string, on_run_data:fun(is_err:boolean, data:string), on_run_exit:fun(data:string[]))
+---@field run fun(runner: FlutterRunner, paths:table, args:table, cwd:string, on_run_data:fun(is_err:boolean, data:string), on_run_exit:fun(data:string[]))
 ---@field cleanup fun()
----@field send fun(cmd:string)
+---@field send fun(runner: FlutterRunner, cmd:string, quiet: boolean?)
 
----@type FlutterRunner
+---@type FlutterRunner?
 local runner = nil
 
-function M.use_dap_runner()
-  local dap_requested = config.get("debugger").run_via_dap
-  if dap_requested then
-    if not dap_ok then
-      ui.notify(
-        { "dap runner was request but nvim-dap is not installed!", dap },
-        { level = ui.ERROR }
-      )
-      return false
-    end
-    return true
-  else
-    return false
-  end
+function M.use_debugger_runner()
+  if not config.get("debugger").run_via_dap then return false end
+  if dap_ok then return true end
+  ui.notify(
+    { "debugger runner was request but nvim-dap is not installed!", dap },
+    { level = ui.ERROR }
+  )
+  return false
 end
 
 function M.current_device()
@@ -50,9 +44,7 @@ function M.is_running()
 end
 
 local function match_error_string(line)
-  if not line then
-    return false
-  end
+  if not line then return false end
   -- match the error string if no devices are setup
   if line:match("No supported devices connected") ~= nil then
     -- match the error string returned if multiple devices are matched
@@ -63,13 +55,11 @@ local function match_error_string(line)
 end
 
 ---@param lines string[]
----@return boolean, string
+---@return boolean, string?
 local function has_recoverable_error(lines)
   for _, line in pairs(lines) do
     local match, msg = match_error_string(line)
-    if match then
-      return match, msg
-    end
+    if match then return match, msg end
   end
   return false, nil
 end
@@ -78,16 +68,12 @@ end
 ---@param is_err boolean if this is stdout or stderr
 local function on_run_data(is_err, data)
   local dev_log_conf = config.get("dev_log")
-  if is_err then
-    ui.notify({ data }, { level = ui.ERROR, timeout = 5000 })
-  end
+  if is_err then ui.notify({ data }, { level = ui.ERROR, timeout = 5000, source = "process" }) end
   dev_log.log(data, dev_log_conf)
 end
 
 local function shutdown()
-  if runner ~= nil then
-    runner:cleanup()
-  end
+  if runner ~= nil then runner:cleanup() end
   runner = nil
   current_device = nil
   dev_tools.on_flutter_shutdown()
@@ -122,12 +108,18 @@ function M.run_command(args)
   M.run({ args = args })
 end
 
+local function check_if_web(args)
+  for _, arg in ipairs(args) do
+    local formatted = arg:lower()
+    if formatted:match("chrome") or formatted:match("web") then return true end
+  end
+  return false
+end
+
 ---Run the flutter application
 ---@param opts table
 function M.run(opts)
-  if M.is_running() then
-    return ui.notify({ "Flutter is already running!" })
-  end
+  if M.is_running() then return ui.notify({ "Flutter is already running!" }) end
   opts = opts or {}
   local device = opts.device
   local cmd_args = opts.args
@@ -135,57 +127,48 @@ function M.run(opts)
   executable.get(function(paths)
     local args = cli_args or {}
     if not cli_args then
-      if not M.use_dap_runner() then
-        vim.list_extend(args, { "run" })
-      end
-      if not cmd_args and device and device.id then
-        vim.list_extend(args, { "-d", device.id })
-      end
+      if not M.use_debugger_runner() then vim.list_extend(args, { "run" }) end
+      if not cmd_args and device and device.id then vim.list_extend(args, { "-d", device.id }) end
 
-      if cmd_args then
-        vim.list_extend(args, cmd_args)
-      end
+      if cmd_args then vim.list_extend(args, cmd_args) end
 
       local dev_url = dev_tools.get_url()
-      if dev_url then
-        vim.list_extend(args, { "--devtools-server-address", dev_url })
-      end
+      if dev_url then vim.list_extend(args, { "--devtools-server-address", dev_url }) end
     end
+    -- NOTE: debugging does not currently work with flutter web
+    local is_web = check_if_web(args)
+    if not vim.tbl_contains(args, "run") and is_web then table.insert(args, 1, "run") end
     ui.notify({ "Starting flutter project..." })
-    runner = M.use_dap_runner() and dap_runner or job_runner
+    runner = (M.use_debugger_runner() and not is_web) and debugger_runner or job_runner
     runner:run(paths, args, lsp.get_lsp_root_dir(), on_run_data, on_run_exit)
   end)
 end
 
 ---@param cmd string
----@param quiet boolean
+---@param quiet boolean?
 ---@param on_send function|nil
 local function send(cmd, quiet, on_send)
-  if M.is_running() then
+  if M.is_running() and runner then
     runner:send(cmd, quiet)
-    if on_send then
-      on_send()
-    end
+    if on_send then on_send() end
   elseif not quiet then
     ui.notify({ "Sorry! Flutter is not running" })
   end
 end
 
----@param quiet boolean
+---@param quiet boolean?
 function M.reload(quiet)
   send("reload", quiet)
 end
 
----@param quiet boolean
+---@param quiet boolean?
 function M.restart(quiet)
   send("restart", quiet, function()
-    if not quiet then
-      ui.notify({ "Restarting..." }, { timeout = 1500 })
-    end
+    if not quiet then ui.notify({ "Restarting..." }, { timeout = 1500 }) end
   end)
 end
 
----@param quiet boolean
+---@param quiet boolean?
 function M.quit(quiet)
   send("quit", quiet, function()
     if not quiet then
@@ -195,12 +178,12 @@ function M.quit(quiet)
   end)
 end
 
----@param quiet boolean
+---@param quiet boolean?
 function M.visual_debug(quiet)
   send("visual_debug", quiet)
 end
 
----@param quiet boolean
+---@param quiet boolean?
 function M.detach(quiet)
   send("detach", quiet)
 end
@@ -223,6 +206,16 @@ function M.copy_profiler_url()
   end
 end
 
+---@param quiet boolean?
+function M.open_dev_tools(quiet)
+  send("open_dev_tools", quiet)
+end
+
+---@param quiet boolean
+function M.generate(quiet)
+  send("generate", quiet)
+end
+
 ---@param quiet boolean
 function M.widget_inspector(quiet)
   send("inspect", quiet)
@@ -243,7 +236,7 @@ local function on_pub_get(result, err)
   ui.notify(result, { timeout = timeout })
 end
 
----@type Job
+---@type Job?
 local pub_get_job = nil
 
 function M.pub_get()
@@ -267,7 +260,7 @@ function M.pub_get()
   end
 end
 
----@type Job
+---@type Job?
 local pub_upgrade_job = nil
 
 --- Take arguments from the commandline and pass
@@ -283,9 +276,7 @@ function M.pub_upgrade(cmd_args)
     executable.flutter(function(cmd)
       local notify_timeout = 10000
       local args = { "pub", "upgrade" }
-      if cmd_args then
-        vim.list_extend(args, cmd_args)
-      end
+      if cmd_args then vim.list_extend(args, cmd_args) end
       pub_upgrade_job = Job:new({ command = cmd, args = args, cwd = lsp.get_lsp_root_dir() })
       pub_upgrade_job:after_success(vim.schedule_wrap(function(j)
         ui.notify(j:result(), { timeout = notify_timeout })
@@ -304,7 +295,7 @@ end
 -- FVM commands
 -----------------------------------------------------------------------------//
 
----@type Job
+---@type Job?
 local fvm_list_job = nil
 
 --- Returns table<{name: string, status: active|global|nil}>
@@ -344,7 +335,7 @@ function M.fvm_list(callback)
   end
 end
 
----@type Job
+---@type Job?
 local fvm_use_job = nil
 
 function M.fvm_use(sdk_name)

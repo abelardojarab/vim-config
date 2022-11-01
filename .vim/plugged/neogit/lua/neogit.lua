@@ -21,9 +21,9 @@ local neogit = {
     opts = opts or {}
     if opts[1] ~= nil then
       local popup_name = opts[1]
-      local popup = require("neogit.popups." .. popup_name)
+      local has_pop, popup = pcall(require, "neogit.popups." .. popup_name)
 
-      if popup == nil then
+      if not has_pop then
         vim.api.nvim_err_writeln("Invalid popup '" .. popup_name .. "'")
       else
         popup.create()
@@ -54,7 +54,18 @@ local neogit = {
       config.values.mappings.status["p"] = ""
     end
     hl.setup()
-  end
+
+    require("neogit.autocmds").setup()
+  end,
+  complete = function(arglead)
+    if arglead:find("^kind=") then
+      return { "kind=replace", "kind=tab", "kind=split", "kind=split_above", "kind=vsplit", "kind=floating" }
+    end
+    -- Only complete arguments that start with arglead
+    return vim.tbl_filter(function(arg)
+      return arg:match("^" .. arglead)
+    end, { "kind=", "cwd=", "commit" })
+  end,
 }
 
 neogit.setup()

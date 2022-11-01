@@ -29,10 +29,6 @@ function M.init()
       end,
     },
   }
-
-  vim.cmd [[
-    command! TSHighlightCapturesUnderCursor :lua require'nvim-treesitter-playground.hl-info'.show_hl_captures()<cr>
-  ]]
 end
 
 return M

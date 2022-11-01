@@ -9,11 +9,16 @@ let s:filename_modifier   = get(g:, 'lightline#bufferline#filename_modifier', ':
 let s:min_buffer_count    = get(g:, 'lightline#bufferline#min_buffer_count', 0)
 let s:min_tab_count       = get(g:, 'lightline#bufferline#min_tab_count', 0)
 let s:filter_by_tabpage   = get(g:, 'lightline#bufferline#filter_by_tabpage', 0)
+let s:buffer_filter       = get(g:, 'lightline#bufferline#buffer_filter', 's:buffer_filter_noop')
 let s:auto_hide           = get(g:, 'lightline#bufferline#auto_hide', 0)
+let s:max_width_function  = get(g:, 'lightline#bufferline#max_width', 's:max_width')
+let s:disable_more_buffers_indicator = get(g:, 'lightline#bufferline#disable_more_buffers_indicator', 0)
 let s:margin_left         = get(g:, 'lightline#bufferline#margin_left', 0)
 let s:margin_right        = get(g:, 'lightline#bufferline#margin_right', 0)
-let s:number_map          = get(g:, 'lightline#bufferline#number_map', {})
-let s:composed_number_map = get(g:, 'lightline#bufferline#composed_number_map', {})
+let s:ordinal_number_map  = get(g:, 'lightline#bufferline#ordinal_number_map', get(g:, 'lightline#bufferline#number_map', {}))
+let s:buffer_number_map   = get(g:, 'lightline#bufferline#buffer_number_map', {})
+let s:composed_ordinal_number_map = get(g:, 'lightline#bufferline#composed_ordinal_number_map', get(g:, 'lightline#bufferline#composed_number_map', {}))
+let s:composed_buffer_number_map = get(g:, 'lightline#bufferline#composed_buffer_number_map', {})
 let s:shorten_path        = get(g:, 'lightline#bufferline#shorten_path', 1)
 let s:smart_path          = get(g:, 'lightline#bufferline#smart_path', 1)
 let s:show_number         = get(g:, 'lightline#bufferline#show_number', 0)
@@ -127,24 +132,24 @@ endfunction
 
 function! s:get_number(i, buffer)
   if s:show_number == 1
-    return a:buffer . s:number_separator
+    return s:get_from_number_map(a:buffer, s:composed_buffer_number_map, s:buffer_number_map) . s:number_separator
   elseif s:show_number == 2
-    return s:get_from_number_map(a:i + 1). s:number_separator
+    return s:get_from_number_map(a:i + 1, s:composed_ordinal_number_map, s:ordinal_number_map). s:number_separator
   elseif s:show_number == 3
-    return a:buffer . s:ordinal_separator . s:get_from_number_map(a:i + 1) . s:number_separator
+    return s:get_from_number_map(a:buffer, s:composed_buffer_number_map, s:buffer_number_map) . s:ordinal_separator . s:get_from_number_map(a:i + 1, s:composed_ordinal_number_map, s:ordinal_number_map) . s:number_separator
   elseif s:show_number == 4
-    return s:get_from_number_map(a:i + 1) . s:ordinal_separator . a:buffer . s:number_separator
+    return s:get_from_number_map(a:i + 1, s:composed_ordinal_number_map, s:ordinal_number_map) . s:ordinal_separator . s:get_from_number_map(a:buffer, s:composed_buffer_number_map, s:buffer_number_map) . s:number_separator
   endif
 
   return ''
 endfunction
 
-function! s:get_from_number_map(i)
+function! s:get_from_number_map(i, composed_number_map, number_map)
   let l:number = a:i
-  let l:result = get(s:composed_number_map, l:number, '')
+  let l:result = get(a:composed_number_map, l:number, '')
   if l:result == ""
     for i in range(1, strlen(l:number))
-      let l:result = get(s:number_map, l:number % 10, l:number % 10) . l:result
+      let l:result = get(a:number_map, l:number % 10, l:number % 10) . l:result
       let l:number = l:number / 10
     endfor
   endif
@@ -158,9 +163,15 @@ function! s:tabpage_filter(i)
   return 1
 endfunc
 
+function! s:buffer_filter_noop(buffer)
+  return 1
+endfunction
+
+let s:bufferFilterFunc = function(s:buffer_filter)
+
 function! s:filter_buffer(i)
-  return bufexists(a:i) && buflisted(a:i) && !(getbufvar(a:i, '&filetype') ==# 'qf')
-       \ && s:tabpage_filter(a:i)
+  return bufexists(a:i) && buflisted(a:i) && getbufvar(a:i, '&filetype') !=# 'qf'
+       \ && s:tabpage_filter(a:i) && call(s:bufferFilterFunc, [a:i])
 endfunction
 
 function! s:filtered_buffers()
@@ -293,15 +304,21 @@ function! s:fit_lengths(list, available)
   return [l:remaining, l:count]
 endfunction
 
+function! s:max_width()
+  return &columns
+endfunction
+
+let s:maxWidthFunc = function(s:max_width_function)
+
 function! s:select_buffers(before, current, after)
   let [l:before_names, l:current_names, l:after_names] = [a:before[0], a:current[0], a:after[0]]
   let [l:before_lengths, l:current_lengths, l:after_lengths] = [a:before[1], a:current[1], a:after[1]]
 
   " The current buffer is always displayed
-  let l:width = &columns - l:current_lengths[:0][0]
+  let l:width = call(s:maxWidthFunc, []) - l:current_lengths[:0][0]
 
   " Display all buffers if there is enough space to display them
-  if s:sum(l:before_lengths) + s:sum(l:after_lengths) <= l:width
+  if s:disable_more_buffers_indicator || s:sum(l:before_lengths) + s:sum(l:after_lengths) <= l:width
     return [l:before_names, l:current_names, l:after_names]
   endif
 

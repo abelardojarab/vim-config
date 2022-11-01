@@ -38,7 +38,7 @@ local record M
     diff_opts: DiffOpts
     base: string
 
-    record SignsConfig
+    record SignConfig
       show_count: boolean
       hl: string
       text: string
@@ -46,7 +46,10 @@ local record M
       linehl: string
       keymaps: {string:string}
     end
-    signs: {string: SignsConfig}
+
+    type SignsConfig = {string: SignConfig}
+
+    signs: SignsConfig
 
     count_chars: {string|integer:string}
     signcolumn: boolean
@@ -55,8 +58,10 @@ local record M
     show_deleted: boolean
     sign_priority: integer
     keymaps: {string:any}
+    _on_attach_pre: function(bufnr: integer, callback: function(table))
     on_attach: function(bufnr: integer)
     record watch_gitdir
+      enable: boolean
       interval: integer
       follow_files: boolean
     end
@@ -71,6 +76,7 @@ local record M
     end
 
     current_line_blame_formatter: string|function(string, {string:any}, current_line_blame_formatter_opts): {{string,string}}
+    current_line_blame_formatter_nc: string|function(string, {string:any}, current_line_blame_formatter_opts): {{string,string}}
 
     record current_line_blame_opts
       virt_text: boolean
@@ -84,6 +90,7 @@ local record M
 
       delay: integer
       ignore_whitespace: boolean
+      virt_text_priority: integer
     end
 
     preview_config: {string:any}
@@ -95,10 +102,18 @@ local record M
 
     trouble: boolean
 
+    record Worktree
+      toplevel: string
+      gitdir: string
+    end
+    worktrees: {Worktree}
+
     -- Undocumented
     word_diff: boolean
     _refresh_staged_on_update: boolean
     _blame_cache: boolean
+    _threaded_diff: boolean
+    _extmark_signs: boolean
 
     _git_version: string
     _verbose: boolean
@@ -115,10 +130,10 @@ M.schema = {
     type = 'table',
     deep_extend = true,
     default = {
-      add          = {hl = 'GitSignsAdd'   , text = '│', numhl='GitSignsAddNr'   , linehl='GitSignsAddLn'    },
-      change       = {hl = 'GitSignsChange', text = '│', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn' },
-      delete       = {hl = 'GitSignsDelete', text = '_', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
-      topdelete    = {hl = 'GitSignsDelete', text = '‾', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
+      add          = {hl = 'GitSignsAdd'   , text = '┃', numhl='GitSignsAddNr'   , linehl='GitSignsAddLn'    },
+      change       = {hl = 'GitSignsChange', text = '┃', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn' },
+      delete       = {hl = 'GitSignsDelete', text = '▁', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
+      topdelete    = {hl = 'GitSignsDelete', text = '▔', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
       changedelete = {hl = 'GitSignsChange', text = '~', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn' },
     },
     description = [[
@@ -168,6 +183,49 @@ M.schema = {
     ]]
   },
 
+  worktrees = {
+    type = 'table',
+    default = nil,
+    description = [[
+      Detached working trees.
+
+      Array of tables with the keys `gitdir` and `toplevel`.
+
+      If normal attaching fails, then each entry in the table is attempted
+      with the work tree details set.
+
+      Example: >
+        worktrees = {
+          {
+            toplevel = vim.env.HOME,
+            gitdir = vim.env.HOME .. '/projects/dotfiles/.git'
+          }
+        }
+    ]]
+  },
+
+  _on_attach_pre = {
+    type = 'function',
+    default = nil,
+    description = [[
+      Asynchronous hook called before attaching to a buffer. Mainly used to
+      configure detached worktrees.
+
+      This callback must call its callback argument. The callback argument can
+      accept an optional table argument with the keys: 'gitdir' and 'toplevel'.
+
+      Example: >
+        on_attach_pre = function(bufnr, callback)
+          ...
+          callback {
+            gitdir = ...,
+            toplevel = ...
+          }
+        end
+<
+    ]]
+  },
+
   on_attach = {
     type = 'function',
     default = nil,
@@ -195,7 +253,9 @@ M.schema = {
 
   watch_gitdir = {
     type = 'table',
+    deep_extend = true,
     default = {
+      enable = true,
       interval = 1000,
       follow_files = true
     },
@@ -205,6 +265,9 @@ M.schema = {
       update signs.
 
       Fields: ~
+        • `enable`:
+            Whether the watcher is enabled.
+
         • `interval`:
             Interval the watcher waits between polls of the gitdir in milliseconds.
 
@@ -262,7 +325,7 @@ M.schema = {
     description = [[
       Show the old version of hunks inline in the buffer (via virtual lines).
 
-      Note: Virtual lines currently use the highlight `GitSignsDeleteLn`.
+      Note: Virtual lines currently use the highlight `GitSignsDeleteVirtLn`.
     ]]
   },
 
@@ -311,7 +374,7 @@ M.schema = {
 
             Note Neovim v0.5 uses LuaJIT's FFI interface, whereas v0.5+ uses
             `vim.diff`.
-        • indent_heuristic: string
+        • indent_heuristic: boolean
             Use the indent heuristic for the internal
             diff library.
         • vertical: boolean
@@ -381,7 +444,7 @@ M.schema = {
     type = 'number',
     default = 40000,
     description = [[
-      Max file length to attach to.
+      Max file length (in lines) to attach to.
     ]]
   },
 
@@ -434,6 +497,7 @@ M.schema = {
     default = {
       virt_text = true,
       virt_text_pos = 'eol',
+      virt_text_priority = 100,
       delay = 1000
     },
     description = [[
@@ -453,6 +517,8 @@ M.schema = {
           displayed.
         • ignore_whitespace: boolean
           Ignore whitespace when running blame.
+        • virt_text_priority: integer
+          Priority of virtual text.
     ]]
   },
 
@@ -551,6 +617,17 @@ M.schema = {
     ]]
   },
 
+  current_line_blame_formatter_nc = {
+    type = {'string', 'function'},
+    default = ' <author>',
+    description = [[
+      String or function used to format the virtual text of
+      |gitsigns-config-current_line_blame| for lines that aren't committed.
+
+      See |gitsigns-config-current_line_blame_formatter| for more information.
+    ]]
+  },
+
   trouble = {
     type = 'boolean',
     default = function(): boolean
@@ -613,7 +690,7 @@ M.schema = {
 
   _refresh_staged_on_update = {
     type = 'boolean',
-    default = true,
+    default = false,
     description = [[
       Always refresh the staged file on each update. Disabling this will cause
       the staged file to only be refreshed when an update to the index is
@@ -629,6 +706,22 @@ M.schema = {
     ]]
   },
 
+  _threaded_diff = {
+    type = 'boolean',
+    default = false,
+    description = [[
+      Run diffs on a separate thread
+    ]]
+  },
+
+  _extmark_signs = {
+    type = 'boolean',
+    default = false,
+    description = [[
+      Use extmarks for placing signs.
+    ]]
+  },
+
   debug_mode = {
     type = 'boolean',
     default = false,
@@ -638,12 +731,6 @@ M.schema = {
     ]]
   },
 
-  watch_index                 = { deprecated = {hard = true, new_field = 'watch_gitdir' } },
-  current_line_blame_delay    = { deprecated = {hard = true, new_field = 'current_line_blame_opts.delay'} },
-  current_line_blame_position = { deprecated = {hard = true, new_field = 'current_line_blame_opts.virt_text_pos'} },
-  diff_algorithm              = { deprecated = {hard = true, new_field = 'diff_opts.algorithm'} },
-  use_decoration_api          = { deprecated = {hard = true}},
-  use_internal_diff           = { deprecated = {hard = true, new_field = 'diff_opts.internal'} },
 }
 
 warn = function(s: string, ...: any)

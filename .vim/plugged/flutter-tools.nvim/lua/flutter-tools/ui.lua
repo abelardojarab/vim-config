@@ -1,4 +1,5 @@
 local utils = require("flutter-tools.utils")
+local config = require("flutter-tools.config")
 local fmt = string.format
 
 local M = {
@@ -52,9 +53,7 @@ local function calculate_width(lines)
   local max_width = math.ceil(vim.o.columns * 0.8)
   local max_length = 0
   for _, line in pairs(lines) do
-    if #line > max_length then
-      max_length = #line
-    end
+    if #line > max_length then max_length = #line end
   end
   return max_length <= max_width and max_length or max_width
 end
@@ -83,15 +82,11 @@ end
 
 --- @param buf_id number
 --- @param lines table[]
---- @param ns_id integer
+--- @param ns_id integer?
 function M.add_highlights(buf_id, lines, ns_id)
-  if not buf_id then
-    return
-  end
+  if not buf_id then return end
   ns_id = ns_id or namespace_id
-  if not lines then
-    return
-  end
+  if not lines then return end
   for _, line in ipairs(lines) do
     api.nvim_buf_add_highlight(
       buf_id,
@@ -109,9 +104,7 @@ end
 --- @param lines table
 local function invalid_lines(lines)
   for _, line in pairs(lines) do
-    if line ~= "" then
-      return false
-    end
+    if line ~= "" then return false end
   end
   return true
 end
@@ -122,9 +115,7 @@ local function update_win_state(win)
   state.open_windows = vim.tbl_filter(function(id)
     return id ~= win
   end, state.open_windows)
-  if state.last_opened == win then
-    state.last_opened = nil
-  end
+  if state.last_opened == win then state.last_opened = nil end
 end
 
 ---Create a popup window to notify the user of an event
@@ -133,25 +124,25 @@ end
 local function notify(lines, duration)
   assert(type(lines) == "table", "lines passed to notify should be a list of strings")
   duration = duration or 3000
-  if not lines or #lines < 1 or invalid_lines(lines) then
-    return
-  end
+  if not lines or #lines < 1 or invalid_lines(lines) then return end
   lines = pad_lines(lines)
+  for i = 1, #lines do
+    lines[i] = lines[i]:gsub("\\([nt])", { n = "\n", t = "\t" })
+  end
 
   local row = vim.o.lines - #lines - vim.o.cmdheight - 2
 
   if state.last_opened then
-    local config = api.nvim_win_get_config(state.last_opened)
-    if config.row[false] then
-      local next_row = config.row[false] - #lines - 2 -- one for padding
+    ---@type table
+    local win_config = api.nvim_win_get_config(state.last_opened)
+    if win_config.row[false] then
+      local next_row = win_config.row[false] - #lines - 2 -- one for padding
       -- if the next row will be outside the window then close all open windows
       -- if there is more than one, otherwise let them start to stack again from the bottom
       if next_row <= 0 then
         if #state.open_windows > 1 then
           for _, win in ipairs(state.open_windows) do
-            if api.nvim_win_is_valid(win) then
-              api.nvim_win_close(win, { force = true })
-            end
+            if api.nvim_win_is_valid(win) then api.nvim_win_close(win, true) end
           end
         end
       else
@@ -191,27 +182,25 @@ local function notify(lines, duration)
   vim.wo[win].winblend = WIN_BLEND
   vim.bo[buf].modifiable = false
   fn.timer_start(duration, function()
-    if api.nvim_win_is_valid(win) then
-      api.nvim_win_close(win, true)
-    end
+    if api.nvim_win_is_valid(win) then api.nvim_win_close(win, true) end
     update_win_state(win)
   end)
 end
 
-local notification_style = require("flutter-tools.config").get("ui").notification_style
 ---Post a message to UI so the user knows something has occurred.
 ---@param lines string[]
----@param opts table
+---@param opts table?
 M.notify = function(lines, opts)
   opts = opts or {}
   local timeout = opts.timeout
-  local level = opts.level or "info"
+  local level = (opts.level and type(opts.level) == "string") and opts.level or "INFO"
+  local notification_style = config.get("ui").notification_style
   if notification_style == "native" then
-    vim.notify(
-      table.concat(lines, "\n"),
-      level,
-      { title = "Flutter tools", timeout = timeout, icon = "" }
-    )
+    vim.notify(table.concat(lines, "\n"), vim.log.levels[level:upper()], {
+      title = "Flutter tools",
+      timeout = timeout,
+      icon = "",
+    })
   else
     notify(lines, timeout)
   end
@@ -236,9 +225,7 @@ function M.popup_create(opts)
   local display = opts.display or { winblend = WIN_BLEND }
   local position = opts.position or {}
 
-  if not lines or #lines < 1 or invalid_lines(lines) then
-    return
-  end
+  if not lines or #lines < 1 or invalid_lines(lines) then return end
 
   lines = pad_lines(lines)
   local width = calculate_width(lines)
@@ -305,14 +292,12 @@ function M.popup_create(opts)
     nowait = true,
   })
   vim.cmd(string.format([[autocmd! WinLeave <buffer> silent! execute 'bw %d']], buf))
-  if on_create then
-    on_create(buf, win)
-  end
+  if on_create then on_create(buf, win) end
 end
 
 ---Create a split window
 ---@param opts table
----@param on_open fun(buf: number, win: number)
+---@param on_open fun(buf: integer, win: integer)
 ---@return nil
 function M.open_win(opts, on_open)
   local open_cmd = opts.open_cmd or "botright 30vnew"
@@ -325,9 +310,7 @@ function M.open_win(opts, on_open)
   local buf = api.nvim_get_current_buf()
   vim.bo[buf].swapfile = false
   vim.bo[buf].buftype = "nofile"
-  if on_open then
-    on_open(buf, win)
-  end
+  if on_open then on_open(buf, win) end
 end
 
 return M

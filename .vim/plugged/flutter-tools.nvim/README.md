@@ -20,18 +20,13 @@ This plugin handles things like starting and managing flutter application proces
 selecting devices/emulators to run as well as niceties like an outline window, widget guides etc. Other core lsp functionality has to be
 configured via nvim lsp.
 
-To set up the lsp client there are a few things to do/read:
-
-1. Read the lsp documentation this can be found in `:h lsp` or a short summary can be found [here](https://github.com/neovim/nvim-lspconfig#lsp-overview).
-1. **Autocompletion:** Install an autocompletion plugin such as [`nvim-compe`](https://github.com/hrsh7th/nvim-compe).
-1. **Code actions/Rename UI:**
-   - For code actions, rename and other UI improvements, install an LSP UI plugin such as [`lspsaga`](https://github.com/glepnir/lspsaga.nvim)
-   - For code actions _only_: [lsp-fastaction.nvim](https://github.com/windwp/lsp-fastaction.nvim)
+To set up the lsp client please read the lsp documentation this can be found in `:h lsp` as well `nvim-lspconfig`'s [README](https://github.com/neovim/nvim-lspconfig#lsp-overview)
+which provides information on how to setup _autocompletion_ and _code-actions_, those are not configured via this plugin 🙏.
 
 A minimal native LSP configuration might look like:
 
 ```vim
- " Jump to definition
+ " Show hover
 nnoremap K <Cmd>lua vim.lsp.buf.hover()<CR>
  " Jump to definition
 nnoremap gd <Cmd>lua vim.lsp.buf.definition()<CR>
@@ -46,9 +41,34 @@ some basic setup might look like.
 
 ## Prerequisites
 
-- neovim 0.5+
+- neovim 0.7.0+
 
 ## Notices
+
+- This plugin no longer relies on dart code's debugger as flutter and dart now ship with a native debugger.
+  Versions of flutter before version 2.10.0 will still require the old dart code debugger.
+  Setup instructions for this can be found [here](https://github.com/mfussenegger/nvim-dap/wiki/Debug-Adapter-installation#dart).
+
+  Migration for existing users of the Dart code debugger on older flutter versions:
+
+  ```lua
+    local debugger_dir = path.join(fn.stdpath("cache"), "dart-code")
+    local debugger_path = path.join(debugger_dir, "out", "dist", "debug.js")
+
+    -- In config section for the debugger
+    debugger = {
+      enabled = true,
+      register.configurations = function()
+        local dap = require("dap")
+        dap.adapters.dart = {
+          type = "executable",
+          command = "node",
+          args = { debugger_path, "flutter" },
+        }
+        -- Other configuration herek
+      end,
+    },
+  ```
 
 - The `:FlutterOutline` command has been renamed to `:FlutterOutlineOpen`, and a `:FlutterOutlineToggle` has been added.
 
@@ -94,7 +114,7 @@ EOF
 require("flutter-tools").setup{} -- use defaults
 ```
 
-# Functionality
+## Features
 
 #### Run flutter app with hot reloading
 
@@ -145,6 +165,8 @@ require("flutter-tools").setup{} -- use defaults
 - `FlutterCopyProfilerUrl` - Copies the profiler url to your system clipboard (+ register). Note that commands `FlutterRun` and
   `FlutterDevTools` must be executed first.
 - `FlutterLspRestart` - This command restarts the dart language server, and is intended for situations where it begins to work incorrectly.
+- `FlutterSuper` - Go to super class, method using custom LSP method `dart/textDocument/super`.
+- `FlutterReanalyze` - Forces LSP server reanalyze using custom LSP method `dart/reanalyze`.
 
 <hr/>
 
@@ -198,7 +220,10 @@ require("flutter-tools").setup {
   },
   debugger = { -- integrate with nvim dap + install dart code debugger
     enabled = false,
-    run_via_dap = false, -- use dap instead of a plenary job to run flutter apps 
+    run_via_dap = false, -- use dap instead of a plenary job to run flutter apps
+    -- if empty dap will not stop on any exceptions, otherwise it will stop on those specified
+    -- see |:help dap.set_exception_breakpoints()| for more info
+    exception_breakpoints = {}
     register_configurations = function(paths)
       require("dap").configurations.dart = {
         <put here config that you would find in .vscode/launch.json>
@@ -243,10 +268,14 @@ require("flutter-tools").setup {
       config.specificThingIDontWant = false
       return config
     end,
+    -- see the link below for details on each option:
+    -- https://github.com/dart-lang/sdk/blob/master/pkg/analysis_server/tool/lsp_spec/README.md#client-workspace-configuration
     settings = {
       showTodos = true,
       completeFunctionCalls = true,
-      analysisExcludedFolders = {<path-to-flutter-sdk-packages>}
+      analysisExcludedFolders = {"<path-to-flutter-sdk-packages>"},
+      renameFilesWithClasses = "prompt", -- "always"
+      enableSnippets = true,
     }
   }
 }
@@ -260,6 +289,10 @@ By default this plugin excludes analysis of the packages in the flutter SDK. If 
 you jump to the definition of `StatelessWidget`, the lsp will not try and index the 100s (maybe 1000s) of
 files in that directory. If for some reason you would like this behaviour set `analysisExcludedFolders = {}`
 You cannot/should not edit the files in the sdk directly so diagnostic analysis of these file is pointless.
+
+**Exclude Note for Windows:**
+To ignore packages installed with pub, consider adding `vim.fn.expand("$HOME/AppData/Local/Pub/Cache")` to
+`analysisExcludedFolders` if you are using PowerShell.
 
 #### Flutter binary
 
@@ -347,7 +380,7 @@ use 'mfussenegger/nvim-dap'
 
 This plugin integrates with [nvim-dap](https://github.com/mfussenegger/nvim-dap) to provide debug capabilities.
 Currently if `debugger.enabled` is set to `true` in the user's config **it will expect `nvim-dap` to be installed**.
-If `dap` is installed the plugin will attempt to install the debugger (Dart-Code's debugger).
+If `dap` is this plugin will use `flutter` or `dart` native debugger to debug your project.
 
 To use the debugger you need to run `:lua require('dap').continue()<CR>`. This will start your app. You should then be able
 to use `dap` commands to begin to debug it. For more information on how to use `nvim-dap` please read the project's README
@@ -357,7 +390,8 @@ Alternatively, if you prefer always running your app via dap, you can set `debug
 This way you benefit from the debugging abilities of DAP, AND you can still use `:FlutterRestart`, `:FlutterReload`, etc.
 
 You can use the `debugger.register_configurations` to register custom runner configuration (for example for different targets or flavor).
-If your flutter repo contains launch configurations in `.vscode/launch.json` you can use them via this config : 
+If your flutter repo contains launch configurations in `.vscode/launch.json` you can use them via this config :
+
 ```lua
   debugger = {
     enabled = true,
@@ -369,7 +403,6 @@ If your flutter repo contains launch configurations in `.vscode/launch.json` you
 ```
 
 Since there is an overlap between this plugin's log buffer and the repl buffer when running via dap, you may use the `dev_log.enabled` configuration option if you want.
-
 
 Also see:
 

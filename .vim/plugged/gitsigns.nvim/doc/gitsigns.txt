@@ -2,7 +2,7 @@
 *gitsigns.nvim*
 
 Author:   Lewis Russell <lewis6991@gmail.com>
-Version:  0.3-dev
+Version:  0.6-dev
 Homepage: <https://github.com/lewis6991/gitsigns.nvim>
 License:  MIT license
 
@@ -61,7 +61,7 @@ of the default settings:
       sign_priority = 6,
       update_debounce = 100,
       status_formatter = nil, -- Use default
-      max_file_length = 40000,
+      max_file_length = 40000, -- Disable if file is longer than this (in lines)
       preview_config = {
         -- Options passed to nvim_open_win
         border = 'single',
@@ -79,20 +79,10 @@ of the default settings:
 ==============================================================================
 MAPPINGS                                                   *gitsigns-mappings*
 
-All mappings are configurable via |gitsigns-setup()|.
+Custom mappings can be defined in the `on_attach` callback in the config table
+passed to |gitsigns-setup()|. See |gitsigns-config-on_attach|.
 
 Most actions can be repeated with `.` if you have |vim-repeat| installed.
-
-Buffer ~
-    ]c         Jump to the next hunk.
-    [c         Jump to the previous hunk.
-    <leader>hs Stage the hunk at the cursor position.
-    <leader>hu Undo the last stage hunk.
-    <leader>hr Reset the lines of the hunk to what is in Git's index.
-    <leader>hp Preview the hunk in a floating window.
-
-Custom mappings are defined using the `keymaps` table in the config table
-passed to |gitsigns-setup()|. See |gitsigns-config-keymaps|.
 
 ==============================================================================
 FUNCTIONS                                                 *gitsigns-functions*
@@ -188,9 +178,46 @@ setqflist({target}, {opts})                             *gitsigns.setqflist()*
                                Open the quickfix/location list viewer.
                                Defaults to `true`.
 
-diffthis({base})                                         *gitsigns.diffthis()*
+show({revision})                                             *gitsigns.show()*
+                Show revision {base} of the current file, if it is given, or
+                with the currently set base (index by default).
+
+                If {base} is the index, then the opened buffer is editable and
+                any written changes will update the index accordingly.
+
+                Examples: >
+                  " View the index version of the file
+                  :Gitsigns show
+
+                  " View revision of file in the last commit
+                  :Gitsigns show ~1
+<
+
+                For a more complete list of ways to specify bases, see
+                |gitsigns-revision|.
+
+                Attributes: ~
+                    {async}
+
+diffthis({base}, {opts})                                 *gitsigns.diffthis()*
                 Perform a |vimdiff| on the given file with {base} if it is
                 given, or with the currently set base (index by default).
+
+                If {base} is the index, then the opened buffer is editable and
+                any written changes will update the index accordingly.
+
+                Parameters: ~
+                    {base}   (string|nil): Revision to diff against. Defaults
+                             to index.
+                    {opts}   (table|nil):
+                             Additional options:
+                             • {vertical}: {boolean}. Split window vertically. Defaults to
+                             config.diff_opts.vertical. If running via command line, then
+                             this is taken from the command modifiers.
+                             • {split}: {string}. One of: 'aboveleft', 'belowright',
+                             'botright', 'rightbelow', 'leftabove', 'topleft'. Defaults to
+                             'aboveleft'. If running via command line, then this is taken
+                             from the command modifiers.
 
                 Examples: >
                   " Diff against the index
@@ -249,13 +276,14 @@ change_base({base}, {global})                         *gitsigns.change_base()*
 
 blame_line({opts})                                     *gitsigns.blame_line()*
                 Run git blame on the current line and show the results in a
-                floating window.
+                floating window. If already open, calling this will cause the
+                window to get focus.
 
                 Parameters: ~
                     {opts}   (table|nil):
                              Additional options:
                              • {full}: (boolean)
-                               Display full commit message
+                               Display full commit message with hunk.
                              • {ignore_whitespace}: (boolean)
                                Ignore whitespace when running blame.
 
@@ -287,18 +315,26 @@ get_hunks({bufnr})                                      *gitsigns.get_hunks()*
 select_hunk()                                         *gitsigns.select_hunk()*
                 Select the hunk under the cursor.
 
+preview_hunk_inline()                         *gitsigns.preview_hunk_inline()*
+                Preview the hunk at the cursor position inline in the buffer.
+
 preview_hunk()                                       *gitsigns.preview_hunk()*
                 Preview the hunk at the cursor position in a floating
-                window.
+                window. If the preview is already open, calling this
+                will cause the window to get focus.
 
 prev_hunk({opts})                                       *gitsigns.prev_hunk()*
-                Jump to the previous hunk in the current buffer.
+                Jump to the previous hunk in the current buffer. If a hunk preview
+                (popup or inline) was previously opened, it will be re-opened
+                at the previous hunk.
 
                 Parameters: ~
                     See |gitsigns.next_hunk()|.
 
 next_hunk({opts})                                       *gitsigns.next_hunk()*
-                Jump to the next hunk in the current buffer.
+                Jump to the next hunk in the current buffer. If a hunk preview
+                (popup or inline) was previously opened, it will be re-opened
+                at the next hunk.
 
                 Parameters: ~
                     {opts}  table|nil Configuration table. Keys:
@@ -312,6 +348,9 @@ next_hunk({opts})                                       *gitsigns.next_hunk()*
                               Expand folds when navigating to a hunk which is
                               inside a fold. Defaults to `true` if 'foldopen'
                               contains `search`.
+                            • {preview}: (boolean)
+                              Automatically open preview_hunk() upon navigating
+                              to a hunk.
 
 reset_buffer_index()                           *gitsigns.reset_buffer_index()*
                 Unstage all hunks for current buffer in the index. Note:
@@ -363,24 +402,68 @@ stage_hunk({range})                                    *gitsigns.stage_hunk()*
                 Parameters:~
                     {range} table|nil List-like table of two integers making
                     up the line range from which you want to stage the hunks.
+                    If running via command line, then this is taken from the
+                    command modifiers.
 
-toggle_deleted()                                   *gitsigns.toggle_deleted()*
+toggle_deleted({value})                            *gitsigns.toggle_deleted()*
                 Toggle |gitsigns-config-show_deleted|
 
-toggle_current_line_blame()             *gitsigns.toggle_current_line_blame()*
+                Parameters:~
+                    {value} boolean|nil Value to set toggle. If `nil`
+                    the toggle value is inverted.
+
+                Returns:~
+                    Current value of |gitsigns-config-show_deleted|
+
+toggle_current_line_blame({value})      *gitsigns.toggle_current_line_blame()*
                 Toggle |gitsigns-config-current_line_blame|
 
-toggle_word_diff()                               *gitsigns.toggle_word_diff()*
+                Parameters:~
+                    {value} boolean|nil Value to set toggle. If `nil`
+                    the toggle value is inverted.
+
+                Returns:~
+                    Current value of |gitsigns-config-current_line_blame|
+
+toggle_word_diff({value})                        *gitsigns.toggle_word_diff()*
                 Toggle |gitsigns-config-word_diff|
 
-toggle_linehl()                                     *gitsigns.toggle_linehl()*
+                Parameters:~
+                    {value} boolean|nil Value to set toggle. If `nil`
+                    the toggle value is inverted.
+
+                Returns:~
+                    Current value of |gitsigns-config-word_diff|
+
+toggle_linehl({value})                              *gitsigns.toggle_linehl()*
                 Toggle |gitsigns-config-linehl|
 
-toggle_numhl()                                       *gitsigns.toggle_numhl()*
+                Parameters:~
+                    {value} boolean|nil Value to set toggle. If `nil`
+                    the toggle value is inverted.
+
+                Returns:~
+                    Current value of |gitsigns-config-linehl|
+
+toggle_numhl({value})                                *gitsigns.toggle_numhl()*
                 Toggle |gitsigns-config-numhl|
 
-toggle_signs()                                       *gitsigns.toggle_signs()*
-                Toggle |gitsigns-config-signcolumn|
+                Parameters:~
+                    {value} boolean|nil Value to set toggle. If `nil`
+                    the toggle value is inverted.
+
+                Returns:~
+                    Current value of |gitsigns-config-numhl|
+
+toggle_signs({value})                                *gitsigns.toggle_signs()*
+                Toggle |gitsigns-config-signbooleancolumn|
+
+                Parameters:~
+                    {value} boolean|nil Value to set toggle. If `nil`
+                    the toggle value is inverted.
+
+                Returns:~
+                    Current value of |gitsigns-config-signcolumn|
 
 
 ==============================================================================
@@ -396,10 +479,10 @@ signs                                                  *gitsigns-config-signs*
       Type: `table[extended]`
       Default: >
         {
-          add          = {hl = 'GitSignsAdd'   , text = '│', numhl='GitSignsAddNr'   , linehl='GitSignsAddLn'    },
-          change       = {hl = 'GitSignsChange', text = '│', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn' },
-          delete       = {hl = 'GitSignsDelete', text = '_', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
-          topdelete    = {hl = 'GitSignsDelete', text = '‾', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
+          add          = {hl = 'GitSignsAdd'   , text = '┃', numhl='GitSignsAddNr'   , linehl='GitSignsAddLn'    },
+          change       = {hl = 'GitSignsChange', text = '┃', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn' },
+          delete       = {hl = 'GitSignsDelete', text = '▁', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
+          topdelete    = {hl = 'GitSignsDelete', text = '▔', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
           changedelete = {hl = 'GitSignsChange', text = '~', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn' },
         }
 <
@@ -444,6 +527,24 @@ keymaps                                              *gitsigns-config-keymaps*
       to `{}`, and |gitsigns-config-on_attach| can instead be used to define
       mappings.
 
+worktrees                                          *gitsigns-config-worktrees*
+      Type: `table`, Default: `nil`
+
+      Detached working trees.
+
+      Array of tables with the keys `gitdir` and `toplevel`.
+
+      If normal attaching fails, then each entry in the table is attempted
+      with the work tree details set.
+
+      Example: >
+        worktrees = {
+          {
+            toplevel = vim.env.HOME,
+            gitdir = vim.env.HOME .. '/projects/dotfiles/.git'
+          }
+        }
+
 on_attach                                          *gitsigns-config-on_attach*
       Type: `function`, Default: `nil`
 
@@ -467,9 +568,10 @@ on_attach                                          *gitsigns-config-on_attach*
 <
 
 watch_gitdir                                    *gitsigns-config-watch_gitdir*
-      Type: `table`
+      Type: `table[extended]`
       Default: >
         {
+          enable = true,
           interval = 1000,
           follow_files = true
         }
@@ -479,6 +581,9 @@ watch_gitdir                                    *gitsigns-config-watch_gitdir*
       update signs.
 
       Fields: ~
+        • `enable`:
+            Whether the watcher is enabled.
+
         • `interval`:
             Interval the watcher waits between polls of the gitdir in milliseconds.
 
@@ -521,7 +626,7 @@ show_deleted                                    *gitsigns-config-show_deleted*
 
       Show the old version of hunks inline in the buffer (via virtual lines).
 
-      Note: Virtual lines currently use the highlight `GitSignsDeleteLn`.
+      Note: Virtual lines currently use the highlight `GitSignsDeleteVirtLn`.
 
 diff_opts                                          *gitsigns-config-diff_opts*
       Type: `table[extended]`, Default: derived from 'diffopt'
@@ -541,7 +646,7 @@ diff_opts                                          *gitsigns-config-diff_opts*
 
             Note Neovim v0.5 uses LuaJIT's FFI interface, whereas v0.5+ uses
             `vim.diff`.
-        • indent_heuristic: string
+        • indent_heuristic: boolean
             Use the indent heuristic for the internal
             diff library.
         • vertical: boolean
@@ -594,7 +699,7 @@ status_formatter                            *gitsigns-config-status_formatter*
 max_file_length                              *gitsigns-config-max_file_length*
       Type: `number`, Default: `40000`
 
-      Max file length to attach to.
+      Max file length (in lines) to attach to.
 
 preview_config                                *gitsigns-config-preview_config*
       Type: `table[extended]`
@@ -634,6 +739,7 @@ current_line_blame_opts              *gitsigns-config-current_line_blame_opts*
         {
           virt_text = true,
           virt_text_pos = 'eol',
+          virt_text_priority = 100,
           delay = 1000
         }
 <
@@ -653,6 +759,8 @@ current_line_blame_opts              *gitsigns-config-current_line_blame_opts*
           displayed.
         • ignore_whitespace: boolean
           Ignore whitespace when running blame.
+        • virt_text_priority: integer
+          Priority of virtual text.
 
 current_line_blame_formatter_opts
                            *gitsigns-config-current_line_blame_formatter_opts*
@@ -746,6 +854,15 @@ current_line_blame_formatter    *gitsigns-config-current_line_blame_formatter*
           field of |nvim_buf_set_extmark| and thus must be a list of
           [text, highlight] tuples.
 
+current_line_blame_formatter_nc
+                             *gitsigns-config-current_line_blame_formatter_nc*
+      Type: `string|function`, Default: `' <author>'`
+
+      String or function used to format the virtual text of
+      |gitsigns-config-current_line_blame| for lines that aren't committed.
+
+      See |gitsigns-config-current_line_blame_formatter| for more information.
+
 trouble                                              *gitsigns-config-trouble*
       Type: `boolean`, Default: true if installed
 
@@ -782,34 +899,6 @@ debug_mode                                        *gitsigns-config-debug_mode*
 
       Enables debug logging and makes the following functions
       available: `dump_cache`, `debug_messages`, `clear_debug`.
-
-watch_index                                      *gitsigns-config-watch_index*
-   HARD-DEPRECATED
-
-   Please instead use |gitsigns-config-watch_gitdir|.
-
-current_line_blame_delay            *gitsigns-config-current_line_blame_delay*
-   HARD-DEPRECATED
-
-   Please instead use the field `delay` in |gitsigns-config-current_line_blame_opts|.
-
-current_line_blame_position      *gitsigns-config-current_line_blame_position*
-   HARD-DEPRECATED
-
-   Please instead use the field `virt_text_pos` in |gitsigns-config-current_line_blame_opts|.
-
-diff_algorithm                                *gitsigns-config-diff_algorithm*
-   HARD-DEPRECATED
-
-   Please instead use the field `algorithm` in |gitsigns-config-diff_opts|.
-
-use_decoration_api                        *gitsigns-config-use_decoration_api*
-   HARD-DEPRECATED
-
-use_internal_diff                          *gitsigns-config-use_internal_diff*
-   HARD-DEPRECATED
-
-   Please instead use the field `internal` in |gitsigns-config-diff_opts|.
 
 
 ==============================================================================
@@ -892,6 +981,20 @@ TEXT OBJECTS                                             *gitsigns-textobject*
 Since text objects are defined via keymaps, these are exposed and configurable
 via the config, see |gitsigns-config-keymaps|. The lua implementation is
 exposed through |gitsigns.select_hunk()|.
+
+==============================================================================
+EVENT                                                         *gitsigns-event*
+
+Every time Gitsigns updates its knowledge about hunks, it issues a custom
+|User| event named `GitSignsUpdate`. You can use it via usual autocommands,
+like so: >
+
+    vim.api.nvim_create_autocmd('User', {
+      pattern = 'GitSignsUpdate',
+      callback = function()
+        print(os.time() .. ' Gitsigns made an update')
+      end
+    })
 
 ------------------------------------------------------------------------------
 vim:tw=78:ts=8:ft=help:norl:

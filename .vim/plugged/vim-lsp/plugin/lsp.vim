@@ -10,6 +10,7 @@ let g:lsp_log_file = get(g:, 'lsp_log_file', '')
 let g:lsp_log_verbose = get(g:, 'lsp_log_verbose', 1)
 let g:lsp_debug_servers = get(g:, 'lsp_debug_servers', [])
 let g:lsp_format_sync_timeout = get(g:, 'lsp_format_sync_timeout', -1)
+let g:lsp_max_buffer_size = get(g:, 'lsp_max_buffer_size', 5000000)
 
 let g:lsp_completion_documentation_enabled = get(g:, 'lsp_completion_documentation_enabled', 1)
 let g:lsp_completion_documentation_delay = get(g:, 'lsp_completion_documention_delay', 80)
@@ -31,7 +32,7 @@ let g:lsp_diagnostics_signs_information = get(g:, 'lsp_diagnostics_signs_informa
 let g:lsp_diagnostics_signs_hint = get(g:, 'lsp_diagnostics_signs_hint', {})
 let g:lsp_diagnostics_signs_priority = get(g:, 'lsp_diagnostics_signs_priority', 10)
 let g:lsp_diagnostics_signs_priority_map = get(g:, 'lsp_diagnostics_signs_priority_map', {})
-let g:lsp_diagnostics_virtual_text_enabled = get(g:, 'lsp_diagnostics_virtual_text_enabled', lsp#utils#_has_virtual_text())
+let g:lsp_diagnostics_virtual_text_enabled = get(g:, 'lsp_diagnostics_virtual_text_enabled', lsp#utils#_has_nvim_virtual_text())
 let g:lsp_diagnostics_virtual_text_insert_mode_enabled = get(g:, 'lsp_diagnostics_virtual_text_insert_mode_enabled', 0)
 let g:lsp_diagnostics_virtual_text_delay = get(g:, 'lsp_diagnostics_virtual_text_delay', 500)
 let g:lsp_diagnostics_virtual_text_prefix = get(g:, 'lsp_diagnostics_virtual_text_prefix', '')
@@ -63,6 +64,7 @@ let g:lsp_hover_conceal = get(g:, 'lsp_hover_conceal', 1)
 let g:lsp_hover_ui = get(g:, 'lsp_hover_ui', '')
 let g:lsp_ignorecase = get(g:, 'lsp_ignorecase', &ignorecase)
 let g:lsp_semantic_enabled = get(g:, 'lsp_semantic_enabled', 0)
+let g:lsp_semantic_delay = get(g:, 'lsp_semantic_delay', 500)
 let g:lsp_text_document_did_save_delay = get(g:, 'lsp_text_document_did_save_delay', -1)
 let g:lsp_completion_resolve_timeout = get(g:, 'lsp_completion_resolve_timeout', 200)
 let g:lsp_tagfunc_source_methods = get(g:, 'lsp_tagfunc_source_methods', ['definition', 'declaration', 'implementation', 'typeDefinition'])
@@ -70,6 +72,9 @@ let g:lsp_show_message_request_enabled = get(g:, 'lsp_show_message_request_enabl
 let g:lsp_show_message_log_level = get(g:, 'lsp_show_message_log_level', 'warning')
 let g:lsp_work_done_progress_enabled = get(g:, 'lsp_work_done_progress_enabled', 0)
 let g:lsp_untitled_buffer_enabled = get(g:, 'lsp_untitled_buffer_enabled', 1)
+let g:lsp_inlay_hints_enabled = get(g:, 'lsp_inlay_hints_enabled', 0)
+let g:lsp_inlay_hints_delay = get(g:, 'lsp_inlay_hints_delay', 350)
+let g:lsp_code_action_ui = get(g:, 'lsp_code_action_ui', 'preview')
 
 let g:lsp_get_supported_capabilities = get(g:, 'lsp_get_supported_capabilities', [function('lsp#default_get_supported_capabilities')])
 
@@ -85,16 +90,14 @@ endif
 command! LspAddTreeCallHierarchyIncoming call lsp#ui#vim#add_tree_call_hierarchy_incoming()
 command! LspCallHierarchyIncoming call lsp#ui#vim#call_hierarchy_incoming({})
 command! LspCallHierarchyOutgoing call lsp#ui#vim#call_hierarchy_outgoing()
-command! -range -nargs=* -complete=customlist,lsp#ui#vim#code_action#complete LspCodeAction call lsp#ui#vim#code_action#do({
-      \   'sync': v:false,
-      \   'selection': <range> != 0,
-      \   'query': '<args>'
-      \ })
-command! -range -nargs=* -complete=customlist,lsp#ui#vim#code_action#complete LspCodeActionSync call lsp#ui#vim#code_action#do({
-      \   'sync': v:true,
-      \   'selection': <range> != 0,
-      \   'query': '<args>'
-      \ })
+command! -range -nargs=* -complete=customlist,lsp#ui#vim#code_action#complete LspCodeAction call lsp#ui#vim#code_action#do(
+            \ extend({ 'sync': v:false, 'selection': <range> != 0 }, lsp#utils#args#_parse(<q-args>, {
+            \   'ui': { 'type': type('') },
+            \ }, 'query')))
+command! -range -nargs=* -complete=customlist,lsp#ui#vim#code_action#complete LspCodeActionSync call lsp#ui#vim#code_action#do(
+            \ extend({ 'sync': v:true, 'selection': <range> != 0 }, lsp#utils#args#_parse(<q-args>, {
+            \   'ui': { 'type': type('') },
+            \ }, 'query')))
 command! LspCodeLens call lsp#ui#vim#code_lens#do({})
 command! LspDeclaration call lsp#ui#vim#declaration(0, <q-mods>)
 command! LspPeekDeclaration call lsp#ui#vim#declaration(1)
@@ -105,11 +108,11 @@ command! LspDocumentSymbolSearch call lsp#internal#document_symbol#search#do({})
 command! -nargs=? LspDocumentDiagnostics call lsp#internal#diagnostics#document_diagnostics_command#do(
             \ extend({}, lsp#utils#args#_parse(<q-args>, {
             \   'buffers': {'type': type('')},
-            \ })))
+            \ }, v:null)))
 command! -nargs=? -complete=customlist,lsp#utils#empty_complete LspHover call lsp#internal#document_hover#under_cursor#do(
             \ extend({}, lsp#utils#args#_parse(<q-args>, {
             \   'ui': { 'type': type('') },
-            \ })))
+            \ }, v:null)))
 command! -nargs=* LspNextError call lsp#internal#diagnostics#movement#_next_error(<f-args>)
 command! -nargs=* LspPreviousError call lsp#internal#diagnostics#movement#_previous_error(<f-args>)
 command! -nargs=* LspNextWarning call lsp#internal#diagnostics#movement#_next_warning(<f-args>)
@@ -128,13 +131,13 @@ command! -range -nargs=? LspDocumentFormatSync call lsp#internal#document_format
             \ extend({'bufnr': bufnr('%'), 'sync': 1 }, lsp#utils#args#_parse(<q-args>, {
             \   'timeout': {'type': type(0)},
             \   'sleep': {'type': type(0)},
-            \ })))
+            \ }, v:null)))
 command! -range LspDocumentRangeFormat call lsp#internal#document_range_formatting#format({ 'bufnr': bufnr('%') })
 command! -range -nargs=? LspDocumentRangeFormatSync call lsp#internal#document_range_formatting#format(
             \ extend({'bufnr': bufnr('%'), 'sync': 1 }, lsp#utils#args#_parse(<q-args>, {
             \   'timeout': {'type': type(0)},
             \   'sleep': {'type': type(0)},
-            \ })))
+            \ }, v:null)))
 command! LspImplementation call lsp#ui#vim#implementation(0, <q-mods>)
 command! LspPeekImplementation call lsp#ui#vim#implementation(1)
 command! -nargs=0 LspStatus call lsp#print_server_status()
@@ -144,11 +147,14 @@ command! -nargs=? -complete=customlist,lsp#server_complete LspStopServer call ls
 command! -nargs=? -complete=customlist,lsp#utils#empty_complete LspSignatureHelp call lsp#ui#vim#signature_help#get_signature_help_under_cursor()
 command! LspDocumentFold call lsp#ui#vim#folding#fold(0)
 command! LspDocumentFoldSync call lsp#ui#vim#folding#fold(1)
-command! -nargs=? LspSemanticScopes call lsp#ui#vim#semantic#display_scope_tree(<args>)
+command! -nargs=0 LspSemanticTokenTypes echo lsp#internal#semantic#get_token_types()
+command! -nargs=0 LspSemanticTokenModifiers echo lsp#internal#semantic#get_token_modifiers()
 
 nnoremap <silent> <plug>(lsp-call-hierarchy-incoming) :<c-u>call lsp#ui#vim#call_hierarchy_incoming({})<cr>
 nnoremap <silent> <plug>(lsp-call-hierarchy-outgoing) :<c-u>call lsp#ui#vim#call_hierarchy_outgoing()<cr>
-nnoremap <silent> <plug>(lsp-code-action) :<c-u>call lsp#ui#vim#code_action()<cr>
+nnoremap <silent> <plug>(lsp-code-action) :<c-u>call lsp#ui#vim#code_action({})<cr>
+nnoremap <silent> <plug>(lsp-code-action-float) :<c-u>call lsp#ui#vim#code_action({ 'ui': 'float' })<cr>
+nnoremap <silent> <plug>(lsp-code-action-preview) :<c-u>call lsp#ui#vim#code_action({ 'ui': 'preview' })<cr>
 nnoremap <silent> <plug>(lsp-code-lens) :<c-u>call lsp#ui#vim#code_lens()<cr>
 nnoremap <silent> <plug>(lsp-declaration) :<c-u>call lsp#ui#vim#declaration(0)<cr>
 nnoremap <silent> <plug>(lsp-peek-declaration) :<c-u>call lsp#ui#vim#declaration(1)<cr>

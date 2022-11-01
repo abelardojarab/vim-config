@@ -242,6 +242,7 @@
 :GoMetaLinterAutoSaveToggle	vim-go.txt	/*:GoMetaLinterAutoSaveToggle*
 :GoModFmt	vim-go.txt	/*:GoModFmt*
 :GoModFmtAutoSaveToggle	vim-go.txt	/*:GoModFmtAutoSaveToggle*
+:GoModReload	vim-go.txt	/*:GoModReload*
 :GoPath	vim-go.txt	/*:GoPath*
 :GoPlay	vim-go.txt	/*:GoPlay*
 :GoPointsTo	vim-go.txt	/*:GoPointsTo*

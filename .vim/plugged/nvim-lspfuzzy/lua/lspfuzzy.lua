@@ -6,6 +6,20 @@
 local fmt = string.format
 local offset_encoding    -- hold client offset encoding (see :h vim.lsp.client)
 local last_results = {}  -- hold last location results
+local ansi = {
+  reset = string.char(0x001b) .. '[0m',
+  red = string.char(0x001b) .. '[31m',
+  green = string.char(0x001b) .. '[32m',
+  yellow = string.char(0x001b) .. '[33m',
+  blue = string.char(0x001b) .. '[34m',
+  purple = string.char(0x001b) .. '[35m',
+}
+local diagnostics_fmt = {
+  [vim.diagnostic.severity.ERROR] = {text = 'Error', ansi = ansi.red},
+  [vim.diagnostic.severity.WARN] = {text = 'Warn', ansi = ansi.yellow},
+  [vim.diagnostic.severity.INFO] = {text = 'Info', ansi = ansi.blue},
+  [vim.diagnostic.severity.HINT] = {text = 'Hint', ansi = ansi.reset},
+}
 
 -------------------- OPTIONS -------------------------------
 local opts = {
@@ -33,9 +47,11 @@ local function echo(hlgroup, msg)
 end
 
 local function lsp_to_fzf(item)
-  local path = vim.fn.fnamemodify(item.filename, opts.fzf_modifier)
+  local filename = vim.fn.fnamemodify(item.filename, opts.fzf_modifier)
+  local path = fmt('%s%s%s', ansi.purple, filename, ansi.reset)
+  local lnum = fmt('%s%s%s', ansi.green, item.lnum, ansi.reset)
   local text = opts.fzf_trim and vim.trim(item.text) or item.text
-  return fmt('%s:%s:%s: %s', path, item.lnum, item.col, text)
+  return fmt('%s:%s:%s: %s', path, lnum, item.col, text)
 end
 
 local function fzf_to_lsp(entry)
@@ -185,12 +201,13 @@ end
 -------------------- COMMANDS ------------------------------
 local function diagnostics_cmd(diagnostics)
   local label = 'Diagnostics'
-  local items = {}
+  local items, severity = {}, {}
 
   for _, diagnostic in ipairs(diagnostics) do
+    severity = diagnostics_fmt[diagnostic.severity]
     table.insert(items, {
       filename = vim.api.nvim_buf_get_name(diagnostic.bufnr),
-      text = diagnostic.message,
+      text = fmt('%s[%s]%s %s', severity.ansi, severity.text, ansi.reset, diagnostic.message),
       lnum = diagnostic.lnum + 1,
       col = diagnostic.col + 1,
     })

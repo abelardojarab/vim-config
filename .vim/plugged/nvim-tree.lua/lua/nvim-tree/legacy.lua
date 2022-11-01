@@ -1,11 +1,12 @@
 local utils = require "nvim-tree.utils"
+local notify = require "nvim-tree.notify"
 
 local M = {}
 
--- TODO update git.io/JPhyt when adding a migration
+-- TODO update bit.ly/3vIpEOJ when adding a migration
 
 -- migrate the g: to o if the user has not specified that when calling setup
-local migrations = {
+local g_migrations = {
   nvim_tree_disable_netrw = function(o)
     if o.disable_netrw == nil then
       o.disable_netrw = vim.g.nvim_tree_disable_netrw ~= 0
@@ -21,12 +22,6 @@ local migrations = {
   nvim_tree_auto_open = function(o)
     if o.open_on_setup == nil then
       o.open_on_setup = vim.g.nvim_tree_auto_open ~= 0
-    end
-  end,
-
-  nvim_tree_auto_close = function(o)
-    if o.auto_close == nil then
-      o.auto_close = vim.g.nvim_tree_auto_close ~= 0
     end
   end,
 
@@ -175,21 +170,157 @@ local migrations = {
       o.actions.change_dir.global = vim.g.nvim_tree_change_dir_global == 1
     end
   end,
+
+  nvim_tree_indent_markers = function(o)
+    utils.table_create_missing(o, "renderer.indent_markers")
+    if o.renderer.indent_markers.enable == nil then
+      o.renderer.indent_markers.enable = vim.g.nvim_tree_indent_markers == 1
+    end
+  end,
+
+  nvim_tree_add_trailing = function(o)
+    utils.table_create_missing(o, "renderer")
+    if o.renderer.add_trailing == nil then
+      o.renderer.add_trailing = vim.g.nvim_tree_add_trailing == 1
+    end
+  end,
+
+  nvim_tree_highlight_opened_files = function(o)
+    utils.table_create_missing(o, "renderer")
+    if o.renderer.highlight_opened_files == nil then
+      if vim.g.nvim_tree_highlight_opened_files == 1 then
+        o.renderer.highlight_opened_files = "icon"
+      elseif vim.g.nvim_tree_highlight_opened_files == 2 then
+        o.renderer.highlight_opened_files = "name"
+      elseif vim.g.nvim_tree_highlight_opened_files == 3 then
+        o.renderer.highlight_opened_files = "all"
+      end
+    end
+  end,
+
+  nvim_tree_root_folder_modifier = function(o)
+    utils.table_create_missing(o, "renderer")
+    if o.renderer.root_folder_modifier == nil then
+      o.renderer.root_folder_modifier = vim.g.nvim_tree_root_folder_modifier
+    end
+  end,
+
+  nvim_tree_special_files = function(o)
+    utils.table_create_missing(o, "renderer")
+    if o.renderer.special_files == nil and type(vim.g.nvim_tree_special_files) == "table" then
+      o.renderer.special_files = {}
+      for k, v in pairs(vim.g.nvim_tree_special_files) do
+        if v ~= 0 then
+          table.insert(o.renderer.special_files, k)
+        end
+      end
+    end
+  end,
+
+  nvim_tree_icon_padding = function(o)
+    utils.table_create_missing(o, "renderer.icons")
+    if o.renderer.icons.padding == nil then
+      o.renderer.icons.padding = vim.g.nvim_tree_icon_padding
+    end
+  end,
+
+  nvim_tree_symlink_arrow = function(o)
+    utils.table_create_missing(o, "renderer.icons")
+    if o.renderer.icons.symlink_arrow == nil then
+      o.renderer.icons.symlink_arrow = vim.g.nvim_tree_symlink_arrow
+    end
+  end,
+
+  nvim_tree_show_icons = function(o)
+    utils.table_create_missing(o, "renderer.icons")
+    if o.renderer.icons.show == nil and type(vim.g.nvim_tree_show_icons) == "table" then
+      o.renderer.icons.show = {}
+      o.renderer.icons.show.file = vim.g.nvim_tree_show_icons.files == 1
+      o.renderer.icons.show.folder = vim.g.nvim_tree_show_icons.folders == 1
+      o.renderer.icons.show.folder_arrow = vim.g.nvim_tree_show_icons.folder_arrows == 1
+      o.renderer.icons.show.git = vim.g.nvim_tree_show_icons.git == 1
+    end
+  end,
+
+  nvim_tree_icons = function(o)
+    utils.table_create_missing(o, "renderer.icons")
+    if o.renderer.icons.glyphs == nil and type(vim.g.nvim_tree_icons) == "table" then
+      o.renderer.icons.glyphs = vim.g.nvim_tree_icons
+    end
+  end,
+
+  nvim_tree_git_hl = function(o)
+    utils.table_create_missing(o, "renderer")
+    if o.renderer.highlight_git == nil then
+      o.renderer.highlight_git = vim.g.nvim_tree_git_hl == 1
+    end
+  end,
+
+  nvim_tree_group_empty = function(o)
+    utils.table_create_missing(o, "renderer")
+    if o.renderer.group_empty == nil then
+      o.renderer.group_empty = vim.g.nvim_tree_group_empty == 1
+    end
+  end,
+
+  nvim_tree_respect_buf_cwd = function(o)
+    if o.respect_buf_cwd == nil then
+      o.respect_buf_cwd = vim.g.nvim_tree_respect_buf_cwd == 1
+    end
+  end,
+
+  nvim_tree_create_in_closed_folder = function(o)
+    if o.create_in_closed_folder == nil then
+      o.create_in_closed_folder = vim.g.nvim_tree_create_in_closed_folder == 1
+    end
+  end,
 }
 
-function M.migrate_legacy_options(opts)
-  local msg = nil
-
-  for g, m in pairs(migrations) do
-    if vim.fn.exists("g:" .. g) ~= 0 then
-      m(opts)
-      msg = (msg and msg .. ", " or "Following options were moved to setup, see git.io/JPhyt: ") .. g
+local function refactored(opts)
+  -- mapping actions
+  if opts.view and opts.view.mappings and opts.view.mappings.list then
+    for _, m in pairs(opts.view.mappings.list) do
+      if m.action == "toggle_ignored" then
+        m.action = "toggle_git_ignored"
+      end
     end
   end
 
-  if msg then
-    require("nvim-tree.utils").warn(msg)
+  -- 2022/06/20
+  utils.move_missing_val(opts, "update_focused_file", "update_cwd", opts, "update_focused_file", "update_root")
+  utils.move_missing_val(opts, "", "update_cwd", opts, "", "sync_root_with_cwd")
+end
+
+local function removed(opts)
+  if opts.auto_close then
+    notify.warn "auto close feature has been removed, see note in the README (tips & reminder section)"
+    opts.auto_close = nil
   end
+
+  if opts.focus_empty_on_setup then
+    notify.warn "focus_empty_on_setup has been removed and will be replaced by a new startup configuration. Please remove this option. See https://bit.ly/3yJch2T"
+  end
+  opts.focus_empty_on_setup = nil
+end
+
+function M.migrate_legacy_options(opts)
+  -- g: options
+  local msg
+  for g, m in pairs(g_migrations) do
+    if vim.fn.exists("g:" .. g) ~= 0 then
+      m(opts)
+      msg = (msg and msg .. ", " or "Following options were moved to setup, see bit.ly/3vIpEOJ: ") .. g
+    end
+  end
+  if msg then
+    notify.warn(msg)
+  end
+
+  -- silently move
+  refactored(opts)
+
+  -- warn and delete
+  removed(opts)
 end
 
 return M

@@ -1,6 +1,6 @@
 *vm-mappings.txt*    Version 0.3.0    Last change: June 11 2019
 
-MAPPINGS ~
+MAPPINGS                                                      *vm-mappings-all*
 ===============================================================================
                                                                     *g:VM_maps*
 To change any mapping you must first initialize the variable:
@@ -146,6 +146,8 @@ Special commands: ~
 
 Increase              <C-A>       increase numbers (same as vim)
 Decrease              <C-X>       decrease numbers (same as vim)
+gIncrease             g<C-A>      progressively increase numbers (like |v_g_CTRL-A|)
+gDecrease             g<C-X>      progressively decrease numbers (like |v_g_CTRL-X|)
 Alpha-Increase        \\<C-A>     same but +alpha (see |'nrformats'|)
 Alpha-Decrease        \\<C-X>     ,,
 

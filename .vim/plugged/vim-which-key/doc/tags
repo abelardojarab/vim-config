@@ -15,6 +15,7 @@ g:which_key_floating_relative_win	vim-which-key.txt	/*g:which_key_floating_relat
 g:which_key_group_dicts	vim-which-key.txt	/*g:which_key_group_dicts*
 g:which_key_hspace	vim-which-key.txt	/*g:which_key_hspace*
 g:which_key_ignore_invalid_key	vim-which-key.txt	/*g:which_key_ignore_invalid_key*
+g:which_key_ignore_outside_mappings	vim-which-key.txt	/*g:which_key_ignore_outside_mappings*
 g:which_key_max_size	vim-which-key.txt	/*g:which_key_max_size*
 g:which_key_position	vim-which-key.txt	/*g:which_key_position*
 g:which_key_run_map_on_popup	vim-which-key.txt	/*g:which_key_run_map_on_popup*

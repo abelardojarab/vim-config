@@ -8,12 +8,18 @@
 (complex) @number
 
 (string) @string
+(string (escape_sequence) @string.escape)
 
-(comment) @comment
+(comment) @comment @spell
+
+((program . (comment) @preproc)
+  (#match? @preproc "^#!/"))
 
 (identifier) @variable
 
 (formal_parameters (identifier) @parameter)
+(formal_parameters
+ (default_parameter name: (identifier) @parameter))
 
 ; Operators
 [
@@ -55,6 +61,8 @@
   (special)
 ] @operator
 
+(lambda_function "\\" @operator)
+
 [
  "("
  ")"
@@ -87,6 +95,7 @@
 [
   "if"
   "else"
+  "switch"
 ] @conditional
 
 [
@@ -103,12 +112,7 @@
 "function" @keyword.function
 
 (call function: (identifier) @function)
-
-(call arguments:
- (arguments
-  name: (identifier) @parameter))
-
-(lambda_function "\\" @operator)
+(default_argument name: (identifier) @parameter)
 
 (namespace_get function: (identifier) @method)
 (namespace_get_internal function: (identifier) @method)
@@ -118,8 +122,6 @@
 
 (namespace_get_internal namespace: (identifier) @namespace
  ":::" @operator)
-
-(string (escape_sequence) @string.escape)
 
 ; Error
 (ERROR) @error

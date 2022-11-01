@@ -2,13 +2,13 @@
 
 Show register content when you try to access it in Neovim. Written in Lua.
 
-Requires Neovim 0.4.4+.
+Requires Neovim 0.7.0+.
 
 ## Features
 
-- No configuration required, automatically maps to <kbd>"</kbd> and <kbd>Ctrl</kbd><kbd>R</kbd>
-- Non-obtrusive, won't influence you're workflow
+- Non-obtrusive, won't influence your workflow
 - Minimal interface, no visual noise
+- Configurable, there's a setting for almost all aspects of this plugin
 
 ## Use
 
@@ -16,12 +16,9 @@ The popup window showing the registers and their values can be opened in one of 
 
 - Call `:Registers`
 - Press <kbd>"</kbd> in _normal_ or _visual_ mode
-
-![normal](docs/normal.png?raw=true)
-
 - Press <kbd>Ctrl</kbd><kbd>R</kbd> in _insert_ mode
 
-![insert](docs/insert.png?raw=true)
+![preview](.github/img/preview.png?raw=true)
 
 Empty registers are not shown by default.
 
@@ -29,264 +26,131 @@ Empty registers are not shown by default.
 
 Use the <kbd>Up</kbd> and <kbd>Down</kbd> or <kbd>Ctrl</kbd><kbd>P</kbd> and <kbd>Ctrl</kbd><kbd>N</kbd> or <kbd>Ctrl</kbd><kbd>J</kbd> and <kbd>Ctrl</kbd><kbd>K</kbd> keys to select the register you want to use and press <kbd>Enter</kbd> to apply it, or type the register you want to apply, which is one of the following:
 
-<kbd>"</kbd> <kbd>0</kbd>-<kbd>9</kbd> <kbd>a</kbd>-<kbd>z</kbd> <kbd>:</kbd> <kbd>.</kbd> <kbd>%</kbd> <kbd>#</kbd> <kbd>=</kbd> <kbd>*</kbd> <kbd>+</kbd> <kbd>_</kbd> <kbd>/</kbd>
+<kbd>"</kbd> <kbd>0</kbd>-<kbd>9</kbd> <kbd>a</kbd>-<kbd>z</kbd> <kbd>:</kbd> <kbd>.</kbd> <kbd>%</kbd> <kbd>#</kbd> <kbd>=</kbd> <kbd>\*</kbd> <kbd>+</kbd> <kbd>\_</kbd> <kbd>/</kbd>
 
 ## Install
 
 ### Packer
 
 ```lua
-use "tversteeg/registers.nvim"
-```
-
-### Paq
-
-```lua
-paq "tversteeg/registers.nvim"
-```
-
-### Plug
-
-```vim
-Plug 'tversteeg/registers.nvim', { 'branch': 'main' }
-```
-
-### Dein
-
-```vim
-call dein#add('tversteeg/registers.nvim')
+use {
+	"tversteeg/registers.nvim",
+	config = function()
+		require("registers").setup()
+	end,
+}
 ```
 
 ## Configuration
 
-### `return_symbol`
+This plugin can be configured by passing a table to `require("registers").setup({})`.
+Configuration options can be found in Neovim's documentation after installing with: [`:h registers`](doc/registers.txt).
 
-Symbol shown for newline characters.
+### Default Values
 
-#### Default
-
-`"⏎"`
-
-#### Example
-
-```vim
-let g:registers_return_symbol = "\n"
+```lua
+use {
+    "tversteeg/registers.nvim",
+    config = function()
+        local registers = require("registers")
+        registers.setup({
 ```
 
-### `tab_symbol`
+<!-- MARKDOWN-AUTO-DOCS:START (CODE:src=./lua/registers.lua&lines=138-224) -->
+<!-- The below code snippet is automatically added from ./lua/registers.lua -->
+```lua
+        -- Show these registers in the order of the string
+        show = "*+\"-/_=#%.0123456789abcdefghijklmnopqrstuvwxyz:",
+        -- Show a line at the bottom with registers that aren't filled
+        show_empty = true,
+        -- Expose the :Registers user command
+        register_user_command = true,
+        -- Always transfer all selected registers to the system clipboard
+        system_clipboard = true,
+        -- Don't show whitespace at the begin and end of the register's content
+        trim_whitespace = true,
+        -- Don't show registers which are exclusively filled with whitespace
+        hide_only_whitespace = true,
+        -- Show a character next to the register name indicating how the register will be applied
+        show_register_types = true,
 
-Symbol shown for tab characters.
+        bind_keys = {
+            -- Show the window when pressing " in normal mode, applying the selected register as part of a motion, which is the default behavior of Neovim
+            normal = registers.show_window({ mode = "motion" }),
+            -- Show the window when pressing " in visual mode, applying the selected register as part of a motion, which is the default behavior of Neovim
+            visual = registers.show_window({ mode = "motion" }),
+            -- Show the window when pressing <C-R> in insert mode, inserting the selected register, which is the default behavior of Neovim
+            insert = registers.show_window({ mode = "insert" }),
 
-#### Default
+            -- When pressing the key of a register, apply it with a very small delay, which will also highlight the selected register
+            registers = registers.apply_register({ delay = 0.1 }),
+            -- Immediately apply the selected register line when pressing the return key
+            return_key = registers.apply_register(),
+            -- Close the registers window when pressing the Esc key
+            escape = registers.close_window(),
 
-`"·"`
+            -- Move the cursor in the registers window down when pressing <C-N>
+            ctrl_n = registers.move_cursor_down(),
+            -- Move the cursor in the registers window up when pressing <C-P>
+            ctrl_p = registers.move_cursor_up(),
+            -- Move the cursor in the registers window down when pressing <C-J>
+            ctrl_j = registers.move_cursor_down(),
+            -- Move the cursor in the registers window up when pressing <C-K>
+            ctrl_k = registers.move_cursor_up(),
+        },
 
-#### Example
+        events = {
+            -- When a register line is highlighted, show a preview in the main buffer with how the register will be applied, but only if the register will be inserted or pasted
+            on_register_highlighted = registers.preview_highlighted_register({ if_mode = { "insert", "paste" } }),
+        },
 
-```vim
-let g:registers_tab_symbol = "\t"
+        symbols = {
+            -- Show a special character for line breaks
+            newline = "⏎",
+            -- Show space characters without changes
+            space = " ",
+            -- Show a special character for tabs
+            tab = "·",
+            -- The character to show when a register will be applied in a char-wise fashion
+            register_type_charwise = "ᶜ",
+            -- The character to show when a register will be applied in a line-wise fashion
+            register_type_linewise = "ˡ",
+            -- The character to show when a register will be applied in a block-wise fashion
+            register_type_blockwise = "ᵇ",
+        },
+
+        window = {
+            -- The window can't be wider than 100 characters
+            max_width = 100,
+            -- Show a small highlight in the sign column for the line the cursor is on
+            highlight_cursorline = true,
+            -- Don't draw a border around the registers window
+            border = "none",
+            -- Apply a tiny bit of transparency to the the window, letting some characters behind it bleed through
+            transparency = 10,
+        },
+
+        -- Highlight the sign registers as regular Neovim highlights
+        sign_highlights = {
+            cursorline = "Visual",
+            selection = "Constant",
+            default = "Function",
+            unnamed = "Statement",
+            read_only = "Type",
+            expression = "Exception",
+            black_hole = "Error",
+            alternate_buffer = "Operator",
+            last_search = "Tag",
+            delete = "Special",
+            yank = "Delimiter",
+            history = "Number",
+            named = "Todo",
+        },
 ```
-
-### `space_symbol`
-
-Symbol shown for space characters.
-
-#### Default
-
-`" "`
-
-#### Example
-
-```vim
-let g:registers_space_symbol = "."
-```
-
-### `delay`
-
-Milliseconds to wait before opening the popup window.
-
-#### Default
-
-`0`
-
-#### Example
-
-```vim
-let g:registers_delay = 500
-```
-
-### `register_key_sleep`
-
-Seconds to wait before closing the window when a register key is pressed.
-
-#### Default
-
-`0`
-
-#### Example
-
-```vim
-let g:registers_register_key_sleep = 1
-```
-
-### `show_empty_registers`
-
-An additional line with the registers without content.
-
-#### Default
-
-`1`
-
-#### Example
-
-```vim
-let g:registers_show_empty_registers = 0
-```
-
-### `trim_whitespace`
-
-Don't show whitespace at the begin and end of the registers.
-
-#### Default
-
-`1`
-
-#### Example
-
-```vim
-let g:registers_trim_whitespace = 0
-```
-
-### `hide_only_whitespace`
-
-Don't show registers filled exclusively with whitespace.
-
-#### Default
-
-`0`
-
-#### Example
-
-```vim
-let g:registers_hide_only_whitespace = 1
-```
-
-### `window_border`
-
-Requires Neovim 0.5.0+.
-
-Can be `"none"`, `"single"`, `"double"`, `"rounded"`, `"solid"`, or `"shadow"`.
-
-#### Default
-
-`"none"`
-
-#### Example
-
-```vim
-let g:registers_window_border = "single"
-```
-
-### `window_min_height`
-
-Minimum height of the window when there is the cursor at the bottom.
-
-#### Default
-
-`3`
-
-#### Example
-
-```vim
-let g:registers_window_min_height = 10
-```
-
-### `window_max_width`
-
-Maximum width of the window.
-
-#### Default
-
-`100`
-
-#### Example
-
-```vim
-let g:registers_window_max_width = 20
-```
-
-### `normal_mode`
-
-Open the window in normal mode.
-
-#### Default
-
-`1`
-
-#### Example
-
-```vim
-let g:registers_normal_mode = 0
-```
-
-### `paste_in_normal_mode`
-
-Automatically perform a paste action when selecting a register through any means in normal mode.
-
-#### Default
-
-`0`
-
-#### Options
-
-- `0` - Default Neovim behavior.
-- `1` - Paste when selecting a register with the register key and <kbd>Return</kbd>.
-- `2` - Paste when selecting a register only with <kbd>Return</kbd>.
-
-#### Example
-
-```vim
-let g:registers_paste_in_normal_mode = 1
-```
-
-### `visual_mode`
-
-Open the window in visual mode.
-
-#### Default
-
-`1`
-
-#### Example
-
-```vim
-let g:registers_visual_mode = 0
-```
-
-### `insert_mode`
-
-Open the window in insert mode.
-
-#### Default
-
-`1`
-
-#### Example
-
-```vim
-let g:registers_insert_mode = 0
-```
-
-### `show`
-
-Which registers to show and in what order.
-
-#### Default
-
-`"*+\"-/_=#%.0123456789abcdefghijklmnopqrstuvwxyz:"`
-
-#### Example
-
-```vim
-let g:registers_show = "*+\""
+<!-- MARKDOWN-AUTO-DOCS:END -->
+
+```lua
+        })
+    end,
+}
 ```

@@ -4,7 +4,7 @@ function! lsp#utils#has_lua() abort
 endfunction
 
 let s:has_virtual_text = exists('*nvim_buf_set_virtual_text') && exists('*nvim_create_namespace')
-function! lsp#utils#_has_virtual_text() abort
+function! lsp#utils#_has_nvim_virtual_text() abort
     return s:has_virtual_text
 endfunction
 
@@ -13,7 +13,7 @@ function! lsp#utils#_has_signs() abort
     return s:has_signs
 endfunction
 
-let s:has_nvim_buf_highlight = exists('*nvim_buf_add_highlight')
+let s:has_nvim_buf_highlight = exists('*nvim_buf_add_highlight') && has('nvim')
 function! lsp#utils#_has_nvim_buf_highlight() abort
     return s:has_nvim_buf_highlight
 endfunction
@@ -24,9 +24,19 @@ function! lsp#utils#_has_textprops() abort
     return s:has_textprops
 endfunction
 
+let s:has_vim9textprops = exists('*prop_add') && has('patch-9.0.0178')
+function! lsp#utils#_has_vim_virtual_text() abort
+    return s:has_vim9textprops
+endfunction
+
 let s:has_higlights = has('nvim') ? lsp#utils#_has_nvim_buf_highlight() : lsp#utils#_has_textprops()
 function! lsp#utils#_has_highlights() abort
     return s:has_higlights
+endfunction
+
+let s:has_popup_menu = exists('*popup_menu')
+function! lsp#utils#_has_popup_menu() abort
+    return s:has_popup_menu
 endfunction
 
 function! lsp#utils#is_file_uri(uri) abort
@@ -444,6 +454,11 @@ function! lsp#utils#parse_command_options(params) abort
         let l:result[l:match[1]] = l:match[3]
     endfor
     return l:result
+endfunction
+
+function! lsp#utils#is_large_window(winid) abort
+    let l:buffer_size = line2byte(line('$', a:winid))
+    return g:lsp_max_buffer_size >= 0 && l:buffer_size >= g:lsp_max_buffer_size
 endfunction
 
 " polyfill for the neovim wait function

@@ -39,22 +39,22 @@
 
 ; Function calls
 (call_expression
-  function: (identifier) @function)
+  function: (identifier) @function.call)
 (call_expression
   function: (scoped_identifier
-              (identifier) @function .))
+              (identifier) @function.call .))
 (call_expression
   function: (field_expression
-    field: (field_identifier) @function))
+    field: (field_identifier) @function.call))
 
 (generic_function
-  function: (identifier) @function)
+  function: (identifier) @function.call)
 (generic_function
   function: (scoped_identifier
-    name: (identifier) @function))
+    name: (identifier) @function.call))
 (generic_function
   function: (field_expression
-    field: (field_identifier) @function))
+    field: (field_identifier) @function.call))
 
 ; Assume other uppercase names are enum constructors
 ((field_identifier) @constant
@@ -144,7 +144,7 @@
 [
   (line_comment)
   (block_comment)
-] @comment
+] @comment @spell
 
 (boolean_literal) @boolean
 (integer_literal) @number
@@ -211,13 +211,15 @@
 [
   "break"
   "continue"
-  "for"
   "in"
   "loop"
   "while"
 ] @repeat
 
-
+(impl_item
+  "for" @keyword)
+(for_expression
+  "for" @repeat)
 
 ;;; Operators & Punctuation
 

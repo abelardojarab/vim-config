@@ -14,7 +14,7 @@ let s:notification_callbacks = [] " { name, callback }
 "        "bingo": [ "first-line", "next-line", ... ]
 "      },
 "      2: {
-"        "pyls": [ "first-line", "next-line", ... ]
+"        "pylsp": [ "first-line", "next-line", ... ]
 "      }
 "    }
 let s:file_content = {}
@@ -64,10 +64,12 @@ function! lsp#enable() abort
     call lsp#internal#document_highlight#_enable()
     call lsp#internal#diagnostics#_enable()
     call lsp#internal#document_code_action#signs#_enable()
+    call lsp#internal#semantic#_enable()
     call lsp#internal#show_message_request#_enable()
     call lsp#internal#show_message#_enable()
     call lsp#internal#work_done_progress#_enable()
     call lsp#internal#completion#documentation#_enable()
+    call lsp#internal#inlay_hints#_enable()
     call s:register_events()
 endfunction
 
@@ -80,6 +82,7 @@ function! lsp#disable() abort
     call lsp#internal#document_highlight#_disable()
     call lsp#internal#diagnostics#_disable()
     call lsp#internal#document_code_action#signs#_disable()
+    call lsp#internal#semantic#_disable()
     call lsp#internal#show_message_request#_disable()
     call lsp#internal#show_message#_disable()
     call lsp#internal#work_done_progress#_disable()
@@ -93,7 +96,7 @@ function! lsp#get_server_names() abort
 endfunction
 
 function! lsp#get_server_info(server_name) abort
-    return s:servers[a:server_name]['server_info']
+    return get(get(s:servers, a:server_name, {}), 'server_info', {})
 endfunction
 
 function! lsp#get_server_root_uri(server_name) abort
@@ -145,7 +148,22 @@ let s:color_map = {
 \ 'not running': 'Comment'
 \}
 
-" Print the current status of all servers (if called with no arguments)
+" Collect the current status of all servers
+function! lsp#collect_server_status() abort
+    let l:results = {}
+    for l:k in keys(s:servers)
+        let l:status = s:server_status(l:k)
+        " Copy to prevent callers from corrupting our config.
+        let l:info = deepcopy(s:servers[l:k].server_info)
+        let l:results[l:k] = {
+            \ 'status': l:status,
+            \ 'info': l:info,
+            \ }
+    endfor
+    return l:results
+endfunction
+
+" Print the current status of all servers
 function! lsp#print_server_status() abort
     for l:k in sort(keys(s:servers))
         let l:status = s:server_status(l:k)
@@ -154,6 +172,15 @@ function! lsp#print_server_status() abort
         echon l:status
         echohl None
         echo ''
+        if &verbose
+            let l:cfg = { 'workspace_config': s:servers[l:k].server_info.workspace_config }
+            if get(g:, 'loaded_scriptease', 0)
+                call scriptease#pp_command(0, -1, l:cfg)
+            else
+                echo json_encode(l:cfg)
+            endif
+            echo ''
+        endif
     endfor
 endfunction
 
@@ -411,7 +438,7 @@ endfunction
 function! s:ensure_start(buf, server_name, cb) abort
     let l:path = lsp#utils#get_buffer_path(a:buf)
 
-    if lsp#utils#is_remote_uri(l:path)
+    if lsp#utils#is_remote_uri(l:path) || !has_key(s:servers, a:server_name)
         let l:msg = s:new_rpc_error('ignoring start server due to remote uri', { 'server_name': a:server_name, 'uri': l:path})
         call lsp#log(l:msg)
         call a:cb(l:msg)
@@ -452,14 +479,17 @@ function! s:ensure_start(buf, server_name, cb) abort
         endif
 
         call lsp#log('Starting server', a:server_name, l:cmd)
-
-        let l:lsp_id = lsp#client#start({
-            \ 'cmd': l:cmd,
-            \ 'on_stderr': function('s:on_stderr', [a:server_name]),
-            \ 'on_exit': function('s:on_exit', [a:server_name]),
-            \ 'on_notification': function('s:on_notification', [a:server_name]),
-            \ 'on_request': function('s:on_request', [a:server_name]),
-            \ })
+        let l:opts = {
+        \ 'cmd': l:cmd,
+        \ 'on_stderr': function('s:on_stderr', [a:server_name]),
+        \ 'on_exit': function('s:on_exit', [a:server_name]),
+        \ 'on_notification': function('s:on_notification', [a:server_name]),
+        \ 'on_request': function('s:on_request', [a:server_name]),
+        \ }
+        if has_key(l:server_info, 'env')
+          let l:opts.env = l:server_info.env
+        endif
+        let l:lsp_id = lsp#client#start(l:opts)
     endif
 
     if l:lsp_id > 0
@@ -478,6 +508,9 @@ function! lsp#default_get_supported_capabilities(server_info) abort
     " Sorted alphabetically
     return {
     \   'textDocument': {
+    \       'callHierarchy': {
+    \           'dynamicRegistration': v:false,
+    \       },
     \       'codeAction': {
     \         'dynamicRegistration': v:false,
     \         'codeActionLiteralSupport': {
@@ -535,9 +568,15 @@ function! lsp#default_get_supported_capabilities(server_info) abort
     \           'dynamicRegistration': v:false,
     \           'contentFormat': ['markdown', 'plaintext'],
     \       },
+    \       'inlayHint': {
+    \           'dynamicRegistration': v:false,
+    \       },
     \       'implementation': {
     \           'dynamicRegistration': v:false,
     \           'linkSupport' : v:true
+    \       },
+    \       'publishDiagnostics': {
+    \           'relatedInformation': v:true,
     \       },
     \       'rangeFormatting': {
     \           'dynamicRegistration': v:false,
@@ -545,11 +584,35 @@ function! lsp#default_get_supported_capabilities(server_info) abort
     \       'references': {
     \           'dynamicRegistration': v:false,
     \       },
-    \       'semanticHighlightingCapabilities': {
-    \           'semanticHighlighting': lsp#ui#vim#semantic#is_enabled()
+    \       'rename': {
+    \           'dynamicRegistration': v:false,
+    \           'prepareSupport': v:true,
+    \           'prepareSupportDefaultBehavior': 1
     \       },
-    \       'publishDiagnostics': {
-    \           'relatedInformation': v:true,
+    \       'semanticTokens': {
+    \           'dynamicRegistration': v:false,
+    \           'requests': {
+    \               'range': v:false,
+    \               'full': lsp#internal#semantic#is_enabled()
+    \                     ? {'delta': v:true}
+    \                     : v:false
+    \
+    \           },
+    \           'tokenTypes': [
+    \               'type', 'class', 'enum', 'interface', 'struct',
+    \               'typeParameter', 'parameter', 'variable', 'property',
+    \               'enumMember', 'event', 'function', 'method', 'macro',
+    \               'keyword', 'modifier', 'comment', 'string', 'number',
+    \               'regexp', 'operator'
+    \           ],
+    \           'tokenModifiers': [],
+    \           'formats': ['relative'],
+    \           'overlappingTokenSupport': v:false,
+    \           'multilineTokenSupport': v:false,
+    \           'serverCancelSupport': v:false
+    \       },
+    \       'signatureHelp': {
+    \           'dynamicRegistration': v:false,
     \       },
     \       'synchronization': {
     \           'didSave': v:true,
@@ -557,10 +620,12 @@ function! lsp#default_get_supported_capabilities(server_info) abort
     \           'willSave': v:false,
     \           'willSaveWaitUntil': v:false,
     \       },
-    \       'typeHierarchy': v:false,
     \       'typeDefinition': {
     \           'dynamicRegistration': v:false,
     \           'linkSupport' : v:true
+    \       },
+    \       'typeHierarchy': {
+    \           'dynamicRegistration': v:false
     \       },
     \   },
     \   'window': {
@@ -569,6 +634,9 @@ function! lsp#default_get_supported_capabilities(server_info) abort
     \   'workspace': {
     \       'applyEdit': v:true,
     \       'configuration': v:true,
+    \       'symbol': {
+    \           'dynamicRegistration': v:false,
+    \       },
     \       'workspaceFolders': g:lsp_experimental_workspace_folders ? v:true : v:false,
     \   },
     \ }
@@ -843,14 +911,7 @@ function! s:on_notification(server_name, id, data, event) abort
     endif
     call lsp#stream(1, l:stream_data) " notify stream before callbacks
 
-    if lsp#client#is_server_instantiated_notification(a:data)
-        if has_key(l:response, 'method')
-            if l:response['method'] ==# 'textDocument/semanticHighlighting'
-                call lsp#ui#vim#semantic#handle_semantic(a:server_name, a:data)
-            endif
-            " NOTE: this is legacy code, use stream instead of handling notifications here
-        endif
-    else
+    if !lsp#client#is_server_instantiated_notification(a:data)
         let l:request = a:data['request']
         let l:method = l:request['method']
         if l:method ==# 'initialize'
@@ -875,6 +936,11 @@ function! s:on_request(server_name, id, request) abort
     elseif a:request['method'] ==# 'workspace/configuration'
         let l:response_items = map(a:request['params']['items'], { key, val -> lsp#utils#workspace_config#get_value(a:server_name, val) })
         call s:send_response(a:server_name, { 'id': a:request['id'], 'result': l:response_items })
+    elseif a:request['method'] ==# 'workspace/workspaceFolders'
+        let l:server_info = s:servers[a:server_name]['server_info']
+        if has_key(l:server_info, 'workspaceFolders')
+            call s:send_response(a:server_name, { 'id': a:request['id'], 'result': l:server_info['workspaceFolders']})
+        endif
     elseif a:request['method'] ==# 'window/workDoneProgress/create'
         call s:send_response(a:server_name, { 'id': a:request['id'], 'result': v:null})
     else
@@ -1156,10 +1222,9 @@ function! s:add_didchange_queue(buf) abort
         endfor
         return
     endif
-    if index(s:didchange_queue, a:buf) != -1
-        return
+    if index(s:didchange_queue, a:buf) == -1
+        call add(s:didchange_queue, a:buf)
     endif
-    call add(s:didchange_queue, a:buf)
     call lsp#log('s:send_didchange_queue() will be triggered')
     call timer_stop(s:didchange_timer)
     let l:lazy = &updatetime > 1000 ? &updatetime : 1000
@@ -1207,6 +1272,10 @@ endfunction
 " 'percentage': 0 - 100 or not exist
 function! lsp#get_progress() abort
     return lsp#internal#work_done_progress#get_progress()
+endfunction
+
+function! lsp#document_hover_preview_winid() abort
+    return lsp#internal#document_hover#under_cursor#getpreviewwinid()
 endfunction
 
 "

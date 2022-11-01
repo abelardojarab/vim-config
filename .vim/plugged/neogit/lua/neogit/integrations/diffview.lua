@@ -1,48 +1,32 @@
 local M = {}
 
-local dv = require 'diffview'
-local dv_config = require 'diffview.config'
-local Rev = require'diffview.git.rev'.Rev
-local RevType = require'diffview.git.rev'.RevType
-local CDiffView = require'diffview.api.views.diff.diff_view'.CDiffView
-local dv_lib = require'diffview.lib'
+local dv = require("diffview")
+local dv_config = require("diffview.config")
+local Rev = require("diffview.git.rev").Rev
+local RevType = require("diffview.git.rev").RevType
+local CDiffView = require("diffview.api.views.diff.diff_view").CDiffView
+local dv_lib = require("diffview.lib")
+local dv_utils = require("diffview.utils")
 
-local neogit = require 'neogit'
-local status = require'neogit.status'
-local a = require 'plenary.async'
+local neogit = require("neogit")
+local status = require("neogit.status")
+local a = require("plenary.async")
 
 local old_config
 
 M.diffview_mappings = {
   close = function()
-    vim.cmd [[tabclose]]
+    vim.cmd("tabclose")
     neogit.dispatch_refresh()
     dv.setup(old_config)
-  end
+  end,
 }
 
 local function cb(name)
   return string.format(":lua require('neogit.integrations.diffview').diffview_mappings['%s']()<CR>", name)
 end
 
-function M.open(selected_file_name)
-  old_config = dv_config.get_config()
-
-  local config = vim.tbl_deep_extend("force", old_config, {
-    key_bindings = {
-      view = {
-        ["q"] = cb("close"),
-        ["<esc>"] = cb("close")
-      },
-      file_panel = {
-        ["q"] = cb("close"),
-        ["<esc>"] = cb("close")
-      }
-    }
-  })
-
-  dv.setup(config)
-
+local function get_local_diff_view(selected_file_name)
   local left = Rev(RevType.INDEX)
   local right = Rev(RevType.LOCAL)
   local git_root = neogit.cli.git_root_sync()
@@ -52,7 +36,7 @@ function M.open(selected_file_name)
     local repo = neogit.get_repo()
     local sections = {
       working = repo.unstaged,
-      staged = repo.staged
+      staged = repo.staged,
     }
     for kind, section in pairs(sections) do
       files[kind] = {}
@@ -62,11 +46,11 @@ function M.open(selected_file_name)
           status = item.mode,
           stats = (item.diff and item.diff.stats) and {
             additions = item.diff.stats.additions or 0,
-            deletions = item.diff.stats.deletions or 0
+            deletions = item.diff.stats.deletions or 0,
           } or nil,
           left_null = vim.tbl_contains({ "A", "?" }, item.mode),
           right_null = false,
-          selected = item.name == selected_file_name
+          selected = item.name == selected_file_name,
         }
 
         table.insert(files[kind], file)
@@ -78,7 +62,7 @@ function M.open(selected_file_name)
 
   local files = update_files()
 
-  local view = CDiffView({
+  local view = CDiffView {
     git_root = git_root,
     left = left,
     right = right,
@@ -90,23 +74,57 @@ function M.open(selected_file_name)
         if side == "left" then
           table.insert(args, "HEAD")
         end
-        return neogit.cli.show.file(unpack(args)).call_sync()
+        return neogit.cli.show.file(unpack(args)).call_sync():trim().stdout
       elseif kind == "working" then
-        return side == "left"
-          and neogit.cli.show.file(path).call_sync()
-          or nil
+        local fdata = neogit.cli.show.file(path).call_sync():trim().stdout
+        return side == "left" and fdata
       end
-    end
-  })
+    end,
+  }
 
-  view:on_files_staged(a.void(function (_)
-    status.refresh({ status = true, diffs = true })
+  view:on_files_staged(a.void(function(_)
+    status.refresh({ status = true, diffs = true }, "on_files_staged")
     view:update_files()
   end))
 
   dv_lib.add_view(view)
 
-  view:open()
+  return view
+end
+
+function M.open(section_name, item_name)
+  old_config = dv_config.get_config()
+
+  local config = vim.tbl_deep_extend("force", old_config, {
+    key_bindings = {
+      view = {
+        ["q"] = cb("close"),
+        ["<esc>"] = cb("close"),
+      },
+      file_panel = {
+        ["q"] = cb("close"),
+        ["<esc>"] = cb("close"),
+      },
+    },
+  })
+
+  dv.setup(config)
+
+  local view
+
+  if section_name == "recent" or section_name == "unmerged" or section_name == "log" then
+    local commit_id = item_name:match("[a-f0-9]+")
+    view = dv_lib.diffview_open(dv_utils.tbl_pack(commit_id .. "^!"))
+  elseif section_name == "stashes" then
+    local stash_id = item_name:match("stash@{%d+}")
+    view = dv_lib.diffview_open(dv_utils.tbl_pack(stash_id .. "^!"))
+  else
+    view = get_local_diff_view(item_name)
+  end
+
+  if view then
+    view:open()
+  end
 
   return view
 end

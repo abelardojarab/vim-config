@@ -1,7 +1,5 @@
-
 local api = vim.api
 
-local nvim = require('gitsigns.nvim')
 local dprintf = require("gitsigns.debug").dprintf
 
 local record M
@@ -20,7 +18,11 @@ local hls: {{string:{string}}} = {
 
   {GitSignsAddLn              = {'GitGutterAddLine'   , 'SignifyLineAdd'   , 'DiffAdd'   }},
   {GitSignsChangeLn           = {'GitGutterChangeLine', 'SignifyLineChange', 'DiffChange'}},
-  {GitSignsDeleteLn           = {'GitGutterDeleteLine', 'SignifyLineDelete', 'DiffDelete'}},
+  -- Don't set GitSignsDeleteLn by default
+  -- {GitSignsDeleteLn           = {}},
+
+  {GitSignsAddPreview         = {'GitGutterAddLine'   , 'SignifyLineAdd'   , 'DiffAdd'   }},
+  {GitSignsDeletePreview      = {'GitGutterDeleteLine', 'SignifyLineDelete', 'DiffDelete'}},
 
   {GitSignsCurrentLineBlame   = {'NonText'}},
 
@@ -34,7 +36,7 @@ local hls: {{string:{string}}} = {
 
   {GitSignsAddLnVirtLn        = {'GitSignsAddLn'   }},
   {GitSignsChangeVirtLn       = {'GitSignsChangeLn'}},
-  {GitSignsDeleteVirtLn       = {'GitSignsDeleteLn'}},
+  {GitSignsDeleteVirtLn       = {'GitGutterDeleteLine', 'SignifyLineDelete', 'DiffDelete'}},
 
   {GitSignsAddLnVirtLnInLine  = {'GitSignsAddLnInline'   }},
   {GitSignsChangeVirtLnInLine = {'GitSignsChangeLnInline'}},
@@ -60,7 +62,7 @@ M.setup_highlights = function()
         for _, d in ipairs(candidates) do
           if is_hl_set(d) then
             dprintf('Deriving %s from %s', hl, d)
-            nvim.highlight(hl, {default = true, link = d })
+            api.nvim_set_hl(0, hl, {default = true, link = d })
             break
           end
         end

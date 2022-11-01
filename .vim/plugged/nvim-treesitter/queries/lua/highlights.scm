@@ -1,15 +1,3 @@
-;;; Builtins
-
-[
-  (false)
-  (true)
-] @boolean
-
-(nil) @constant.builtin
-
-((identifier) @variable.builtin
- (#match? @variable.builtin "self"))
-
 ;; Keywords
 
 "return" @keyword.return
@@ -140,12 +128,22 @@
 
 (identifier) @variable
 
-;; Constants
+((identifier) @variable.builtin
+ (#eq? @variable.builtin "self"))
 
-(vararg_expression) @constant
+;; Constants
 
 ((identifier) @constant
  (#lua-match? @constant "^[A-Z][A-Z_0-9]*$"))
+
+(vararg_expression) @constant
+
+(nil) @constant.builtin
+
+[
+  (false)
+  (true)
+] @boolean
 
 ;; Tables
 
@@ -163,10 +161,10 @@
 
 (parameters (identifier) @parameter)
 
-(function_call name: (identifier) @function)
+(function_call name: (identifier) @function.call)
 (function_declaration name: (identifier) @function)
 
-(function_call name: (dot_index_expression field: (identifier) @function))
+(function_call name: (dot_index_expression field: (identifier) @function.call))
 (function_declaration name: (dot_index_expression field: (identifier) @function))
 
 (method_index_expression method: (identifier) @method)
@@ -182,13 +180,13 @@
 
 ;; Others
 
-(comment) @comment
+(comment) @comment @spell
 
-(hash_bang_line) @comment
+(hash_bang_line) @preproc
 
 (number) @number
 
-(string) @string
+(string) @string @spell
 
 ;; Error
 (ERROR) @error

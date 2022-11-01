@@ -1,6 +1,6 @@
 <h1 align="center">
   <br>
-  <img width="300" height="300" src="img/logo.png">
+  <img width="300" height="300" src="https://user-images.githubusercontent.com/15387611/189754366-359af924-48c8-4f58-8d21-589d5e5c2276.png">
   <br>
   nvim-peekup
   <br>
@@ -9,6 +9,9 @@
 <h2 align="center">
   <img alt="PR" src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat"/>
   <img alt="Lua" src="https://img.shields.io/badge/lua-%232C2D72.svg?&style=flat&logo=lua&logoColor=white"/>
+  <a href="https://github.com/gennaro-tedesco/nvim-peekup/releases">
+    <img alt="releases" src="https://img.shields.io/github/release/gennaro-tedesco/nvim-peekup"/>
+  </a>
 </h2>
 
 <h4 align="center">neovim registers made easy!</h4>
@@ -23,7 +26,7 @@
 
 Finally vim registers made easy and fun! No more headaches with cumbersome keystrokes `"<register>p`, no more forgetting where the yanked text is: peek into the vim registers in floating window and pick up the text you want with `nvim-peekup`!
 
-![](img/screenshot.png)
+![](https://user-images.githubusercontent.com/15387611/189754642-323b574f-433f-439a-9bcb-2f20fe0bc0c3.png)
 
 ## Installation
 Install it using your favourite plugin manager; for instance if you are using vim-plug
@@ -34,7 +37,7 @@ Plug 'gennaro-tedesco/nvim-peekup'
 ## Usage
 Open the peekup window with the default keymapping `""`. Scroll and browse the list of registers ordered by type and select the register you want by simply pressing the corresponding character (letter or number, no need to prepend `"`): you receive visual confirmation for your choice and the text is copied into the default register. The peekup window automatically closes and you can now easily put (`p`) your yanked text anywhere you want.
 
-`<Esc>` to manually close the window otherwise.
+`<Esc>` to manually close the window otherwise (the peekup window closes automatically also when changing windows focus).
 
 ![demo](https://user-images.githubusercontent.com/15387611/113494882-03645880-94ed-11eb-90f5-1beeeeeee09a.gif)
 
@@ -42,11 +45,12 @@ Default commands
 
 | key             | description
 |:--------------- |:-------------
-|""               | open peekup window
+|`""`             | open peekup window
 |`<Esc>`          | close peekup window
 |any character    | select and copy text from the corresponding " register
 |`<C-j>`, `<C-k>` | scroll the list up and down
 |`<Up>`, `<Down>` | move to next registers type
+|`"x`             | empty all registers (outside the peekup window)
 
 Notice that since characters keystrokes copy the text from the corresponding register, the peekup window does not obey the standard vim motion commands. Arrow keys move among registers sections (they can also use the corresponding marks `'n, 'l, 's`).
 
@@ -67,6 +71,7 @@ Exposed interfaces
 |g:peekup\_open            | `<Plug>PeekupOpen`           | open peekup window and interact
 |g:peekup\_paste\_before   | `<Plug>PeekupPasteBefore`    | directly paste before cursor upon selection
 |g:peekup\_paste\_after    | `<Plug>PeekupPasteAfter`     | directly paste after cursor upon selection
+|g:peekup\_empty\_registers| `<Plug>PeekupEmptyRegisters` | clear all registers
 
 see also `:help peekup-usage`.
 
@@ -74,7 +79,9 @@ see also `:help peekup-usage`.
 - peekup floating window with registers content
 - visual confirmation of selected text
 - peekup closes automatically, put (`p`) the yanked text anywhere
+- keymap to empty all registers
 - fully customisable layout and behaviour
+
 
 ## Customisation
 The look and the behaviour of the registers floating window is fully customisable. In order to do so simply override the [dictionary configuration entries](https://github.com/gennaro-tedesco/nvim-peekup/blob/master/lua/nvim-peekup/config.lua) specifying the below in your nvim configurations (init.vim or any other option file being sourced at start-up), say

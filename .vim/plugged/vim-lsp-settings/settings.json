@@ -31,6 +31,31 @@
       }
     }
   ],
+  "astro": [
+    {
+      "command": "astro-ls",
+      "url": "https://github.com/withastro/language-tools/tree/main/packages/language-server",
+      "description": "The Astro Language Server, and official extensions which use it",
+      "config": {
+        "refresh_pattern": "\\(/\\|\\k\\+\\)$"
+      },
+      "requires": [
+        "npm"
+      ],
+      "root_uri_patterns": [
+        "package.json",
+        "tsconfig.json",
+        "jsconfig.json",
+        ".git"
+      ],
+      "vim_plugin": {
+        "extensions": [
+          "astro"
+        ],
+        "name": "wuelnerdotexe/vim-astro"
+      }
+    }
+  ],
   "c": [
     {
       "command": "clangd",
@@ -478,7 +503,7 @@
   ],
   "haskell": [
     {
-      "command": "hie",
+      "command": "hie-wrapper",
       "url": "https://github.com/haskell/haskell-ide-engine",
       "description": "The engine for haskell ide-integration. Not an IDE",
       "requires": [
@@ -490,7 +515,7 @@
       ]
     },
     {
-      "command": "haskell-language-server",
+      "command": "haskell-language-server-wrapper",
       "url": "https://github.com/haskell/haskell-language-server",
       "description": "Official haskell ide support via language server (LSP). Successor of ghcide & haskell-ide-engine.",
       "requires": [],
@@ -819,10 +844,18 @@
   ],
   "markdown": [
     {
-      "command": "remark-language-server",
+      "command": "vscode-markdown-languageserver",
+      "url": "https://github.com/microsoft/vscode/tree/main/extensions/markdown-language-features/server",
+      "description": "Markdown Language Server",
       "requires": [
         "npm"
       ]
+    },
+    {
+      "command": "marksman",
+      "url": "https://github.com/artempyanykh/marksman",
+      "description": "Markdown LSP server providing completion, cross-references, diagnostics, and more.",
+      "requires": []
     }
   ],
   "nim": [
@@ -839,6 +872,16 @@
         ],
         "name": "zah/nim.vim"
       }
+    }
+  ],
+  "nix": [
+    {
+      "command": "rnix-lsp",
+      "url": "https://github.com/nix-community/rnix-lsp",
+      "description": "Language server implementation for Nix",
+      "requires": [
+        "nix"
+      ]
     }
   ],
   "objc": [
@@ -873,7 +916,35 @@
       }
     }
   ],
+  "odin": [
+    {
+      "command": "ols",
+      "url": "https://github.com/DanielGavin/ols",
+      "description": "Language server for Odin",
+      "requires": [
+        "odin"
+      ],
+      "vim_plugin": {
+        "extensions": [
+          "odin"
+        ],
+        "name": "https://github.com/Tetralux/odin.vim"
+      }
+    }
+  ],
   "perl": [
+    {
+      "command": "perlnavigator",
+      "url": "https://github.com/bscan/PerlNavigator",
+      "description": "Perl Language Server that includes syntax checking, perl critic, and code navigation",
+      "config": {
+        "refresh_pattern": "\\(\\$[a-zA-Z0-9_:]*\\|\\k\\+\\|\\k\\+::\\)$"
+      },
+      "requires": [
+        "npm",
+        "perl"
+      ]
+    },
     {
       "command": "slp",
       "url": "https://github.com/cazador481/App-LanguageServer-Perl",
@@ -969,6 +1040,16 @@
       ]
     }
   ],
+  "proto": [
+    {
+      "command": "bufls",
+      "url": "https://github.com/bufbuild/buf-language-server",
+      "description": "Prototype for a Protobuf language server compatible with Buf.",
+      "requires": [
+        "go"
+      ]
+    }
+  ],
   "ps1": [
     {
       "command": "powershell-languageserver",
@@ -995,6 +1076,16 @@
         "git",
         "ruby",
         "bundler"
+      ]
+    }
+  ],
+  "purescript": [
+    {
+      "command": "purescript-language-server",
+      "url": "https://github.com/nwolverson/purescript-language-server",
+      "description": "Language server implementation for PureScript",
+      "requires": [
+        "npm"
       ]
     }
   ],
@@ -1149,6 +1240,14 @@
   ],
   "ruby": [
     {
+      "command": "ruby-lsp",
+      "url": "https://github.com/Shopify/ruby-lsp",
+      "description": "An implementation of the LSP specification for Ruby",
+      "requires": [
+        "gem"
+      ]
+    },
+    {
       "command": "typeprof",
       "url": "https://github.com/ruby/typeprof",
       "description": "An experimental type-level Ruby interpreter for testing and understanding Ruby code",
@@ -1265,6 +1364,14 @@
       },
       "requires": [
         "go"
+      ]
+    },
+    {
+      "command": "plpgsql-lsp",
+      "url": "https://github.com/UniqueVision/plpgsql-lsp",
+      "description": "PL/pgSQL Language Server",
+      "requires": [
+        "npm"
       ]
     }
   ],
@@ -1500,7 +1607,7 @@
     },
     {
       "command": "vimscript-language-server",
-      "url": "vimscript-language-server",
+      "url": "https://github.com/google/vimscript-language-server",
       "description": "Vim script Language Server",
       "requires": [
         "cargo"
@@ -1527,26 +1634,6 @@
   ],
   "vue": [
     {
-      "command": "vls",
-      "url": "https://github.com/vuejs/vetur",
-      "description": "Vue tooling for VS Code.",
-      "config": {
-        "refresh_pattern": "\\([a-zA-Z0-9_-]\\+\\|/\\|\\k\\+\\)$"
-      },
-      "requires": [
-        "npm"
-      ],
-      "root_uri_patterns": [
-        "package.json"
-      ],
-      "vim_plugin": {
-        "extensions": [
-          "vue"
-        ],
-        "name": "posva/vim-vue"
-      }
-    },
-    {
       "command": "volar-server",
       "url": "https://github.com/johnsoncodehk/volar",
       "description": "Explore high-performance tooling for Vue",
@@ -1564,6 +1651,26 @@
           "vue"
         ],
         "name": "leafOfTree/vim-vue-plugin"
+      }
+    },
+    {
+      "command": "vls",
+      "url": "https://github.com/vuejs/vetur",
+      "description": "Vue tooling for VS Code.",
+      "config": {
+        "refresh_pattern": "\\([a-zA-Z0-9_-]\\+\\|/\\|\\k\\+\\)$"
+      },
+      "requires": [
+        "npm"
+      ],
+      "root_uri_patterns": [
+        "package.json"
+      ],
+      "vim_plugin": {
+        "extensions": [
+          "vue"
+        ],
+        "name": "posva/vim-vue"
       }
     }
   ],

@@ -206,6 +206,37 @@ function! s:log(msg) abort
     endif
 endfunction
 
+function! s:ObserveOptions()
+    augroup Undotree_OptionsObserver
+        try
+            autocmd!
+            if exists('+fdo')
+                let s:open_folds = &fdo =~# 'undo'
+                if exists('##OptionSet')
+                    autocmd OptionSet foldopen let s:open_folds = v:option_new =~# 'undo'
+                endif
+            endif
+        finally
+            augroup END
+        endtry
+endfunction
+
+" Whether to open folds on undo/redo.
+" Is 1 when 'undo' is in &fdo (see :help 'foldopen').
+" default: 1
+let s:open_folds = 1
+
+if exists('v:vim_did_enter')
+    if !v:vim_did_enter
+        autocmd VimEnter * call s:ObserveOptions()
+    else
+        call s:ObserveOptions()
+    endif
+else
+    autocmd VimEnter * call s:ObserveOptions()
+    call s:ObserveOptions()
+endif
+
 "=================================================
 "Base class for panels.
 let s:panel = {}
@@ -345,6 +376,10 @@ function! s:undotree.ActionInTarget(cmd) abort
     " Target should be a normal buffer.
     if (&bt == '' || &bt == 'acwrite') && (&modifiable == 1) && (mode() == 'n')
         call s:exec(a:cmd)
+        " Open folds so that the change being undone/redone is visible.
+        if s:open_folds
+            call s:exec('normal! zv')
+        endif
         call self.Update()
     endif
     " Update not always set current focus.
@@ -426,10 +461,12 @@ function! s:undotree.ActionClearHistory() abort
         return
     endif
     let ul_bak = &undolevels
+    let mod_bak = &modified
     let &undolevels = -1
     call s:exec("norm! a \<BS>\<Esc>")
     let &undolevels = ul_bak
-    unlet ul_bak
+    let &modified = mod_bak
+    unlet ul_bak mod_bak
     let self.targetBufnr = -1 "force update
     call self.Update()
 endfunction
