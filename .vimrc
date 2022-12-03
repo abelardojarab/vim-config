@@ -165,7 +165,6 @@ nnoremap <silent> <Leader>nn :set number!
 silent !stty -ixon
 autocmd VimLeave * silent !stty ixon
 
-
 " Use a bar-shaped cursor for insert mode, even through tmux.
 if exists('$TMUX')
     let &t_SI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=1\x7\<Esc>\\"
@@ -204,7 +203,6 @@ cmap <Esc>[1;2D <S-Left>
 cmap <Esc>[1;2C <S-Right>
 
 " ---  Clipboard  ---
-
 " Allow Shift+Insert to paste
 map <S-Insert> <MiddleMouse>
 map! <S-Insert> <MiddleMouse>
