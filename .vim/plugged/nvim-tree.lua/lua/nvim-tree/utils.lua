@@ -1,7 +1,5 @@
-local a = vim.api
-local uv = vim.loop
-
 local Iterator = require "nvim-tree.iterators.node-iterator"
+local notify = require "nvim-tree.notify"
 
 local M = {
   debouncers = {},
@@ -19,16 +17,16 @@ function M.str_find(haystack, needle)
 end
 
 function M.read_file(path)
-  local fd = uv.fs_open(path, "r", 438)
+  local fd = vim.loop.fs_open(path, "r", 438)
   if not fd then
     return ""
   end
-  local stat = uv.fs_fstat(fd)
+  local stat = vim.loop.fs_fstat(fd)
   if not stat then
     return ""
   end
-  local data = uv.fs_read(fd, stat.size, 0)
-  uv.fs_close(fd)
+  local data = vim.loop.fs_read(fd, stat.size, 0)
+  vim.loop.fs_close(fd)
   return data or ""
 end
 
@@ -211,19 +209,19 @@ function M.is_wsl_windows_fs_exe(ext)
 end
 
 function M.rename_loaded_buffers(old_path, new_path)
-  for _, buf in pairs(a.nvim_list_bufs()) do
-    if a.nvim_buf_is_loaded(buf) then
-      local buf_name = a.nvim_buf_get_name(buf)
+  for _, buf in pairs(vim.api.nvim_list_bufs()) do
+    if vim.api.nvim_buf_is_loaded(buf) then
+      local buf_name = vim.api.nvim_buf_get_name(buf)
       local exact_match = buf_name == old_path
       local child_match = (
         buf_name:sub(1, #old_path) == old_path and buf_name:sub(#old_path + 1, #old_path + 1) == path_separator
       )
       if exact_match or child_match then
-        a.nvim_buf_set_name(buf, new_path .. buf_name:sub(#old_path + 1))
+        vim.api.nvim_buf_set_name(buf, new_path .. buf_name:sub(#old_path + 1))
         -- to avoid the 'overwrite existing file' error message on write for
         -- normal files
-        if a.nvim_buf_get_option(buf, "buftype") == "" then
-          a.nvim_buf_call(buf, function()
+        if vim.api.nvim_buf_get_option(buf, "buftype") == "" then
+          vim.api.nvim_buf_call(buf, function()
             vim.cmd "silent! write!"
             vim.cmd "edit"
           end)
@@ -269,14 +267,20 @@ function M.table_create_missing(tbl, path)
   return t
 end
 
--- Move a value from src to dst if value is nil on dst
--- @param src to copy from
--- @param src_path dot separated string of sub-tables
--- @param src_pos value pos
--- @param dst to copy to
--- @param dst_path dot separated string of sub-tables, created when missing
--- @param dst_pos value pos
-function M.move_missing_val(src, src_path, src_pos, dst, dst_path, dst_pos)
+--- Move a value from src to dst if value is nil on dst.
+--- Remove value from src
+--- @param src table to copy from
+--- @param src_path string dot separated string of sub-tables
+--- @param src_pos string value pos
+--- @param dst table to copy to
+--- @param dst_path string dot separated string of sub-tables, created when missing
+--- @param dst_pos string value pos
+--- @param remove boolean default true
+function M.move_missing_val(src, src_path, src_pos, dst, dst_path, dst_pos, remove)
+  if remove == nil then
+    remove = true
+  end
+
   local ok, err = pcall(vim.validate, {
     src = { src, "table" },
     src_path = { src_path, "string" },
@@ -284,9 +288,11 @@ function M.move_missing_val(src, src_path, src_pos, dst, dst_path, dst_pos)
     dst = { dst, "table" },
     dst_path = { dst_path, "string" },
     dst_pos = { dst_pos, "string" },
+    remove = { remove, "boolean" },
   })
   if not ok then
-    M.notify.warn("move_missing_val: " .. (err or "invalid arguments"))
+    notify.warn("move_missing_val: " .. (err or "invalid arguments"))
+    return
   end
 
   for pos in string.gmatch(src_path, "([^%.]+)%.*") do
@@ -307,7 +313,9 @@ function M.move_missing_val(src, src_path, src_pos, dst, dst_path, dst_pos)
     dst[dst_pos] = src_val
   end
 
-  src[src_pos] = nil
+  if remove then
+    src[src_pos] = nil
+  end
 end
 
 function M.format_bytes(bytes)
@@ -369,7 +377,7 @@ function M.debounce(context, timeout, callback)
     timer_stop_close(debouncer.timer)
   end
 
-  local timer = uv.new_timer()
+  local timer = vim.loop.new_timer()
   debouncer.timer = timer
   timer:start(timeout, 0, function()
     timer_stop_close(timer)
@@ -457,7 +465,7 @@ function M.is_nvim_tree_buf(bufnr)
     bufnr = 0
   end
   if vim.fn.bufexists(bufnr) then
-    local bufname = a.nvim_buf_get_name(bufnr)
+    local bufname = vim.api.nvim_buf_get_name(bufnr)
     if vim.fn.fnamemodify(bufname, ":t"):match "^NvimTree_[0-9]+$" then
       if vim.bo[bufnr].filetype == "NvimTree" then
         return true

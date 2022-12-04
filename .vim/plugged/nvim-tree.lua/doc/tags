@@ -43,11 +43,16 @@ nvim-tree.diagnostics	nvim-tree-lua.txt	/*nvim-tree.diagnostics*
 nvim-tree.diagnostics.debounce_delay	nvim-tree-lua.txt	/*nvim-tree.diagnostics.debounce_delay*
 nvim-tree.diagnostics.enable	nvim-tree-lua.txt	/*nvim-tree.diagnostics.enable*
 nvim-tree.diagnostics.icons	nvim-tree-lua.txt	/*nvim-tree.diagnostics.icons*
+nvim-tree.diagnostics.severity	nvim-tree-lua.txt	/*nvim-tree.diagnostics.severity*
+nvim-tree.diagnostics.severity.max	nvim-tree-lua.txt	/*nvim-tree.diagnostics.severity.max*
+nvim-tree.diagnostics.severity.min	nvim-tree-lua.txt	/*nvim-tree.diagnostics.severity.min*
 nvim-tree.diagnostics.show_on_dirs	nvim-tree-lua.txt	/*nvim-tree.diagnostics.show_on_dirs*
+nvim-tree.diagnostics.show_on_open_dirs	nvim-tree-lua.txt	/*nvim-tree.diagnostics.show_on_open_dirs*
 nvim-tree.disable_netrw	nvim-tree-lua.txt	/*nvim-tree.disable_netrw*
 nvim-tree.filesystem_watchers	nvim-tree-lua.txt	/*nvim-tree.filesystem_watchers*
 nvim-tree.filesystem_watchers.debounce_delay	nvim-tree-lua.txt	/*nvim-tree.filesystem_watchers.debounce_delay*
 nvim-tree.filesystem_watchers.enable	nvim-tree-lua.txt	/*nvim-tree.filesystem_watchers.enable*
+nvim-tree.filesystem_watchers.ignore_dirs	nvim-tree-lua.txt	/*nvim-tree.filesystem_watchers.ignore_dirs*
 nvim-tree.filters	nvim-tree-lua.txt	/*nvim-tree.filters*
 nvim-tree.filters.custom	nvim-tree-lua.txt	/*nvim-tree.filters.custom*
 nvim-tree.filters.dotfiles	nvim-tree-lua.txt	/*nvim-tree.filters.dotfiles*
@@ -56,6 +61,7 @@ nvim-tree.git	nvim-tree-lua.txt	/*nvim-tree.git*
 nvim-tree.git.enable	nvim-tree-lua.txt	/*nvim-tree.git.enable*
 nvim-tree.git.ignore	nvim-tree-lua.txt	/*nvim-tree.git.ignore*
 nvim-tree.git.show_on_dirs	nvim-tree-lua.txt	/*nvim-tree.git.show_on_dirs*
+nvim-tree.git.show_on_open_dirs	nvim-tree-lua.txt	/*nvim-tree.git.show_on_open_dirs*
 nvim-tree.git.timeout	nvim-tree-lua.txt	/*nvim-tree.git.timeout*
 nvim-tree.hijack_cursor	nvim-tree-lua.txt	/*nvim-tree.hijack_cursor*
 nvim-tree.hijack_directories	nvim-tree-lua.txt	/*nvim-tree.hijack_directories*
@@ -63,7 +69,6 @@ nvim-tree.hijack_directories.auto_open	nvim-tree-lua.txt	/*nvim-tree.hijack_dire
 nvim-tree.hijack_directories.enable	nvim-tree-lua.txt	/*nvim-tree.hijack_directories.enable*
 nvim-tree.hijack_netrw	nvim-tree-lua.txt	/*nvim-tree.hijack_netrw*
 nvim-tree.hijack_unnamed_buffer_when_opening	nvim-tree-lua.txt	/*nvim-tree.hijack_unnamed_buffer_when_opening*
-nvim-tree.ignore_buf_on_tab_change	nvim-tree-lua.txt	/*nvim-tree.ignore_buf_on_tab_change*
 nvim-tree.ignore_buffer_on_setup	nvim-tree-lua.txt	/*nvim-tree.ignore_buffer_on_setup*
 nvim-tree.ignore_ft_on_setup	nvim-tree-lua.txt	/*nvim-tree.ignore_ft_on_setup*
 nvim-tree.live_filter	nvim-tree-lua.txt	/*nvim-tree.live_filter*
@@ -87,7 +92,6 @@ nvim-tree.notify.threshold	nvim-tree-lua.txt	/*nvim-tree.notify.threshold*
 nvim-tree.on_attach	nvim-tree-lua.txt	/*nvim-tree.on_attach*
 nvim-tree.open_on_setup	nvim-tree-lua.txt	/*nvim-tree.open_on_setup*
 nvim-tree.open_on_setup_file	nvim-tree-lua.txt	/*nvim-tree.open_on_setup_file*
-nvim-tree.open_on_tab	nvim-tree-lua.txt	/*nvim-tree.open_on_tab*
 nvim-tree.prefer_startup_root	nvim-tree-lua.txt	/*nvim-tree.prefer_startup_root*
 nvim-tree.reload_on_bufenter	nvim-tree-lua.txt	/*nvim-tree.reload_on_bufenter*
 nvim-tree.remove_keymaps	nvim-tree-lua.txt	/*nvim-tree.remove_keymaps*
@@ -117,7 +121,7 @@ nvim-tree.renderer.indent_markers.enable	nvim-tree-lua.txt	/*nvim-tree.renderer.
 nvim-tree.renderer.indent_markers.icons	nvim-tree-lua.txt	/*nvim-tree.renderer.indent_markers.icons*
 nvim-tree.renderer.indent_markers.inline_arrows	nvim-tree-lua.txt	/*nvim-tree.renderer.indent_markers.inline_arrows*
 nvim-tree.renderer.indent_width	nvim-tree-lua.txt	/*nvim-tree.renderer.indent_width*
-nvim-tree.renderer.root_folder_modifier	nvim-tree-lua.txt	/*nvim-tree.renderer.root_folder_modifier*
+nvim-tree.renderer.root_folder_label	nvim-tree-lua.txt	/*nvim-tree.renderer.root_folder_label*
 nvim-tree.renderer.special_files	nvim-tree-lua.txt	/*nvim-tree.renderer.special_files*
 nvim-tree.renderer.symlink_destination	nvim-tree-lua.txt	/*nvim-tree.renderer.symlink_destination*
 nvim-tree.respect_buf_cwd	nvim-tree-lua.txt	/*nvim-tree.respect_buf_cwd*
@@ -128,6 +132,11 @@ nvim-tree.sync_root_with_cwd	nvim-tree-lua.txt	/*nvim-tree.sync_root_with_cwd*
 nvim-tree.system_open	nvim-tree-lua.txt	/*nvim-tree.system_open*
 nvim-tree.system_open.args	nvim-tree-lua.txt	/*nvim-tree.system_open.args*
 nvim-tree.system_open.cmd	nvim-tree-lua.txt	/*nvim-tree.system_open.cmd*
+nvim-tree.tab	nvim-tree-lua.txt	/*nvim-tree.tab*
+nvim-tree.tab.sync	nvim-tree-lua.txt	/*nvim-tree.tab.sync*
+nvim-tree.tab.sync.close	nvim-tree-lua.txt	/*nvim-tree.tab.sync.close*
+nvim-tree.tab.sync.ignore	nvim-tree-lua.txt	/*nvim-tree.tab.sync.ignore*
+nvim-tree.tab.sync.open	nvim-tree-lua.txt	/*nvim-tree.tab.sync.open*
 nvim-tree.trash	nvim-tree-lua.txt	/*nvim-tree.trash*
 nvim-tree.trash.cmd	nvim-tree-lua.txt	/*nvim-tree.trash.cmd*
 nvim-tree.trash.require_confirm	nvim-tree-lua.txt	/*nvim-tree.trash.require_confirm*

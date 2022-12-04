@@ -82,7 +82,7 @@ CodeLens~
 
 	Subseparator between codeLenses in virtual text.
 
-	Scope: `resource`, default: `" "`
+	Scope: `resource`, default: `" | "`
 
 ------------------------------------------------------------------------------
 Colors~
@@ -397,7 +397,8 @@ Dialog~
 
 "dialog.maxHeight"					*coc-config-dialog-maxHeight*
 
-	Maximum height of dialog window.
+	Maximum height of dialog window, for quickpick, it's content window's
+	height.
 
 	Scope: `application`, default: `30`
 
@@ -532,11 +533,11 @@ InlayHint~
 
 	Scope: `language-overridable`, default: `true`
 
-"inlayHint.display"					coc-config-inlayHint-display
+"inlayHint.display"					*coc-config-inlayHint-display*
 
 	Display inlay hints. Toggle with :CocCommand document.toggleInlayHint
 
-	Scope: `language-overridable`, default: true
+	Scope: `language-overridable`, default: `true`
 
 "inlayHint.parameterSeparator"				*coc-config-inlayHint-parameterSeparator*
 
@@ -565,9 +566,21 @@ InlayHint~
 ------------------------------------------------------------------------------
 Links~
 							*coc-config-links*
+"links.enable" 						*coc-config-links-enable*
+
+	Enable document links.
+
+	Scope: `language-overridable`, default: `true`
+
+"links.highlight"					*coc-config-links-highlight*
+
+	Use CocLink highlight group to highlight links.
+
+	Scope: `application`, default: `false`
+
 "links.tooltip"						*coc-config-links-tooltip*
 
-	Show tooltip of link under cursor on CursorHold, neovim only.
+	Show tooltip of link under cursor on CursorHold.
 
 	Scope: `application`, default: `false`
 
@@ -586,6 +599,12 @@ List~
 	delimited by spaces.
 
 	Scope: `application`, default: `true`
+
+"list.floatPreview" 					*coc-config-list-floatPreview*
+
+	Enable preview with float window/popup, default: `false`.
+
+	Scope: `application`, default: `false`
 
 "list.height"						*coc-config-list-height*
 
@@ -1167,12 +1186,6 @@ Suggest~
 
 	Scope: `application`, default: `true`
 
-"suggest.fixInsertedWord"				*coc-config-suggest-fixInsertedWord*
-
-	Make inserted word replace word characters after cursor position.
-
-	Scope: `application`, default: `true`
-
 "suggest.floatConfig"					*coc-config-suggest-floatConfig*
 
 	Configure style of popup menu and documentation window for completion,
@@ -1197,6 +1210,12 @@ Suggest~
 
 	Scope: `language-overridable`, default: `null`
 
+"suggest.insertMode" 					*coc-config-suggest-insertMode*
+
+	Controls whether words are overwritten when accepting completions.
+
+	Scope: `language-overridable`, default: `“replace"`
+
 "suggest.ignoreRegexps"					*coc-config-suggest-ignoreRegexps*
 
 	Regexps to ignore when trigger suggest.
@@ -1208,7 +1227,7 @@ Suggest~
 	Invalid character for strip valid word when inserting text of complete
 	item.
 
-	Scope: `application`, default: `[" ","(","<","{","[","\r","\n"]`
+	Scope: `application`, default: `["\r","\n"]`
 
 "suggest.labelMaxLength"				*coc-config-suggest-labelMaxLength*
 
@@ -1519,6 +1538,12 @@ Preferences~
 "coc.preferences.excludeImageLinksInMarkdownDocument"	*coc-preferences-excludeImageLinksInMarkdownDocument*
 
 	Exclude image links from markdown text in float window.
+
+	Scope: `application`, default: `true`
+
+"coc.preferences.enableGFMBreaksInMarkdownDocument"	*coc-preferences-enableGFMBreaksInmakrdownDocument*
+
+	Exclude GFM breaks in markdown document.
 
 	Scope: `application`, default: `true`
 

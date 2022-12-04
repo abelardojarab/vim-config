@@ -1,4 +1,5 @@
 local api = vim.api
+local fn = vim.fn
 local M = {}
 local helper = require("lsp_signature.helper")
 local match_parameter = helper.match_parameter
@@ -79,6 +80,7 @@ local function virtual_hint(hint, off_y)
   if hint == nil or hint == "" then
     return
   end
+  local dwidth = fn.strdisplaywidth
   local r = vim.api.nvim_win_get_cursor(0)
   local line = api.nvim_get_current_line()
   local line_to_cursor = line:sub(1, r[2])
@@ -95,6 +97,14 @@ local function virtual_hint(hint, off_y)
     if completion_visible then
       show_at = cur_line -- pum, show at current line
     else
+      show_at = cur_line - 1 -- show at below line
+    end
+  end
+
+  if off_y ~= nil and off_y > 0 then
+    if completion_visible then
+      show_at = cur_line -- pum, show at current line
+    else
       show_at = cur_line + 1 -- show at below line
     end
   end
@@ -108,7 +118,7 @@ local function virtual_hint(hint, off_y)
     if prev_line and vim.fn.strdisplaywidth(prev_line) < r[2] then
       show_at = cur_line - 1
       pl = prev_line
-    elseif next_line and vim.fn.strdisplaywidth(next_line) < r[2] + 2 and not completion_visible then
+    elseif next_line and dwidth(next_line) < r[2] + 2 and not completion_visible then
       show_at = cur_line + 1
       pl = next_line
     else
@@ -130,10 +140,16 @@ local function virtual_hint(hint, off_y)
   end
   pl = pl or ""
   local pad = ""
-  local line_to_cursor_width = vim.fn.strdisplaywidth(line_to_cursor)
-  local pl_width = vim.fn.strdisplaywidth(pl)
+  local line_to_cursor_width = dwidth(line_to_cursor)
+  local pl_width = dwidth(pl)
   if show_at ~= cur_line and line_to_cursor_width > pl_width + 1 then
     pad = string.rep(" ", line_to_cursor_width - pl_width)
+    local width = vim.api.nvim_win_get_width(0)
+    local hint_width = dwidth(_LSP_SIG_CFG.hint_prefix .. hint)
+    -- todo: 6 is width of sign+linenumber column
+    if #pad + pl_width + hint_width + 6 > width then
+      pad = string.rep(" ", math.max(1, line_to_cursor_width - pl_width - hint_width - 6))
+    end
   end
   _LSP_SIG_VT_NS = _LSP_SIG_VT_NS or vim.api.nvim_create_namespace("lsp_signature_vt")
 
@@ -186,6 +202,10 @@ local signature_handler = function(err, result, ctx, config)
 
     return
   end
+  if api.nvim_get_current_buf() ~= bufnr then
+    log("ignore outdated signature result")
+    return
+  end
 
   if config.trigger_from_next_sig then
     log("trigger from next sig", config.activeSignature)
@@ -193,18 +213,13 @@ local signature_handler = function(err, result, ctx, config)
 
   if config.trigger_from_next_sig then
     if #result.signatures > 1 then
-      local sig_num = math.min(_LSP_SIG_CFG.max_height, #result.signatures - result.activeSignature)
-      if config.trigger_from_next_sig then
-        local cnt = math.abs(config.activeSignature - result.activeSignature)
-        for _ = 1, cnt do
-          local m = result.signatures[1]
-          table.insert(result.signatures, #result.signatures + 1, m)
-          table.remove(result.signatures, 1)
-        end
-        result.cfgActiveSignature = config.activeSignature
-      else
-        result.signatures = { unpack(result.signatures, result.activeSignature + 1, sig_num) }
+      local cnt = math.abs(config.activeSignature - result.activeSignature)
+      for _ = 1, cnt do
+        local m = result.signatures[1]
+        table.insert(result.signatures, #result.signatures + 1, m)
+        table.remove(result.signatures, 1)
       end
+      result.cfgActiveSignature = config.activeSignature
     end
   else
     result.cfgActiveSignature = 0 -- reset
@@ -278,7 +293,9 @@ local signature_handler = function(err, result, ctx, config)
   end
 
   if _LSP_SIG_CFG.hint_enable == true then
-    virtual_hint(hint, 0)
+    if _LSP_SIG_CFG.floating_window == false then
+      virtual_hint(hint, 0)
+    end
   else
     _LSP_SIG_VT_NS = _LSP_SIG_VT_NS or vim.api.nvim_create_namespace("lsp_signature_vt")
 
@@ -438,6 +455,13 @@ local signature_handler = function(err, result, ctx, config)
     lines = cnts
   end
 
+  if _LSP_SIG_CFG.hint_enable == true then
+    local v_offy = off_y
+    if v_offy < 0 then
+      v_offy = 1 -- put virtual text below current line
+    end
+    virtual_hint(hint, v_offy)
+  end
   config.offset_y = off_y + config.offset_y
   config.focusable = true -- allow focus
   config.max_height = display_opts.max_height

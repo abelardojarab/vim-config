@@ -2,7 +2,7 @@ scriptencoding utf-8
 let s:root = expand('<sfile>:h:h:h')
 let s:is_win = has('win32') || has('win64')
 let s:is_vim = !has('nvim')
-let s:vim_api_version = 32
+let s:vim_api_version = 34
 
 function! coc#util#remote_fns(name)
   let fns = ['init', 'complete', 'should_complete', 'refresh', 'get_startcol', 'on_complete', 'on_enter']
@@ -49,7 +49,7 @@ endfunction
 
 function! coc#util#semantic_hlgroups() abort
   let res = split(execute('hi'), "\n")
-  let filtered = filter(res, "v:val =~# '^CocSem'")
+  let filtered = filter(res, "v:val =~# '^CocSem' && v:val !~# ' cleared$'")
   return map(filtered, "matchstr(v:val,'\\v^CocSem\\w+')")
 endfunction
 
@@ -307,7 +307,7 @@ function! coc#util#vim_info()
         \ 'ambiguousIsNarrow': &ambiwidth ==# 'single' ? v:true : v:false,
         \ 'textprop': has('textprop') ? v:true : v:false,
         \ 'virtualText': has('nvim-0.5.0') || has('patch-9.0.0067') ? v:true : v:false,
-        \ 'dialog': has('nvim-0.4.0') || has('popupwin') ? v:true : v:false,
+        \ 'dialog': 1,
         \ 'semanticHighlights': coc#util#semantic_hlgroups()
         \}
 endfunction
@@ -331,12 +331,6 @@ function! coc#util#install() abort
 endfunction
 
 function! coc#util#extension_root() abort
-  if get(g:, 'coc_node_env', '') ==# 'test'
-    return s:root.'/src/__tests__/extensions'
-  endif
-  if !empty(get(g:, 'coc_extension_root', ''))
-    echohl Error | echon 'g:coc_extension_root not used any more, use g:coc_data_home instead' | echohl None
-  endif
   return coc#util#get_data_home().'/extensions'
 endfunction
 
@@ -406,17 +400,10 @@ function! coc#util#get_format_opts(bufnr) abort
 endfunction
 
 function! coc#util#get_editoroption(winid) abort
-  if !coc#compat#win_is_valid(a:winid)
+  let info = get(getwininfo(a:winid), 0, v:null)
+  if empty(info) || coc#float#valid(a:winid)
     return v:null
   endif
-  if has('nvim') && exists('*nvim_win_get_config')
-    " avoid float window
-    let config = nvim_win_get_config(a:winid)
-    if !empty(get(config, 'relative', ''))
-      return v:null
-    endif
-  endif
-  let info = getwininfo(a:winid)[0]
   let bufnr = info['bufnr']
   let buftype = getbufvar(bufnr, '&buftype')
   " avoid window for other purpose.
@@ -523,6 +510,9 @@ function! coc#util#get_config_home()
 endfunction
 
 function! coc#util#get_data_home()
+  if get(g:, 'coc_node_env', '') ==# 'test'
+    return $COC_DATA_HOME
+  endif
   if !empty(get(g:, 'coc_data_home', ''))
     let dir = resolve(expand(g:coc_data_home))
   else
@@ -574,8 +564,6 @@ function! coc#util#get_complete_option()
         \ 'colnr' : pos[2],
         \ 'col': col - 1,
         \ 'changedtick': b:changedtick,
-        \ 'blacklist': get(b:, 'coc_suggest_blacklist', []),
-        \ 'disabled': get(b:, 'coc_disabled_sources', []),
         \}
 endfunction
 

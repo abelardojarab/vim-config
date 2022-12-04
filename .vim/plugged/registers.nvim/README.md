@@ -56,7 +56,7 @@ use {
         registers.setup({
 ```
 
-<!-- MARKDOWN-AUTO-DOCS:START (CODE:src=./lua/registers.lua&lines=138-224) -->
+<!-- MARKDOWN-AUTO-DOCS:START (CODE:src=./lua/registers.lua&lines=139-229) -->
 <!-- The below code snippet is automatically added from ./lua/registers.lua -->
 ```lua
         -- Show these registers in the order of the string
@@ -97,6 +97,10 @@ use {
             ctrl_j = registers.move_cursor_down(),
             -- Move the cursor in the registers window up when pressing <C-K>
             ctrl_k = registers.move_cursor_up(),
+            -- Clear the register of the highlighted line when pressing <DEL>
+            delete = registers.clear_highlighted_register(),
+            -- Clear the register of the highlighted line when pressing <BS>
+            backspace = registers.clear_highlighted_register(),
         },
 
         events = {

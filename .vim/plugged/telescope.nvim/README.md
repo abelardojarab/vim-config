@@ -301,7 +301,7 @@ Built-in functions. Ready to be bound to any key you like.
 | `builtin.marks`                     | Lists vim marks and their value                                                                                                                             |
 | `builtin.colorscheme`               | Lists available colorschemes and applies them on `<cr>`                                                                                                     |
 | `builtin.quickfix`                  | Lists items in the quickfix list                                                                                                                            |
-| `builtin.quickfixhistory`           | Lists all quickfix lists in your history and open them with `builtin.quickfix`                                                                              |
+| `builtin.quickfixhistory`           | Lists all quickfix lists in your history and open them with `builtin.quickfix` or quickfix window                                                           |
 | `builtin.loclist`                   | Lists items from the current window's location list                                                                                                         |
 | `builtin.jumplist`                  | Lists Jump List entries                                                                                                                                     |
 | `builtin.vim_options`               | Lists vim options, allows you to edit the current value on `<cr>`                                                                                           |
@@ -524,7 +524,7 @@ Telescope user autocmds:
 ## Extensions
 
 Telescope provides the capabilities to create & register extensions, which
-improve telescope in a variety of ways.
+improves telescope in a variety of ways.
 
 Some extensions provide integration with external tools, outside of the scope of
 `builtins`.  Others provide performance enhancements by using compiled C and

@@ -1,6 +1,3 @@
-local luv = vim.loop
-local api = vim.api
-
 local lib = require "nvim-tree.lib"
 local log = require "nvim-tree.log"
 local colors = require "nvim-tree.colors"
@@ -29,7 +26,7 @@ end
 
 function M.change_root(filepath, bufnr)
   -- skip if current file is in ignore_list
-  local ft = api.nvim_buf_get_option(bufnr, "filetype") or ""
+  local ft = vim.api.nvim_buf_get_option(bufnr, "filetype") or ""
   for _, value in pairs(_config.update_focused_file.ignore_list) do
     if utils.str_find(filepath, value) or utils.str_find(ft, value) then
       return
@@ -75,7 +72,7 @@ function M.toggle(find_file, no_focus, cwd, bang)
   if view.is_visible() then
     view.close()
   else
-    local previous_buf = api.nvim_get_current_buf()
+    local previous_buf = vim.api.nvim_get_current_buf()
     M.open(cwd)
     if _config.update_focused_file.enable or find_file then
       M.find_file(false, previous_buf, bang)
@@ -101,8 +98,8 @@ function M.open_replacing_current_buffer(cwd)
     return
   end
 
-  local buf = api.nvim_get_current_buf()
-  local bufname = api.nvim_buf_get_name(buf)
+  local buf = vim.api.nvim_get_current_buf()
+  local bufname = vim.api.nvim_buf_get_name(buf)
   if bufname == "" or vim.loop.fs_stat(bufname) == nil then
     return
   end
@@ -119,11 +116,11 @@ function M.open_replacing_current_buffer(cwd)
   require("nvim-tree.actions.finders.find-file").fn(bufname)
 end
 
-function M.tab_change()
+function M.tab_enter()
   if view.is_visible { any_tabpage = true } then
-    local bufname = api.nvim_buf_get_name(0)
-    local ft = api.nvim_buf_get_option(0, "ft")
-    for _, filter in ipairs(M.config.ignore_buf_on_tab_change) do
+    local bufname = vim.api.nvim_buf_get_name(0)
+    local ft = vim.api.nvim_buf_get_option(0, "ft")
+    for _, filter in ipairs(M.config.tab.sync.ignore) do
       if bufname:match(filter) ~= nil or ft:match(filter) ~= nil then
         return
       end
@@ -135,14 +132,14 @@ end
 
 local function find_existing_windows()
   return vim.tbl_filter(function(win)
-    local buf = api.nvim_win_get_buf(win)
-    return api.nvim_buf_get_name(buf):match "NvimTree" ~= nil
-  end, api.nvim_list_wins())
+    local buf = vim.api.nvim_win_get_buf(win)
+    return vim.api.nvim_buf_get_name(buf):match "NvimTree" ~= nil
+  end, vim.api.nvim_list_wins())
 end
 
 local function is_file_readable(fname)
-  local stat = luv.fs_stat(fname)
-  return stat and stat.type == "file" and luv.fs_access(fname, "R")
+  local stat = vim.loop.fs_stat(fname)
+  return stat and stat.type == "file" and vim.loop.fs_access(fname, "R")
 end
 
 function M.find_file(with_open, bufnr, bang)
@@ -150,11 +147,11 @@ function M.find_file(with_open, bufnr, bang)
     return
   end
 
-  bufnr = bufnr or api.nvim_get_current_buf()
-  if not api.nvim_buf_is_valid(bufnr) then
+  bufnr = bufnr or vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_valid(bufnr) then
     return
   end
-  local bufname = api.nvim_buf_get_name(bufnr)
+  local bufname = vim.api.nvim_buf_get_name(bufnr)
   local filepath = utils.canonical_path(vim.fn.fnamemodify(bufname, ":p"))
   if not is_file_readable(filepath) then
     return
@@ -181,8 +178,8 @@ function M.open_on_directory()
     return
   end
 
-  local buf = api.nvim_get_current_buf()
-  local bufname = api.nvim_buf_get_name(buf)
+  local buf = vim.api.nvim_get_current_buf()
+  local bufname = vim.api.nvim_buf_get_name(buf)
   if vim.fn.isdirectory(bufname) ~= 1 then
     return
   end
@@ -198,7 +195,7 @@ end
 
 local prev_line
 function M.place_cursor_on_node()
-  local l = api.nvim_win_get_cursor(0)[1]
+  local l = vim.api.nvim_win_get_cursor(0)[1]
   if l == prev_line then
     return
   end
@@ -209,32 +206,32 @@ function M.place_cursor_on_node()
     return
   end
 
-  local line = api.nvim_get_current_line()
-  local cursor = api.nvim_win_get_cursor(0)
+  local line = vim.api.nvim_get_current_line()
+  local cursor = vim.api.nvim_win_get_cursor(0)
   local idx = vim.fn.stridx(line, node.name)
 
   if idx >= 0 then
-    api.nvim_win_set_cursor(0, { cursor[1], idx })
+    vim.api.nvim_win_set_cursor(0, { cursor[1], idx })
   end
 end
 
 function M.on_enter(netrw_disabled)
-  local bufnr = api.nvim_get_current_buf()
-  local bufname = api.nvim_buf_get_name(bufnr)
-  local buftype = api.nvim_buf_get_option(bufnr, "filetype")
+  local bufnr = vim.api.nvim_get_current_buf()
+  local bufname = vim.api.nvim_buf_get_name(bufnr)
+  local buftype = vim.api.nvim_buf_get_option(bufnr, "filetype")
   local ft_ignore = _config.ignore_ft_on_setup
 
-  local stats = luv.fs_stat(bufname)
+  local stats = vim.loop.fs_stat(bufname)
   local is_dir = stats and stats.type == "directory"
   local is_file = stats and stats.type == "file"
   local cwd
   if is_dir then
-    cwd = vim.fn.expand(bufname)
+    cwd = vim.fn.expand(vim.fn.fnameescape(bufname))
     -- INFO: could potentially conflict with rooter plugins
-    vim.cmd("noautocmd cd " .. cwd)
+    vim.cmd("noautocmd cd " .. vim.fn.fnameescape(cwd))
   end
 
-  local lines = not is_dir and api.nvim_buf_get_lines(bufnr, 0, -1, false) or {}
+  local lines = not is_dir and vim.api.nvim_buf_get_lines(bufnr, 0, -1, false) or {}
   local buf_has_content = #lines > 1 or (#lines == 1 and lines[1] ~= "")
 
   local buf_is_dir = is_dir and netrw_disabled
@@ -265,7 +262,7 @@ function M.on_enter(netrw_disabled)
   -- Session that left a NvimTree Buffer opened, reopen with it
   local existing_tree_wins = find_existing_windows()
   if existing_tree_wins[1] then
-    api.nvim_set_current_win(existing_tree_wins[1])
+    vim.api.nvim_set_current_win(existing_tree_wins[1])
   end
 
   if should_open or should_hijack or existing_tree_wins[1] ~= nil then
@@ -297,27 +294,27 @@ local function manage_netrw(disable_netrw, hijack_netrw)
 end
 
 local function setup_vim_commands()
-  api.nvim_create_user_command("NvimTreeOpen", function(res)
+  vim.api.nvim_create_user_command("NvimTreeOpen", function(res)
     M.open(res.args)
   end, { nargs = "?", complete = "dir" })
-  api.nvim_create_user_command("NvimTreeClose", view.close, { bar = true })
-  api.nvim_create_user_command("NvimTreeToggle", function(res)
+  vim.api.nvim_create_user_command("NvimTreeClose", view.close, { bar = true })
+  vim.api.nvim_create_user_command("NvimTreeToggle", function(res)
     M.toggle(false, false, res.args)
   end, { nargs = "?", complete = "dir" })
-  api.nvim_create_user_command("NvimTreeFocus", M.focus, { bar = true })
-  api.nvim_create_user_command("NvimTreeRefresh", reloaders.reload_explorer, { bar = true })
-  api.nvim_create_user_command("NvimTreeClipboard", copy_paste.print_clipboard, { bar = true })
-  api.nvim_create_user_command("NvimTreeFindFile", function(res)
+  vim.api.nvim_create_user_command("NvimTreeFocus", M.focus, { bar = true })
+  vim.api.nvim_create_user_command("NvimTreeRefresh", reloaders.reload_explorer, { bar = true })
+  vim.api.nvim_create_user_command("NvimTreeClipboard", copy_paste.print_clipboard, { bar = true })
+  vim.api.nvim_create_user_command("NvimTreeFindFile", function(res)
     M.find_file(true, nil, res.bang)
   end, { bang = true, bar = true })
-  api.nvim_create_user_command("NvimTreeFindFileToggle", function(res)
+  vim.api.nvim_create_user_command("NvimTreeFindFileToggle", function(res)
     M.toggle(true, false, res.args, res.bang)
   end, { bang = true, nargs = "?", complete = "dir" })
-  api.nvim_create_user_command("NvimTreeResize", function(res)
+  vim.api.nvim_create_user_command("NvimTreeResize", function(res)
     M.resize(res.args)
   end, { nargs = 1, bar = true })
-  api.nvim_create_user_command("NvimTreeCollapse", collapse_all.fn, { bar = true })
-  api.nvim_create_user_command("NvimTreeCollapseKeepBuffers", function()
+  vim.api.nvim_create_user_command("NvimTreeCollapse", collapse_all.fn, { bar = true })
+  vim.api.nvim_create_user_command("NvimTreeCollapseKeepBuffers", function()
     collapse_all.fn(true)
   end, { bar = true })
 end
@@ -331,10 +328,10 @@ function M.change_dir(name)
 end
 
 local function setup_autocommands(opts)
-  local augroup_id = api.nvim_create_augroup("NvimTree", { clear = true })
+  local augroup_id = vim.api.nvim_create_augroup("NvimTree", { clear = true })
   local function create_nvim_tree_autocmd(name, custom_opts)
     local default_opts = { group = augroup_id }
-    api.nvim_create_autocmd(name, vim.tbl_extend("force", default_opts, custom_opts))
+    vim.api.nvim_create_autocmd(name, vim.tbl_extend("force", default_opts, custom_opts))
   end
 
   -- reset highlights when colorscheme is changed
@@ -363,8 +360,8 @@ local function setup_autocommands(opts)
     })
   end
 
-  if opts.open_on_tab then
-    create_nvim_tree_autocmd("TabEnter", { callback = vim.schedule_wrap(M.tab_change) })
+  if opts.tab.sync.open then
+    create_nvim_tree_autocmd("TabEnter", { callback = vim.schedule_wrap(M.tab_enter) })
   end
   if opts.hijack_cursor then
     create_nvim_tree_autocmd("CursorMoved", {
@@ -410,9 +407,9 @@ local function setup_autocommands(opts)
     create_nvim_tree_autocmd("BufEnter", {
       pattern = "NvimTree_*",
       callback = function()
-        local bufnr = api.nvim_get_current_buf()
+        local bufnr = vim.api.nvim_get_current_buf()
         vim.schedule(function()
-          api.nvim_buf_call(bufnr, function()
+          vim.api.nvim_buf_call(bufnr, function()
             vim.cmd [[norm! zz]]
           end)
         end)
@@ -458,8 +455,6 @@ local DEFAULT_OPTS = { -- BEGIN_DEFAULT_OPTS
   ignore_buffer_on_setup = false,
   open_on_setup = false,
   open_on_setup_file = false,
-  open_on_tab = false,
-  ignore_buf_on_tab_change = {},
   sort_by = "name",
   root_dirs = {},
   prefer_startup_root = false,
@@ -504,7 +499,7 @@ local DEFAULT_OPTS = { -- BEGIN_DEFAULT_OPTS
     highlight_git = false,
     full_name = false,
     highlight_opened_files = "none",
-    root_folder_modifier = ":~",
+    root_folder_label = ":~:s?$?/..?",
     indent_width = 2,
     indent_markers = {
       enable = false,
@@ -573,7 +568,12 @@ local DEFAULT_OPTS = { -- BEGIN_DEFAULT_OPTS
   diagnostics = {
     enable = false,
     show_on_dirs = false,
+    show_on_open_dirs = true,
     debounce_delay = 50,
+    severity = {
+      min = vim.diagnostic.severity.HINT,
+      max = vim.diagnostic.severity.ERROR,
+    },
     icons = {
       hint = "",
       info = "",
@@ -589,11 +589,13 @@ local DEFAULT_OPTS = { -- BEGIN_DEFAULT_OPTS
   filesystem_watchers = {
     enable = true,
     debounce_delay = 50,
+    ignore_dirs = {},
   },
   git = {
     enable = true,
     ignore = true,
     show_on_dirs = true,
+    show_on_open_dirs = true,
     timeout = 400,
   },
   actions = {
@@ -640,6 +642,13 @@ local DEFAULT_OPTS = { -- BEGIN_DEFAULT_OPTS
     prefix = "[FILTER]: ",
     always_show_folders = true,
   },
+  tab = {
+    sync = {
+      open = false,
+      close = false,
+      ignore = {},
+    },
+  },
   notify = {
     threshold = vim.log.levels.INFO,
   },
@@ -672,6 +681,7 @@ local FIELD_OVERRIDE_TYPECHECK = {
   remove_keymaps = { boolean = true, table = true },
   on_attach = { ["function"] = true, string = true },
   sort_by = { ["function"] = true, string = true },
+  root_folder_label = { ["function"] = true, string = true },
 }
 
 local function validate_options(conf)
@@ -739,7 +749,6 @@ function M.setup(conf)
   _config.open_on_setup_file = opts.open_on_setup_file
   _config.ignore_buffer_on_setup = opts.ignore_buffer_on_setup
   _config.ignore_ft_on_setup = opts.ignore_ft_on_setup
-  _config.ignore_buf_on_tab_change = opts.ignore_buf_on_tab_change
   _config.hijack_directories = opts.hijack_directories
   _config.hijack_directories.enable = _config.hijack_directories.enable and netrw_disabled
 
@@ -774,9 +783,9 @@ function M.setup(conf)
     setup_vim_commands()
   end
 
-  if M.setup_called and view.is_visible() then
-    view.close()
-    view.abandon_current_window()
+  if M.setup_called then
+    view.close_all_tabs()
+    view.abandon_all_windows()
   end
 
   if M.setup_called and core.get_explorer() ~= nil then

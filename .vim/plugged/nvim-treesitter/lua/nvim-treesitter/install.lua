@@ -69,6 +69,10 @@ local function load_lockfile()
   lockfile = vim.fn.filereadable(filename) == 1 and vim.fn.json_decode(vim.fn.readfile(filename)) or {}
 end
 
+local function is_ignored_parser(lang)
+  return vim.tbl_contains(configs.get_ignored_parser_installs(), lang)
+end
+
 local function get_revision(lang)
   if #lockfile == 0 then
     load_lockfile()
@@ -91,10 +95,23 @@ local function get_installed_revision(lang)
   end
 end
 
+---Checks if parser is installed with nvim-treesitter
 ---@param lang string
 ---@return boolean
 local function is_installed(lang)
-  return #api.nvim_get_runtime_file("parser/" .. lang .. ".so", false) > 0
+  local matched_parsers = vim.api.nvim_get_runtime_file("parser/" .. lang .. ".so", true) or {}
+  local install_dir = configs.get_parser_install_dir()
+  if not install_dir then
+    return false
+  end
+  install_dir = vim.fn.fnamemodify(install_dir, ":p")
+  for _, path in ipairs(matched_parsers) do
+    local abspath = vim.fn.fnamemodify(path, ":p")
+    if vim.startswith(abspath, install_dir) then
+      return true
+    end
+  end
+  return false
 end
 
 ---@param lang string
@@ -107,7 +124,7 @@ end
 ---@return table
 local function outdated_parsers()
   return vim.tbl_filter(function(lang)
-    return needs_update(lang)
+    return is_installed(lang) and needs_update(lang)
   end, info.installed_parsers())
 end
 
@@ -469,7 +486,7 @@ function M.setup_auto_install()
     pattern = { "*" },
     callback = function()
       local lang = parsers.get_buf_lang()
-      if parsers.get_parser_configs()[lang] and not is_installed(lang) then
+      if parsers.get_parser_configs()[lang] and not is_installed(lang) and not is_ignored_parser(lang) then
         install() { lang }
       end
     end,

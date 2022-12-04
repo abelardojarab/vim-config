@@ -1,3 +1,107 @@
+# 2022-12-03
+
+- Add configuration `suggest.insertMode`.
+
+# 2022-12-02
+
+- Expand variables for string configuration value.
+
+# 2022-11-30
+
+- File fragment support for `workspace.jumpTo()`.
+- Support `g:coc_open_url_command`.
+- Support `contributes.configuration` from extension as array.
+
+# 2022-11-29
+
+- Add documentations for develop of coc.nvim extensions.
+- Remove unused variable `g:coc_channel_timeout`.
+
+# 2022-11-28
+
+- Placeholder and update value support for `InputBox` and `QuickPick`.
+- `triggerOnly` option property for vim completion source.
+- Export `getExtensionById` from `extensions` module.
+
+# 2022-11-26
+
+- Use CTRL-R expression instead of timer for pum related functions:
+
+  - `coc#pum#insert()`
+  - `coc#pum#one_more()`
+  - `coc#pum#next()`
+  - `coc#pum#prev()`
+  - `coc#pum#stop()`
+  - `coc#pum#cancel()`
+  - `coc#pum#confirm()`
+
+# 2022-11-25
+
+- Avoid view change on list create.
+- Add configurations `links.enable` and `links.highlight`.
+- Use cursorline for list on neovim (to have correct highlight).
+- Fix highlight not work on neovim 0.5.0 by use `luaeval`.
+
+# 2022-11-22
+
+- Add command `document.toggleCodeLens`.
+
+# 2022-11-21
+
+- Add `CocAction('addWorkspaceFolder')`.
+
+# 2022-11-20
+
+- Support code lens feature on vim9.
+- `codeLens.subseparator` default changed to `|`, like VSCode.
+- Add configuration `coc.preferences.enableGFMBreaksInMarkdownDocument`, default to `true`
+- Add key-mappings `<Plug>(coc-codeaction-selected)` and `<Plug>(coc-codeaction-refactor-selected)`.
+
+# 2022-11-19
+
+- Create highlights after VimEnter.
+- Action 'organizeImport' return false instead of throw error when import code
+  action not found.
+
+# 2022-11-18
+
+- Throw error when rpc request error, instead of echo message.
+
+# 2022-11-13
+
+- Plugin emit ready after extensions activated.
+
+# 2022-11-12
+
+- Not cancel completion when request for in complete sources.
+
+# 2022-11-11
+
+- Support filter and display completion items with different start positions.
+- Remove configuration `suggest.fixInsertedWord`, insert word would always
+  be fixed.
+- Configuration `suggest.invalidInsertCharacters` default to line break
+  characters.
+
+# 2022-11-10
+
+- Not reset 'Search' highlight on float window as it could be used.
+- Note remap `<esc>` on float preview window.
+- Add new action `feedkeys!` to list.
+- Add new configuration `list.floatPreview`.
+
+# 2022-11-07
+
+- Add API `CocAction('snippetInsert')` for snippet insert from vim plugin.
+- Snippet support for vim source, snippet item should have `isSnippet` to be
+  `true` and `insertText` to be snippet text, when `on_complete` function exists,
+  the snippet expand should be handled completion source.
+
+# 2022-11-06
+
+- `window.createQuickPick()` API that show QuickPick by default, call `show()`
+- Fix change value property for QuickPick not works.
+
 # 2022-10-30
 
 - Add configuration `colors.enable`, mark `colors.filetypes` deprecated.

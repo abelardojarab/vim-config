@@ -52,7 +52,7 @@ end
 
 local scheduler_if_buf_valid = awrap(schedule_if_buf_valid, 2)
 
-local function apply_win_signs(bufnr, hunks, top, bot, clear)
+local function apply_win_signs(bufnr, hunks, top, bot, clear, untracked)
    if clear then
       signs:remove(bufnr)
    end
@@ -65,12 +65,12 @@ local function apply_win_signs(bufnr, hunks, top, bot, clear)
 
 
    if clear and hunks[1] then
-      signs:add(bufnr, gs_hunks.calc_signs(hunks[1], hunks[1].added.start, hunks[1].added.start))
+      signs:add(bufnr, gs_hunks.calc_signs(hunks[1], hunks[1].added.start, hunks[1].added.start, untracked))
    end
 
    for _, hunk in ipairs(hunks) do
       if top <= hunk.vend and bot >= hunk.added.start then
-         signs:add(bufnr, gs_hunks.calc_signs(hunk, top, bot))
+         signs:add(bufnr, gs_hunks.calc_signs(hunk, top, bot, untracked))
       end
       if hunk.added.start > bot then
          break
@@ -290,7 +290,7 @@ M.update = throttle_by_id(function(bufnr, bcache)
    if bcache.force_next_update or gs_hunks.compare_heads(bcache.hunks, old_hunks) then
 
 
-      apply_win_signs(bufnr, bcache.hunks, vim.fn.line('w0'), vim.fn.line('w$'), true)
+      apply_win_signs(bufnr, bcache.hunks, vim.fn.line('w0'), vim.fn.line('w$'), true, git_obj.object_name == nil)
 
       update_show_deleted(bufnr)
       bcache.force_next_update = false
@@ -344,7 +344,16 @@ local function handle_moved(bufnr, bcache, old_relpath)
       bcache.file = git_obj.file
       git_obj:update_file_info()
       scheduler()
-      api.nvim_buf_set_name(bufnr, bcache.file)
+
+      local bufexists = vim.fn.bufexists(bcache.file) == 1
+      local old_name = api.nvim_buf_get_name(bufnr)
+
+      if not bufexists then
+         util.buf_rename(bufnr, bcache.file)
+      end
+
+      local msg = bufexists and 'Cannot rename' or 'Renamed'
+      dprintf('%s buffer %d from %s to %s', msg, bufnr, old_name, bcache.file)
    end
 end
 
@@ -478,7 +487,10 @@ M.setup = function()
             return false
          end
          local botline = math.min(botline_guess, api.nvim_buf_line_count(bufnr))
-         apply_win_signs(bufnr, bcache.hunks, topline + 1, botline + 1)
+
+         local untracked = bcache.git_obj.object_name == nil
+
+         apply_win_signs(bufnr, bcache.hunks, topline + 1, botline + 1, false, untracked)
 
          if not (config.word_diff and config.diff_opts.internal) then
             return false

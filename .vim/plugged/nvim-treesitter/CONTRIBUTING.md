@@ -146,6 +146,7 @@ effect on highlighting. We will work on improving highlighting in the near futur
 @keyword.return   ; keywords like `return` and `yield`
 
 @conditional      ; keywords related to conditionals (e.g. `if` / `else`)
+@conditional.ternary ; Ternary operator: condition ? 1 : 2
 @repeat           ; keywords related to loops (e.g. `for` / `while`)
 @debug            ; keywords related to debugging
 @label            ; GOTO and other labels (e.g. `label:` in C)
@@ -156,15 +157,15 @@ effect on highlighting. We will work on improving highlighting in the near futur
 #### Types
 
 ```scheme
-@type            ; type or class definitions and annotations
-@type.builtin    ; built-in types
-@type.definition ; type definitions (e.g. `typedef` in C)
-@type.qualifier  ; type qualifiers (e.g. `const`)
+@type                  ; type or class definitions and annotations
+@type.builtin          ; built-in types
+@type.definition       ; type definitions (e.g. `typedef` in C)
+@type.qualifier        ; type qualifiers (e.g. `const`)
 
-@storageclass    ; visibility/life-time/etc. modifiers (e.g. `static`)
-@attribute       ; attribute annotations (e.g. Python decorators)
-@field           ; object and struct fields
-@property        ; similar to `@field`
+@storageclass          ; visibility/life-time modifiers
+@attribute             ; attribute annotations (e.g. Python decorators)
+@field                 ; object and struct fields
+@property              ; similar to `@field`
 ```
 
 #### Identifiers
@@ -230,16 +231,8 @@ Used for XML-like tags.
 #### Spell
 
 ```scheme
-@spell ; for defining regions to be spellchecked
-```
-
-#### Non-standard
-
-These captures are used by some languages but don't have any default highlights.
-They fall back to the parent capture if they are not manually defined.
-
-```scheme
-@variable.global
+@spell   ; for defining regions to be spellchecked
+@nospell ; for defining regions that should NOT be spellchecked
 ```
 
 ### Locals
@@ -262,7 +255,6 @@ They fall back to the parent capture if they are not manually defined.
 @scope                 ; scope block
 @reference             ; identifier reference
 ```
-
 
 #### Definition Scope
 
@@ -298,7 +290,7 @@ You can define folds for a given language by adding a `folds.scm` query :
 @fold ; fold this node
 ```
 
-If the `fold.scm` query is not present, this will fallback to the `@scope` captures in the `locals`
+If the `folds.scm` query is not present, this will fall back to the `@scope` captures in the `locals`
 query.
 
 ### Injections

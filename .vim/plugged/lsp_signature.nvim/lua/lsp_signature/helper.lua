@@ -353,6 +353,7 @@ helper.cleanup_async = function(close_float_win, delay, force)
 end
 
 local function get_border_height(opts)
+  local border_height = { none = 0, single = 2, double = 2, rounded = 2, solid = 2, shadow = 1 }
   local border = opts.border
   local height = 0
   if border == nil then
@@ -360,10 +361,9 @@ local function get_border_height(opts)
   end
 
   if type(border) == "string" then
-    local border_height = { none = 0, single = 2, double = 2, rounded = 2, solid = 2, shadow = 1 }
     height = border_height[border]
   else
-    local function border_height(id)
+    local function _border_height(id)
       id = (id - 1) % #border + 1
       if type(border[id]) == "table" then
         -- border specified as a table of <character, highlight group>
@@ -373,8 +373,8 @@ local function get_border_height(opts)
         return #border[id] > 0 and 1 or 0
       end
     end
-    height = height + border_height(2) -- top
-    height = height + border_height(6) -- bottom
+    height = height + _border_height(2) -- top
+    height = height + _border_height(6) -- bottom
   end
 
   return height
@@ -391,11 +391,22 @@ helper.cal_pos = function(contents, opts)
   end
   local util = vim.lsp.util
   contents = util._trim(contents, opts)
-  util.try_trim_markdown_code_blocks(contents)
+  -- there are 2 cases:
+  -- 1. contents[1] = "```{language_id}", and contents[#contents] = "```", the code fences will be removed
+  --    and return language_id
+  -- 2. in other cases, no lines will be removed, and return "markdown"
+  local filetype = util.try_trim_markdown_code_blocks(contents)
   log(vim.inspect(contents))
 
   local width, height = util._make_floating_popup_size(contents, opts)
   local float_option = util.make_floating_popup_options(width, height, opts)
+
+  -- if the filetype returned is "markdown", and contents contains code fences, the height should minus 2,
+  -- because the code fences won't be display
+  local code_block_flag = contents[1]:match("^```")
+  if filetype == "markdown" and code_block_flag ~= nil then
+    height = height - 2
+  end
 
   log("popup size:", width, height, float_option)
   local off_y = 0

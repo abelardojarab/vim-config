@@ -199,6 +199,22 @@ With this enabled you can use `<prefix> C-l` to clear the screen.
 
 Thanks to [Brian Hogan][] for the tip on how to re-map the clear screen binding.
 
+#### Restoring SIGQUIT (C-\\)
+
+The default key bindings also include `<Ctrl-\>` which is the default method of
+sending SIGQUIT to a foreground process. Similar to "Clear Screen" above, a key
+binding can be created to replicate SIGQUIT in the prefix table.
+
+``` tmux
+bind C-\\ send-keys 'C-\'
+```
+
+Alternatively, you can exclude the previous pane key binding from your `~/.tmux.conf`. If using TPM, the following line can be used to unbind the previous pane binding set by the plugin.
+
+``` tmux
+unbind -n C-\\
+```
+
 #### Disable Wrapping
 
 By default, if you tru to move past the edge of the screen, tmux/vim will
@@ -315,6 +331,27 @@ issue](https://github.com/christoomey/vim-tmux-navigator/issues/27) for more
 detail.
 
 [tmate]: http://tmate.io/
+
+### Switching between host panes doesn't work when docker is running
+
+Replace the `is_vim` variable in your `~/.tmux.conf` file with:
+```tmux
+if-shell '[ -f /.dockerenv ]' \
+  "is_vim=\"ps -o state=,comm= -t '#{pane_tty}' \
+      | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'\""
+  # Filter out docker instances of nvim from the host system to prevent
+  # host from thinking nvim is running in a pseudoterminal when its not.
+  "is_vim=\"ps -o state=,comm=,cgroup= -t '#{pane_tty}' \
+      | grep -ivE '^.+ +.+ +.+\\/docker\\/.+$' \
+      | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)? +'\""
+```
+
+Details: The output of the ps command on the host system includes processes
+running within containers, but containers have their own instances of
+/dev/pts/\*. vim-tmux-navigator relies on /dev/pts/\* to determine if vim is
+running, so if vim is running in say /dev/pts/<N> in a container and there is a
+tmux pane (not running vim) in /dev/pts/<N> on the host system, then without
+the patch above vim-tmux-navigator will think vim is running when its not.
 
 ### It Still Doesn't Work!!!
 

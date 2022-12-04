@@ -16,7 +16,7 @@ end
 ---@field result ProcessResult|nil
 ---@field job number|nil
 ---@field stdin number|nil
----@field on_line fun(process: Process, data: string, raw: string) callback on complete lines
+---@field pty boolean
 ---@field on_partial_line fun(process: Process, data: string, raw: string) callback on complete lines
 ---@field external_errors boolean|nil Tells the process that any errors will be dealt with externally and wont open a console buffer
 local Process = {}
@@ -118,9 +118,6 @@ local function append_log(process, data)
       preview_buffer.current_span = process.job
     end
 
-    -- Explicitly reset indent
-    -- https://github.com/neovim/neovim/issues/14557
-    data = data:gsub("\n", "\r\n")
     nvim_chan_send(preview_buffer.chan, data)
   end
 
@@ -259,28 +256,26 @@ function Process:spawn(cb)
   local start = vim.loop.hrtime()
   self.start = start
 
-  local function handle_output(_, result, on_line, on_partial)
-    local raw_last_line = ""
+  local function handle_output(_, result, on_partial, on_lb)
     return function(_, data) -- Complete the previous line
-      raw_last_line = raw_last_line .. data[1]
-
       local d = remove_escape_codes(data[1])
 
       result[#result] = remove_escape_codes(result[#result] .. data[1])
 
       on_partial(d, data[1])
-      on_line(result[#result], raw_last_line)
-
-      raw_last_line = ""
+      -- If there is only one item of the incomplete lines, the line will be
+      -- completed in later invocations
 
       for i = 2, #data do
-        d = remove_escape_codes(data[i])
+        local d = data[i]
+        if i ~= data then
+          d = remove_escape_codes(d)
+        end
 
-        on_partial(d, data[i])
         if i < #data then
-          on_line(d, data[i])
+          on_lb()
         else
-          raw_last_line = data[i]
+          on_partial(d, data[i])
         end
 
         table.insert(result, d)
@@ -290,24 +285,29 @@ function Process:spawn(cb)
 
   local on_stdout = handle_output("stdout", res.stdout, function(line, raw)
     if self.verbose then
-      append_log(self, "\r\n")
-    end
-    if self.on_line then
-      self.on_line(self, line, raw)
-    end
-  end, function(line, raw)
-    if self.verbose then
       append_log(self, raw)
     end
     if self.on_partial_line then
       self.on_partial_line(self, line, raw)
     end
+  end, function()
+    if self.verbose then
+      append_log(self, "\r\n")
+    end
   end)
 
+  -- Prevent blank lines
+  local has_line = false
   local on_stderr = handle_output("stderr", res.stderr, function(_, _)
-    append_log(self, "\r\n")
+    if has_line then
+      has_line = false
+      append_log(self, "\r\n")
+    end
   end, function(_, raw)
-    append_log(self, raw)
+    if raw ~= "" then
+      has_line = true
+      append_log(self, raw)
+    end
   end)
 
   local function on_exit(_, code)
@@ -332,11 +332,13 @@ function Process:spawn(cb)
     end
   end
 
+  local logger = require("neogit.logger")
+  logger.debug("Spawning: " .. vim.inspect(self.cmd))
   local job = vim.fn.jobstart(self.cmd, {
     cwd = self.cwd,
     env = self.env,
     -- Fake a small standard terminal
-    pty = true,
+    pty = not not self.pty,
     width = 80,
     height = 24,
     on_stdout = on_stdout,
@@ -367,7 +369,6 @@ function Process:close_stdin()
   -- Send eof
   if self.stdin then
     self.stdin = nil
-    vim.api.nvim_chan_send(self.job, "\04")
     vim.fn.chanclose(self.job, "stdin")
   end
 end

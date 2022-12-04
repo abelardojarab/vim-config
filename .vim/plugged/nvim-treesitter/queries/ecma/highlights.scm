@@ -185,8 +185,9 @@
 ] @operator
 
 (binary_expression "/" @operator)
-(ternary_expression ["?" ":"] @conditional)
-(unary_expression ["!" "~" "-" "+" "delete" "void" "typeof"]  @operator)
+(ternary_expression ["?" ":"] @conditional.ternary)
+(unary_expression ["!" "~" "-" "+"] @operator)
+(unary_expression ["delete" "void" "typeof"] @keyword.operator)
 
 [
   "("
@@ -207,14 +208,17 @@
 "else"
 "switch"
 "case"
-"default"
 ] @conditional
 
 [
 "import"
 "from"
-"as"
 ] @include
+
+(export_specifier "as" @include)
+(import_specifier "as" @include)
+(namespace_export "as" @include)
+(namespace_import "as" @include)
 
 [
 "for"
@@ -239,11 +243,9 @@
 "let"
 "set"
 "static"
-"switch"
 "target"
 "typeof"
 "var"
-"void"
 "with"
 ] @keyword
 
@@ -267,3 +269,8 @@
  "catch"
  "finally"
 ] @exception
+
+(export_statement
+  "default" @keyword)
+(switch_default
+  "default" @conditional)

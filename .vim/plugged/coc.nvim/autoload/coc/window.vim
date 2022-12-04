@@ -3,23 +3,14 @@ let s:is_vim = !has('nvim')
 
 " Get tabpagenr of winid, return -1 if window doesn't exist
 function! coc#window#tabnr(winid) abort
-  if exists('*nvim_win_get_tabpage')
-    try
-      return nvim_win_get_tabpage(a:winid)
-    catch /Invalid window id/
-      return -1
-    endtry
-  endif
+  " getwininfo not work with popup on vim
   if exists('*win_execute')
     let ref = {}
     call win_execute(a:winid, 'let ref["out"] = tabpagenr()')
     return get(ref, 'out', -1)
-  elseif !s:is_vim
-    let info = getwininfo(a:winid)
-    return empty(info) ? -1 : info[0]['tabnr']
-  else
-    throw 'win_execute() does not exist, please upgrade your vim.'
   endif
+  let info = getwininfo(a:winid)
+  return empty(info) ? -1 : info[0]['tabnr']
 endfunction
 
 " (1, 0) based line, column
@@ -51,6 +42,15 @@ function! coc#window#visible(winid) abort
     return 0
   endif
   return coc#window#tabnr(a:winid) == tabpagenr()
+endfunction
+
+" winid is popup and shown
+function! s:visible_popup(winid) abort
+  let popups = popup_list()
+  if index(popups, a:winid) != -1
+    return get(popup_getpos(a:winid), 'visible', 0) == 1
+  endif
+  return 0
 endfunction
 
 " Return v:null when name or window doesn't exist,
@@ -110,6 +110,18 @@ function! coc#window#is_float(winid) abort
   endif
 endfunction
 
+" Reset current lnum & topline of window
+function! coc#window#restview(winid, lnum, topline) abort
+  if empty(getwininfo(a:winid))
+    return
+  endif
+  if s:is_vim && s:visible_popup(a:winid)
+    call popup_setoptions(a:winid, {'firstline': a:topline})
+    return
+  endif
+  call coc#compat#execute(a:winid, ['noa call winrestview({"lnum":'.a:lnum.',"topline":'.a:topline.'})'])
+endfunction
+
 function! coc#window#set_height(winid, height) abort
   if empty(getwininfo(a:winid))
     return
@@ -166,6 +178,10 @@ endfunction
 " Avoid errors
 function! coc#window#close(winid) abort
   if empty(a:winid) || a:winid == -1
+    return
+  endif
+  if coc#float#valid(a:winid)
+    call coc#float#close(a:winid)
     return
   endif
   if exists('*nvim_win_is_valid') && exists('*nvim_win_close')

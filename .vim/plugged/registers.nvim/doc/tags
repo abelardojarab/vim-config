@@ -8,10 +8,13 @@ options	registers.txt	/*options*
 register_mode	registers.txt	/*register_mode*
 registers	registers.txt	/*registers*
 registers.apply_register	registers.txt	/*registers.apply_register*
+registers.clear_highlighted_register	registers.txt	/*registers.clear_highlighted_register*
 registers.close_window	registers.txt	/*registers.close_window*
 registers.default_options	registers.txt	/*registers.default_options*
 registers.move_cursor_down	registers.txt	/*registers.move_cursor_down*
+registers.move_cursor_to_register	registers.txt	/*registers.move_cursor_to_register*
 registers.move_cursor_up	registers.txt	/*registers.move_cursor_up*
+registers.preview_highlighted_register	registers.txt	/*registers.preview_highlighted_register*
 registers.setup	registers.txt	/*registers.setup*
 registers.show_window	registers.txt	/*registers.show_window*
 setup	registers.txt	/*setup*

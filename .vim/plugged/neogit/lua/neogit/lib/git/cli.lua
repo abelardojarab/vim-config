@@ -30,6 +30,7 @@ local configurations = {
       end,
     },
   },
+
   status = config {
     flags = {
       short = "-s",
@@ -260,6 +261,7 @@ local configurations = {
     flags = {
       add = "--add",
       remove = "--remove",
+      refresh = "--refresh",
     },
   },
   ["show-ref"] = config {
@@ -418,6 +420,13 @@ local mt_builder = {
       end
     end
 
+    if action == "in_pty" then
+      return function(in_pty)
+        tbl[k_state].in_pty = in_pty
+        return tbl
+      end
+    end
+
     if action == "hide_text" then
       return function(hide_text)
         tbl[k_state].hide_text = hide_text
@@ -537,12 +546,13 @@ local function new_builder(subcommand)
     files = {},
     input = nil,
     show_popup = true,
+    in_pty = false,
     cwd = nil,
     env = {},
   }
 
   local function to_process(verbose, external_errors)
-    -- Disable the pager so that the commands dont stop and wait for pagination
+    -- Disable the pager so that the commands don't stop and wait for pagination
     local cmd = { "git", "--no-pager", "-c", "color.ui=always", "--no-optional-locks", subcommand }
     for _, o in ipairs(state.options) do
       table.insert(cmd, o)
@@ -571,6 +581,7 @@ local function new_builder(subcommand)
       cmd = cmd,
       cwd = state.cwd,
       env = state.env,
+      pty = state.in_pty,
       verbose = verbose,
       external_errors = external_errors,
     }
@@ -583,7 +594,8 @@ local function new_builder(subcommand)
     to_process = to_process,
     call_interactive = function(handle_line)
       handle_line = handle_line or handle_interactive_password_questions
-      local p = to_process(true)
+      local p = to_process(true, false)
+      p.pty = true
 
       p.on_partial_line = function(p, line, _)
         if line ~= "" then
@@ -615,9 +627,12 @@ local function new_builder(subcommand)
       local result = p:spawn_async(function()
         -- Required since we need to do this before awaiting
         if state.input then
-          p:send(state.input)
+          logger.debug("Sending input:" .. vim.inspect(state.input))
+          -- Include EOT, otherwise git-apply will not work as expects the
+          -- stream to end
+          p:send(state.input .. "\04")
+          p:close_stdin()
         end
-        p:close_stdin()
       end)
 
       assert(result, "Command did not complete")
@@ -639,6 +654,7 @@ local function new_builder(subcommand)
         error("Failed to run command")
         return nil
       end
+
       local result = p:wait()
       assert(result, "Command did not complete")
 
@@ -659,6 +675,7 @@ local function new_parallel_builder(calls)
   local state = {
     calls = calls,
     show_popup = true,
+    in_pty = true,
     cwd = nil,
   }
 
@@ -700,6 +717,13 @@ local function new_parallel_builder(calls)
       if action == "show_popup" then
         return function(show_popup)
           state.show_popup = show_popup
+          return tbl
+        end
+      end
+
+      if action == "in_pty" then
+        return function(in_pty)
+          tbl[k_state].in_pty = in_pty
           return tbl
         end
       end

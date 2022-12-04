@@ -29,6 +29,7 @@ NvimGdbQuery	nvimgdb.txt	/*NvimGdbQuery*
 NvimGdbStart	nvimgdb.txt	/*NvimGdbStart*
 NvimgdbBackends	nvimgdb.txt	/*NvimgdbBackends*
 NvimgdbCommands	nvimgdb.txt	/*NvimgdbCommands*
+NvimgdbConfig	nvimgdb.txt	/*NvimgdbConfig*
 NvimgdbContents	nvimgdb.txt	/*NvimgdbContents*
 NvimgdbDevelopment	nvimgdb.txt	/*NvimgdbDevelopment*
 NvimgdbEvents	nvimgdb.txt	/*NvimgdbEvents*

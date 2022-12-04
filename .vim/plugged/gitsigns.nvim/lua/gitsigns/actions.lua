@@ -38,6 +38,15 @@ local current_buf = api.nvim_get_current_buf
 
 
 
+
+
+
+
+
+
+
+
+
 local M = {QFListOpts = {}, }
 
 
@@ -89,7 +98,18 @@ local M = {QFListOpts = {}, }
 
 local C = {}
 
+
+
+local CP = {}
+
 local ns_inline = api.nvim_create_namespace('gitsigns_preview_inline')
+
+local function complete_heads(arglead)
+   local all = vim.fn.systemlist({ 'git', 'rev-parse', '--symbolic', '--branches', '--tags', '--remotes' })
+   return vim.tbl_filter(function(x)
+      return vim.startswith(x, arglead)
+   end, all)
+end
 
 
 
@@ -159,7 +179,8 @@ M.toggle_word_diff = function(value)
    else
       config.word_diff = not config.word_diff
    end
-   M.refresh()
+
+   api.nvim__buf_redraw_range(0, vim.fn.line('w0') - 1, vim.fn.line('w$'))
    return config.word_diff
 end
 
@@ -223,6 +244,20 @@ local function get_range(params)
    return range
 end
 
+local function get_hunks(bufnr, bcache, greedy)
+   local hunks
+
+   if greedy then
+
+      local buftext = util.buf_lines(bufnr)
+      hunks = run_diff(bcache.compare_text, buftext, false)
+      scheduler()
+   else
+      hunks = bcache.hunks
+   end
+
+   return hunks
+end
 
 
 
@@ -237,7 +272,14 @@ end
 
 
 
-M.stage_hunk = mk_repeatable(void(function(range)
+
+
+
+
+
+
+M.stage_hunk = mk_repeatable(void(function(range, opts)
+   opts = opts or {}
    local bufnr = current_buf()
    local bcache = cache[bufnr]
    if not bcache then
@@ -249,12 +291,13 @@ M.stage_hunk = mk_repeatable(void(function(range)
       return
    end
 
+   local hunks = get_hunks(bufnr, bcache, opts.greedy ~= false)
    local hunk
 
    if range then
       table.sort(range)
       local top, bot = range[1], range[2]
-      hunk = gs_hunks.create_partial_hunk(bcache.hunks, top, bot)
+      hunk = gs_hunks.create_partial_hunk(hunks, top, bot)
       hunk.added.lines = api.nvim_buf_get_lines(bufnr, top - 1, bot, false)
       hunk.removed.lines = vim.list_slice(
       bcache.compare_text,
@@ -262,7 +305,7 @@ M.stage_hunk = mk_repeatable(void(function(range)
       hunk.removed.start + hunk.removed.count - 1)
 
    else
-      hunk = get_cursor_hunk(bufnr, bcache.hunks)
+      hunk = get_cursor_hunk(bufnr, hunks)
    end
 
    if not hunk then
@@ -277,7 +320,7 @@ M.stage_hunk = mk_repeatable(void(function(range)
    update(bufnr)
 end))
 
-C.stage_hunk = function(_pos_args, _named_args, params)
+C.stage_hunk = function(_, params)
    M.stage_hunk(get_range(params))
 end
 
@@ -290,19 +333,28 @@ end
 
 
 
-M.reset_hunk = mk_repeatable(function(range)
+
+
+
+
+
+
+
+M.reset_hunk = mk_repeatable(void(function(range, opts)
+   opts = opts or {}
    local bufnr = current_buf()
    local bcache = cache[bufnr]
    if not bcache then
       return
    end
 
+   local hunks = get_hunks(bufnr, bcache, opts.greedy ~= false)
    local hunk
 
    if range then
       table.sort(range)
       local top, bot = range[1], range[2]
-      hunk = gs_hunks.create_partial_hunk(bcache.hunks, top, bot)
+      hunk = gs_hunks.create_partial_hunk(hunks, top, bot)
       hunk.added.lines = api.nvim_buf_get_lines(bufnr, top - 1, bot, false)
       hunk.removed.lines = vim.list_slice(
       bcache.compare_text,
@@ -310,7 +362,7 @@ M.reset_hunk = mk_repeatable(function(range)
       hunk.removed.start + hunk.removed.count - 1)
 
    else
-      hunk = get_cursor_hunk(bufnr)
+      hunk = get_cursor_hunk(bufnr, hunks)
    end
 
    if not hunk then
@@ -326,9 +378,9 @@ M.reset_hunk = mk_repeatable(function(range)
       lend = hunk.added.start - 1 + hunk.added.count
    end
    util.set_lines(bufnr, lstart, lend, hunk.removed.lines)
-end)
+end))
 
-C.reset_hunk = function(_pos_args, _named_args, params)
+C.reset_hunk = function(_, params)
    M.reset_hunk(get_range(params))
 end
 
@@ -443,6 +495,10 @@ local function process_nav_opts(opts)
    if opts.foldopen == nil then
       opts.foldopen = vim.tbl_contains(vim.opt.foldopen:get(), 'search')
    end
+
+   if opts.greedy == nil then
+      opts.greedy = true
+   end
 end
 
 
@@ -458,7 +514,7 @@ local function has_preview_inline(bufnr)
    return #api.nvim_buf_get_extmarks(bufnr, ns_inline, 0, -1, { limit = 1 }) > 0
 end
 
-local function nav_hunk(opts)
+local nav_hunk = void(function(opts)
    process_nav_opts(opts)
    local bufnr = current_buf()
    local bcache = cache[bufnr]
@@ -466,7 +522,8 @@ local function nav_hunk(opts)
       return
    end
 
-   local hunks = bcache.hunks
+   local hunks = get_hunks(bufnr, bcache, opts.greedy)
+
    if not hunks or vim.tbl_isempty(hunks) then
       if opts.navigation_message then
          api.nvim_echo({ { 'No hunks', 'WarningMsg' } }, false, {})
@@ -508,7 +565,10 @@ local function nav_hunk(opts)
       end
 
    end
-end
+end)
+
+
+
 
 
 
@@ -720,6 +780,7 @@ M.get_hunks = function(bufnr)
    bufnr = bufnr or current_buf()
    if not cache[bufnr] then return end
    local ret = {}
+
    for _, h in ipairs(cache[bufnr].hunks or {}) do
       ret[#ret + 1] = {
          head = h.head,
@@ -739,7 +800,7 @@ local function get_blame_hunk(repo, info)
       a = repo:get_show_text(info.previous_sha .. ':' .. info.previous_filename)
    end
    local b = repo:get_show_text(info.sha .. ':' .. info.filename)
-   local hunks = run_diff(a, b)
+   local hunks = run_diff(a, b, false)
    local hunk, i = gs_hunks.find_hunk(info.orig_lnum, hunks)
    return hunk, i, #hunks
 end
@@ -891,12 +952,22 @@ M.change_base = void(function(base, global)
    end
 end)
 
+C.change_base = function(args, _)
+   M.change_base(args[1], (args[2] or args.global))
+end
+
+CP.change_base = complete_heads
+
 
 
 
 
 M.reset_base = function(global)
    M.change_base(nil, global)
+end
+
+C.reset_base = function(args, _)
+   M.change_base(nil, (args[1] or args.global))
 end
 
 
@@ -944,10 +1015,11 @@ M.diffthis = function(base, opts)
    diffthis.diffthis(base, opts)
 end
 
-C.diffthis = function(pos_args, named_args, params)
+C.diffthis = function(args, params)
+
    local opts = {
-      vertical = named_args.vertical,
-      split = named_args.split,
+      vertical = args.vertical,
+      split = args.split,
    }
 
    if params.smods then
@@ -959,8 +1031,10 @@ C.diffthis = function(pos_args, named_args, params)
       end
    end
 
-   M.diffthis(pos_args[1], opts)
+   M.diffthis(args[1], opts)
 end
+
+CP.diffthis = complete_heads
 
 
 
@@ -991,6 +1065,8 @@ M.show = function(revision)
    local diffthis = require('gitsigns.diffthis')
    diffthis.show(revision)
 end
+
+CP.show = complete_heads
 
 local function hunks_to_qflist(buf_or_filename, hunks, qflist)
    for i, hunk in ipairs(hunks) do
@@ -1182,8 +1258,12 @@ M.refresh = void(function()
    end
 end)
 
-function M.get_cmd_func(name)
+function M._get_cmd_func(name)
    return C[name]
+end
+
+function M._get_cmp_func(name)
+   return CP[name]
 end
 
 return M

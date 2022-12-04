@@ -147,8 +147,6 @@ function! coc#ui#echo_messages(hl, msgs)
     return
   endif
   execute 'echohl '.a:hl
-  echom a:msgs[0]
-  redraw
   echo join(msgs, "\n")
   echohl None
 endfunction
@@ -326,6 +324,10 @@ function! coc#ui#change_lines(bufnr, list) abort
 endfunction
 
 function! coc#ui#open_url(url)
+  if !empty(get(g:, 'coc_open_url_command', ''))
+    call system(g:coc_open_url_command.' '.a:url)
+    return
+  endif
   if has('mac') && executable('open')
     call system('open '.a:url)
     return
@@ -470,4 +472,34 @@ function! coc#ui#outline_close_preview() abort
   if winid
     call coc#float#close(winid)
   endif
+endfunction
+
+" Ignore error from autocmd when file opened
+function! coc#ui#safe_open(cmd, file) abort
+  let bufname = fnameescape(a:file)
+  try
+    execute a:cmd.' 'bufname
+  catch /.*/
+    if bufname('%') != bufname
+      throw v:exception
+    endif
+  endtry
+endfunction
+
+" Use noa to setloclist, avoid BufWinEnter autocmd
+function! coc#ui#setloclist(nr, items, action, title) abort
+  if a:action ==# ' '
+    let title = get(getloclist(a:nr, {'title': 1}), 'title', '')
+    let action = title ==# a:title ? 'r' : ' '
+    noa call setloclist(a:nr, [], action, {'title': a:title, 'items': a:items})
+  else
+    noa call setloclist(a:nr, [], a:action, {'title': a:title, 'items': a:items})
+  endif
+endfunction
+
+function! coc#ui#get_mouse() abort
+  if get(g:, 'coc_node_env', '') ==# 'test'
+    return get(g:, 'mouse_position', [win_getid(), line('.'), col('.')])
+  endif
+  return [v:mouse_winid,v:mouse_lnum,v:mouse_col]
 endfunction

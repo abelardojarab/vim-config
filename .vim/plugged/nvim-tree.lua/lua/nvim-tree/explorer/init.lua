@@ -1,5 +1,3 @@
-local uv = vim.loop
-
 local git = require "nvim-tree.git"
 local watch = require "nvim-tree.explorer.watch"
 local common = require "nvim-tree.explorer.common"
@@ -13,13 +11,13 @@ local Explorer = {}
 Explorer.__index = Explorer
 
 function Explorer.new(cwd)
-  cwd = uv.fs_realpath(cwd or uv.cwd())
+  cwd = vim.loop.fs_realpath(cwd or vim.loop.cwd())
   local explorer = setmetatable({
     absolute_path = cwd,
     nodes = {},
-    watcher = watch.create_watcher(cwd),
     open = true,
   }, Explorer)
+  explorer.watcher = watch.create_watcher(explorer)
   explorer:_load(explorer)
   return explorer
 end

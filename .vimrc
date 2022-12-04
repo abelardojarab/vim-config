@@ -291,6 +291,7 @@ if (has('nvim-0.5'))
     Plug 'nvim-telescope/telescope.nvim'
     Plug 'nvim-telescope/telescope-project.nvim'
 endif
+Plug 'romainl/vim-cool'
 
 " Completion
 Plug 'neoclide/coc.nvim', {'for':['zig','cmake','rust',

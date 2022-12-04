@@ -15,6 +15,7 @@
 :CocOpenLog	coc.txt	/*:CocOpenLog*
 :CocOutline	coc.txt	/*:CocOutline*
 :CocPrev	coc.txt	/*:CocPrev*
+:CocPrintErrors	coc.txt	/*:CocPrintErrors*
 :CocRestart	coc.txt	/*:CocRestart*
 :CocSearch	coc.txt	/*:CocSearch*
 :CocStart	coc.txt	/*:CocStart*
@@ -27,7 +28,10 @@
 <Plug>(coc-codeaction)	coc.txt	/*<Plug>(coc-codeaction)*
 <Plug>(coc-codeaction-cursor)	coc.txt	/*<Plug>(coc-codeaction-cursor)*
 <Plug>(coc-codeaction-line)	coc.txt	/*<Plug>(coc-codeaction-line)*
+<Plug>(coc-codeaction-refactor)	coc.txt	/*<Plug>(coc-codeaction-refactor)*
+<Plug>(coc-codeaction-refactor-selected)	coc.txt	/*<Plug>(coc-codeaction-refactor-selected)*
 <Plug>(coc-codeaction-selected)	coc.txt	/*<Plug>(coc-codeaction-selected)*
+<Plug>(coc-codeaction-source)	coc.txt	/*<Plug>(coc-codeaction-source)*
 <Plug>(coc-codelens-action)	coc.txt	/*<Plug>(coc-codelens-action)*
 <Plug>(coc-command-repeat)	coc.txt	/*<Plug>(coc-command-repeat)*
 <Plug>(coc-cursors-operator)	coc.txt	/*<Plug>(coc-cursors-operator)*
@@ -59,6 +63,7 @@
 <Plug>(coc-type-definition)	coc.txt	/*<Plug>(coc-type-definition)*
 CocAction('activeExtension')	coc.txt	/*CocAction('activeExtension')*
 CocAction('addRanges')	coc.txt	/*CocAction('addRanges')*
+CocAction('addWorkspaceFolder')	coc.txt	/*CocAction('addWorkspaceFolder')*
 CocAction('codeAction')	coc.txt	/*CocAction('codeAction')*
 CocAction('codeActionRange')	coc.txt	/*CocAction('codeActionRange')*
 CocAction('codeActions')	coc.txt	/*CocAction('codeActions')*
@@ -123,6 +128,7 @@ CocAction('showOutline')	coc.txt	/*CocAction('showOutline')*
 CocAction('showSignatureHelp')	coc.txt	/*CocAction('showSignatureHelp')*
 CocAction('showSubTypes')	coc.txt	/*CocAction('showSubTypes')*
 CocAction('showSuperTypes')	coc.txt	/*CocAction('showSuperTypes')*
+CocAction('snippetInsert')	coc.txt	/*CocAction('snippetInsert')*
 CocAction('sourceStat')	coc.txt	/*CocAction('sourceStat')*
 CocAction('toggleExtension')	coc.txt	/*CocAction('toggleExtension')*
 CocAction('toggleService')	coc.txt	/*CocAction('toggleService')*
@@ -163,9 +169,14 @@ CocInfoLine	coc.txt	/*CocInfoLine*
 CocInfoSign	coc.txt	/*CocInfoSign*
 CocInfoVirtualText	coc.txt	/*CocInfoVirtualText*
 CocInlayHint	coc.txt	/*CocInlayHint*
+CocInlayHintParameter	coc.txt	/*CocInlayHintParameter*
+CocInlayHintType	coc.txt	/*CocInlayHintType*
+CocInputBoxVirtualText	coc.txt	/*CocInputBoxVirtualText*
 CocItalic	coc.txt	/*CocItalic*
 CocJumpPlaceholder	coc.txt	/*CocJumpPlaceholder*
+CocLink	coc.txt	/*CocLink*
 CocLinkedEditing	coc.txt	/*CocLinkedEditing*
+CocList	coc.txt	/*CocList*
 CocListLine	coc.txt	/*CocListLine*
 CocListMode	coc.txt	/*CocListMode*
 CocListPath	coc.txt	/*CocListPath*
@@ -312,6 +323,14 @@ coc#util#get_data_home()	coc.txt	/*coc#util#get_data_home()*
 coc#util#job_command()	coc.txt	/*coc#util#job_command()*
 coc#util#root_patterns()	coc.txt	/*coc#util#root_patterns()*
 coc-actions	coc.txt	/*coc-actions*
+coc-api-console	coc-api.txt	/*coc-api-console*
+coc-api-debug	coc-api.txt	/*coc-api-debug*
+coc-api-extension	coc-api.txt	/*coc-api-extension*
+coc-api-intro	coc-api.txt	/*coc-api-intro*
+coc-api-json	coc-api.txt	/*coc-api-json*
+coc-api-single	coc-api.txt	/*coc-api-single*
+coc-api-vim-source	coc-api.txt	/*coc-api-vim-source*
+coc-api.txt	coc-api.txt	/*coc-api.txt*
 coc-autocmds	coc.txt	/*coc-autocmds*
 coc-buffer-variables	coc.txt	/*coc-buffer-variables*
 coc-callHierarchy	coc.txt	/*coc-callHierarchy*
@@ -409,6 +428,7 @@ coc-config-http-proxyAuthorization	coc-config.txt	/*coc-config-http-proxyAuthori
 coc-config-http-proxyCA	coc-config.txt	/*coc-config-http-proxyCA*
 coc-config-http-proxyStrictSSL	coc-config.txt	/*coc-config-http-proxyStrictSSL*
 coc-config-inlayHint	coc-config.txt	/*coc-config-inlayHint*
+coc-config-inlayHint-display	coc-config.txt	/*coc-config-inlayHint-display*
 coc-config-inlayHint-enable	coc-config.txt	/*coc-config-inlayHint-enable*
 coc-config-inlayHint-enableParameter	coc-config.txt	/*coc-config-inlayHint-enableParameter*
 coc-config-inlayHint-parameterSeparator	coc-config.txt	/*coc-config-inlayHint-parameterSeparator*
@@ -417,10 +437,13 @@ coc-config-inlayHint-subSeparator	coc-config.txt	/*coc-config-inlayHint-subSepar
 coc-config-inlayHint-typeSeparator	coc-config.txt	/*coc-config-inlayHint-typeSeparator*
 coc-config-languageserver	coc-config.txt	/*coc-config-languageserver*
 coc-config-links	coc-config.txt	/*coc-config-links*
+coc-config-links-enable	coc-config.txt	/*coc-config-links-enable*
+coc-config-links-highlight	coc-config.txt	/*coc-config-links-highlight*
 coc-config-links-tooltip	coc-config.txt	/*coc-config-links-tooltip*
 coc-config-list	coc-config.txt	/*coc-config-list*
 coc-config-list-alignColumns	coc-config.txt	/*coc-config-list-alignColumns*
 coc-config-list-extendedSearchMode	coc-config.txt	/*coc-config-list-extendedSearchMode*
+coc-config-list-floatPreview	coc-config.txt	/*coc-config-list-floatPreview*
 coc-config-list-height	coc-config.txt	/*coc-config-list-height*
 coc-config-list-indicator	coc-config.txt	/*coc-config-list-indicator*
 coc-config-list-insertMappings	coc-config.txt	/*coc-config-list-insertMappings*
@@ -515,11 +538,11 @@ coc-config-suggest-defaultSortMethod	coc-config.txt	/*coc-config-suggest-default
 coc-config-suggest-detailField	coc-config.txt	/*coc-config-suggest-detailField*
 coc-config-suggest-enableFloat	coc-config.txt	/*coc-config-suggest-enableFloat*
 coc-config-suggest-enablePreselect	coc-config.txt	/*coc-config-suggest-enablePreselect*
-coc-config-suggest-fixInsertedWord	coc-config.txt	/*coc-config-suggest-fixInsertedWord*
 coc-config-suggest-floatConfig	coc-config.txt	/*coc-config-suggest-floatConfig*
 coc-config-suggest-formatItems	coc-config.txt	/*coc-config-suggest-formatItems*
 coc-config-suggest-highPrioritySourceLimit	coc-config.txt	/*coc-config-suggest-highPrioritySourceLimit*
 coc-config-suggest-ignoreRegexps	coc-config.txt	/*coc-config-suggest-ignoreRegexps*
+coc-config-suggest-insertMode	coc-config.txt	/*coc-config-suggest-insertMode*
 coc-config-suggest-invalidInsertCharacters	coc-config.txt	/*coc-config-suggest-invalidInsertCharacters*
 coc-config-suggest-labelMaxLength	coc-config.txt	/*coc-config-suggest-labelMaxLength*
 coc-config-suggest-languageSourcePriority	coc-config.txt	/*coc-config-suggest-languageSourcePriority*
@@ -566,10 +589,10 @@ coc-config-workspace-workspaceFolderFallbackCwd	coc-config.txt	/*coc-config-work
 coc-config.txt	coc-config.txt	/*coc-config.txt*
 coc-configu-workspace-rootPatterns	coc-config.txt	/*coc-configu-workspace-rootPatterns*
 coc-configuration	coc.txt	/*coc-configuration*
+coc-configuration-expand	coc.txt	/*coc-configuration-expand*
 coc-configuration-scope	coc.txt	/*coc-configuration-scope*
 coc-contents	coc.txt	/*coc-contents*
 coc-cursors	coc.txt	/*coc-cursors*
-coc-custom-source	coc.txt	/*coc-custom-source*
 coc-diagnostics	coc.txt	/*coc-diagnostics*
 coc-diagnostics-jump	coc.txt	/*coc-diagnostics-jump*
 coc-diagnostics-refresh	coc.txt	/*coc-diagnostics-refresh*
@@ -588,6 +611,7 @@ coc-document-filetype	coc.txt	/*coc-document-filetype*
 coc-document-highlights	coc.txt	/*coc-document-highlights*
 coc-document-links	coc.txt	/*coc-document-links*
 coc-extensions	coc.txt	/*coc-extensions*
+coc-extensions-folder	coc.txt	/*coc-extensions-folder*
 coc-extensions-npm	coc.txt	/*coc-extensions-npm*
 coc-faq	coc.txt	/*coc-faq*
 coc-floating	coc.txt	/*coc-floating*
@@ -607,7 +631,8 @@ coc-global-variables	coc.txt	/*coc-global-variables*
 coc-highlights	coc.txt	/*coc-highlights*
 coc-highlights-diagnostics	coc.txt	/*coc-highlights-diagnostics*
 coc-highlights-document	coc.txt	/*coc-highlights-document*
-coc-highlights-list	coc.txt	/*coc-highlights-list*
+coc-highlights-float	coc.txt	/*coc-highlights-float*
+coc-highlights-inlayHint	coc.txt	/*coc-highlights-inlayHint*
 coc-hover	coc.txt	/*coc-hover*
 coc-hover-example	coc.txt	/*coc-hover-example*
 coc-inlayHint	coc.txt	/*coc-inlayHint*
@@ -642,8 +667,10 @@ coc-lsp	coc.txt	/*coc-lsp*
 coc-notification	coc.txt	/*coc-notification*
 coc-nvim.txt	coc.txt	/*coc-nvim.txt*
 coc-outline	coc.txt	/*coc-outline*
+coc-plugins	coc.txt	/*coc-plugins*
 coc-preferences-bracketEnterImprove	coc-config.txt	/*coc-preferences-bracketEnterImprove*
 coc-preferences-currentFunctionSymbolAutoUpdate	coc-config.txt	/*coc-preferences-currentFunctionSymbolAutoUpdate*
+coc-preferences-enableGFMBreaksInmakrdownDocument	coc-config.txt	/*coc-preferences-enableGFMBreaksInmakrdownDocument*
 coc-preferences-enableLinkedEditing	coc-config.txt	/*coc-preferences-enableLinkedEditing*
 coc-preferences-enableMarkdown	coc-config.txt	/*coc-preferences-enableMarkdown*
 coc-preferences-enableMessageDialog	coc-config.txt	/*coc-preferences-enableMessageDialog*
@@ -683,7 +710,6 @@ coc-workspace-folders	coc.txt	/*coc-workspace-folders*
 g:WorkspaceFolders	coc.txt	/*g:WorkspaceFolders*
 g:coc_border_joinchars	coc.txt	/*g:coc_border_joinchars*
 g:coc_borderchars	coc.txt	/*g:coc_borderchars*
-g:coc_channel_timeout	coc.txt	/*g:coc_channel_timeout*
 g:coc_config_home	coc.txt	/*g:coc_config_home*
 g:coc_data_home	coc.txt	/*g:coc_data_home*
 g:coc_default_semantic_highlight_groups	coc.txt	/*g:coc_default_semantic_highlight_groups*
@@ -705,6 +731,7 @@ g:coc_notify	coc.txt	/*g:coc_notify*
 g:coc_notify_error_icon	coc.txt	/*g:coc_notify_error_icon*
 g:coc_notify_info_icon	coc.txt	/*g:coc_notify_info_icon*
 g:coc_notify_warning_icon	coc.txt	/*g:coc_notify_warning_icon*
+g:coc_open_url_command	coc.txt	/*g:coc_open_url_command*
 g:coc_process_pid	coc.txt	/*g:coc_process_pid*
 g:coc_prompt_win_width	coc.txt	/*g:coc_prompt_win_width*
 g:coc_quickfix_open_command	coc.txt	/*g:coc_quickfix_open_command*
@@ -719,4 +746,5 @@ g:coc_status_warning_sign	coc.txt	/*g:coc_status_warning_sign*
 g:coc_terminal_height	coc.txt	/*g:coc_terminal_height*
 g:coc_text_prop_offset	coc.txt	/*g:coc_text_prop_offset*
 g:coc_uri_prefix_replace_patterns	coc.txt	/*g:coc_uri_prefix_replace_patterns*
+g:coc_user_config	coc.txt	/*g:coc_user_config*
 g:node_client_debug	coc.txt	/*g:node_client_debug*

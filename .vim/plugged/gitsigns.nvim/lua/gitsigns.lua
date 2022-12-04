@@ -323,19 +323,26 @@ end)
 local M0 = M
 
 local function complete(arglead, line)
-   local n = #vim.split(line, '%s+')
+   local words = vim.split(line, '%s+')
+   local n = #words
 
+   local actions = require('gitsigns.actions')
    local matches = {}
    if n == 2 then
-      local actions = require('gitsigns.actions')
       for _, m in ipairs({ actions, M0 }) do
          for func, _ in pairs(m) do
-            if vim.startswith(func, '_') then
+            if not func:match('^[a-z]') then
 
             elseif vim.startswith(func, arglead) then
                table.insert(matches, func)
             end
          end
+      end
+   elseif n > 2 then
+
+      local cmp_func = actions._get_cmp_func(words[2])
+      if cmp_func then
+         return cmp_func(arglead)
       end
    end
    return matches
@@ -370,15 +377,18 @@ local run_cmd_func = void(function(params)
 
    local pos_args = vim.tbl_map(parse_to_lua, vim.list_slice(pos_args_raw, 2))
    local named_args = vim.tbl_map(parse_to_lua, named_args_raw)
+   local args = vim.tbl_extend('error', pos_args, named_args)
 
    local actions = require('gitsigns.actions')
    local actions0 = actions
 
-   local cmd_func = actions.get_cmd_func(func)
+   dprintf("Running action '%s' with arguments %s", func, vim.inspect(args, { newline = ' ', indent = '' }))
+
+   local cmd_func = actions._get_cmd_func(func)
    if cmd_func then
 
 
-      cmd_func(pos_args, named_args, params)
+      cmd_func(args, params)
       return
    end
 

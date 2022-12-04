@@ -1,4 +1,5 @@
 :Gitsigns	gitsigns.txt	/*:Gitsigns*
+b:gitsigns_blame_line	gitsigns.txt	/*b:gitsigns_blame_line*
 b:gitsigns_blame_line_dict	gitsigns.txt	/*b:gitsigns_blame_line_dict*
 b:gitsigns_head	gitsigns.txt	/*b:gitsigns_head*
 b:gitsigns_status	gitsigns.txt	/*b:gitsigns_status*

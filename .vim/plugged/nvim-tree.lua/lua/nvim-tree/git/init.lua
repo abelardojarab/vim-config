@@ -1,5 +1,3 @@
-local uv = vim.loop
-
 local log = require "nvim-tree.log"
 local utils = require "nvim-tree.utils"
 local git_utils = require "nvim-tree.git.utils"
@@ -11,6 +9,16 @@ local M = {
   config = {},
   projects = {},
   cwd_to_project_root = {},
+}
+
+-- Files under .git that should result in a reload when changed.
+-- Utilities (like watchman) can also write to this directory (often) and aren't useful for us.
+local WATCHED_FILES = {
+  "FETCH_HEAD", -- remote ref
+  "HEAD", -- local ref
+  "HEAD.lock", -- HEAD will not always be updated e.g. revert
+  "config", -- user config
+  "index", -- staging area
 }
 
 function M.reload()
@@ -74,7 +82,7 @@ function M.get_project_root(cwd)
     return nil
   end
 
-  local stat, _ = uv.fs_stat(cwd)
+  local stat, _ = vim.loop.fs_stat(cwd)
   if not stat or stat.type ~= "directory" then
     return nil
   end
@@ -151,7 +159,7 @@ function M.load_project_status(cwd)
       end)
     end
 
-    watcher = Watcher:new(utils.path_join { project_root, ".git" }, callback, {
+    watcher = Watcher:new(utils.path_join { project_root, ".git" }, WATCHED_FILES, callback, {
       project_root = project_root,
     })
   end

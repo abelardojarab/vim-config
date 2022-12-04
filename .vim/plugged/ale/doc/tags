@@ -110,6 +110,7 @@ ale-ada-language-server	ale-ada.txt	/*ale-ada-language-server*
 ale-ada-options	ale-ada.txt	/*ale-ada-options*
 ale-alex-options	ale.txt	/*ale-alex-options*
 ale-ansible-ansible-lint	ale-ansible.txt	/*ale-ansible-ansible-lint*
+ale-ansible-language-server	ale-ansible.txt	/*ale-ansible-language-server*
 ale-ansible-options	ale-ansible.txt	/*ale-ansible-options*
 ale-api	ale.txt	/*ale-api*
 ale-apkbuild-apkbuild-lint	ale-apkbuild.txt	/*ale-apkbuild-apkbuild-lint*
@@ -190,6 +191,7 @@ ale-cpp-flawfinder	ale-cpp.txt	/*ale-cpp-flawfinder*
 ale-cpp-gcc	ale-cpp.txt	/*ale-cpp-gcc*
 ale-cpp-options	ale-cpp.txt	/*ale-cpp-options*
 ale-cpp-uncrustify	ale-cpp.txt	/*ale-cpp-uncrustify*
+ale-cs-clangformat	ale-cs.txt	/*ale-cs-clangformat*
 ale-cs-csc	ale-cs.txt	/*ale-cs-csc*
 ale-cs-cspell	ale-cs.txt	/*ale-cs-cspell*
 ale-cs-dotnet-format	ale-cs.txt	/*ale-cs-dotnet-format*
@@ -366,6 +368,7 @@ ale-introduction	ale.txt	/*ale-introduction*
 ale-ispc-ispc	ale-ispc.txt	/*ale-ispc-ispc*
 ale-ispc-options	ale-ispc.txt	/*ale-ispc-options*
 ale-java-checkstyle	ale-java.txt	/*ale-java-checkstyle*
+ale-java-clangformat	ale-java.txt	/*ale-java-clangformat*
 ale-java-cspell	ale-java.txt	/*ale-java-cspell*
 ale-java-eclipselsp	ale-java.txt	/*ale-java-eclipselsp*
 ale-java-google-java-format	ale-java.txt	/*ale-java-google-java-format*
@@ -374,6 +377,7 @@ ale-java-javalsp	ale-java.txt	/*ale-java-javalsp*
 ale-java-options	ale-java.txt	/*ale-java-options*
 ale-java-pmd	ale-java.txt	/*ale-java-pmd*
 ale-java-uncrustify	ale-java.txt	/*ale-java-uncrustify*
+ale-javascript-clangformat	ale-javascript.txt	/*ale-javascript-clangformat*
 ale-javascript-cspell	ale-javascript.txt	/*ale-javascript-cspell*
 ale-javascript-deno	ale-javascript.txt	/*ale-javascript-deno*
 ale-javascript-dprint	ale-javascript.txt	/*ale-javascript-dprint*
@@ -389,6 +393,7 @@ ale-javascript-prettier-eslint	ale-javascript.txt	/*ale-javascript-prettier-esli
 ale-javascript-prettier-standard	ale-javascript.txt	/*ale-javascript-prettier-standard*
 ale-javascript-standard	ale-javascript.txt	/*ale-javascript-standard*
 ale-javascript-xo	ale-javascript.txt	/*ale-javascript-xo*
+ale-json-clangformat	ale-json.txt	/*ale-json-clangformat*
 ale-json-cspell	ale-json.txt	/*ale-json-cspell*
 ale-json-dprint	ale-json.txt	/*ale-json-dprint*
 ale-json-eslint	ale-json.txt	/*ale-json-eslint*
@@ -443,6 +448,8 @@ ale-lua-luafmt	ale-lua.txt	/*ale-lua-luafmt*
 ale-lua-options	ale-lua.txt	/*ale-lua-options*
 ale-lua-selene	ale-lua.txt	/*ale-lua-selene*
 ale-lua-stylua	ale-lua.txt	/*ale-lua-stylua*
+ale-make-checkmake	ale-make.txt	/*ale-make-checkmake*
+ale-make-options	ale-make.txt	/*ale-make-options*
 ale-markdown-cspell	ale-markdown.txt	/*ale-markdown-cspell*
 ale-markdown-dprint	ale-markdown.txt	/*ale-markdown-dprint*
 ale-markdown-markdownlint	ale-markdown.txt	/*ale-markdown-markdownlint*
@@ -471,6 +478,7 @@ ale-nroff-write-good	ale-nroff.txt	/*ale-nroff-write-good*
 ale-objc-ccls	ale-objc.txt	/*ale-objc-ccls*
 ale-objc-clang	ale-objc.txt	/*ale-objc-clang*
 ale-objc-clangd	ale-objc.txt	/*ale-objc-clangd*
+ale-objc-clangformat	ale-objc.txt	/*ale-objc-clangformat*
 ale-objc-options	ale-objc.txt	/*ale-objc-options*
 ale-objc-uncrustify	ale-objc.txt	/*ale-objc-uncrustify*
 ale-objcpp-clang	ale-objcpp.txt	/*ale-objcpp-clang*
@@ -532,6 +540,7 @@ ale-prolog-options	ale-prolog.txt	/*ale-prolog-options*
 ale-prolog-swipl	ale-prolog.txt	/*ale-prolog-swipl*
 ale-proto-buf-format	ale-proto.txt	/*ale-proto-buf-format*
 ale-proto-buf-lint	ale-proto.txt	/*ale-proto-buf-lint*
+ale-proto-clangformat	ale-proto.txt	/*ale-proto-clangformat*
 ale-proto-options	ale-proto.txt	/*ale-proto-options*
 ale-proto-protoc-gen-lint	ale-proto.txt	/*ale-proto-protoc-gen-lint*
 ale-proto-protolint	ale-proto.txt	/*ale-proto-protolint*
@@ -650,6 +659,7 @@ ale-special-thanks	ale.txt	/*ale-special-thanks*
 ale-sql-dprint	ale-sql.txt	/*ale-sql-dprint*
 ale-sql-options	ale-sql.txt	/*ale-sql-options*
 ale-sql-pgformatter	ale-sql.txt	/*ale-sql-pgformatter*
+ale-sql-sqlfluff	ale-sql.txt	/*ale-sql-sqlfluff*
 ale-sql-sqlfmt	ale-sql.txt	/*ale-sql-sqlfmt*
 ale-sql-sqlformat	ale-sql.txt	/*ale-sql-sqlformat*
 ale-stylus-options	ale-stylus.txt	/*ale-stylus-options*
@@ -774,6 +784,8 @@ b:ale_ada_gnatpp_options	ale-ada.txt	/*b:ale_ada_gnatpp_options*
 b:ale_alex_executable	ale.txt	/*b:ale_alex_executable*
 b:ale_alex_use_global	ale.txt	/*b:ale_alex_use_global*
 b:ale_ansible_ansible_lint_executable	ale-ansible.txt	/*b:ale_ansible_ansible_lint_executable*
+b:ale_ansible_language_server	ale-ansible.txt	/*b:ale_ansible_language_server*
+b:ale_ansible_language_server_config	ale-ansible.txt	/*b:ale_ansible_language_server_config*
 b:ale_apkbuild_apkbuild_lint_executable	ale-apkbuild.txt	/*b:ale_apkbuild_apkbuild_lint_executable*
 b:ale_apkbuild_secfixes_check_executable	ale-apkbuild.txt	/*b:ale_apkbuild_secfixes_check_executable*
 b:ale_asm_gcc_executable	ale-asm.txt	/*b:ale_asm_gcc_executable*
@@ -912,6 +924,7 @@ b:ale_disable_lsp	ale.txt	/*b:ale_disable_lsp*
 b:ale_dockerfile_dockerfile_lint_executable	ale-dockerfile.txt	/*b:ale_dockerfile_dockerfile_lint_executable*
 b:ale_dockerfile_dockerfile_lint_options	ale-dockerfile.txt	/*b:ale_dockerfile_dockerfile_lint_options*
 b:ale_dockerfile_hadolint_image	ale-dockerfile.txt	/*b:ale_dockerfile_hadolint_image*
+b:ale_dockerfile_hadolint_options	ale-dockerfile.txt	/*b:ale_dockerfile_hadolint_options*
 b:ale_dockerfile_hadolint_use_docker	ale-dockerfile.txt	/*b:ale_dockerfile_hadolint_use_docker*
 b:ale_dprint_config	ale.txt	/*b:ale_dprint_config*
 b:ale_dprint_executable	ale.txt	/*b:ale_dprint_executable*
@@ -1142,6 +1155,8 @@ b:ale_lua_selene_executable	ale-lua.txt	/*b:ale_lua_selene_executable*
 b:ale_lua_selene_options	ale-lua.txt	/*b:ale_lua_selene_options*
 b:ale_lua_stylua_executable	ale-lua.txt	/*b:ale_lua_stylua_executable*
 b:ale_lua_stylua_options	ale-lua.txt	/*b:ale_lua_stylua_options*
+b:ale_make_checkmake_config	ale-make.txt	/*b:ale_make_checkmake_config*
+b:ale_markdown_markdownlint_executable	ale-markdown.txt	/*b:ale_markdown_markdownlint_executable*
 b:ale_markdown_markdownlint_options	ale-markdown.txt	/*b:ale_markdown_markdownlint_options*
 b:ale_markdown_mdl_executable	ale-markdown.txt	/*b:ale_markdown_mdl_executable*
 b:ale_markdown_mdl_options	ale-markdown.txt	/*b:ale_markdown_mdl_options*
@@ -1434,6 +1449,7 @@ b:ale_rust_rls_config	ale-rust.txt	/*b:ale_rust_rls_config*
 b:ale_rust_rls_executable	ale-rust.txt	/*b:ale_rust_rls_executable*
 b:ale_rust_rls_toolchain	ale-rust.txt	/*b:ale_rust_rls_toolchain*
 b:ale_rust_rustc_options	ale-rust.txt	/*b:ale_rust_rustc_options*
+b:ale_rust_rustfmt_executable	ale-rust.txt	/*b:ale_rust_rustfmt_executable*
 b:ale_rust_rustfmt_options	ale-rust.txt	/*b:ale_rust_rustfmt_options*
 b:ale_sass_stylelint_executable	ale-sass.txt	/*b:ale_sass_stylelint_executable*
 b:ale_sass_stylelint_use_global	ale-sass.txt	/*b:ale_sass_stylelint_use_global*
@@ -1474,6 +1490,8 @@ b:ale_spec_rpmlint_executable	ale-spec.txt	/*b:ale_spec_rpmlint_executable*
 b:ale_spec_rpmlint_options	ale-spec.txt	/*b:ale_spec_rpmlint_options*
 b:ale_sql_pgformatter_executable	ale-sql.txt	/*b:ale_sql_pgformatter_executable*
 b:ale_sql_pgformatter_options	ale-sql.txt	/*b:ale_sql_pgformatter_options*
+b:ale_sql_sqlfluff_executable	ale-sql.txt	/*b:ale_sql_sqlfluff_executable*
+b:ale_sql_sqlfluff_options	ale-sql.txt	/*b:ale_sql_sqlfluff_options*
 b:ale_sql_sqlfmt_executable	ale-sql.txt	/*b:ale_sql_sqlfmt_executable*
 b:ale_sql_sqlfmt_options	ale-sql.txt	/*b:ale_sql_sqlfmt_options*
 b:ale_sql_sqlformat_executable	ale-sql.txt	/*b:ale_sql_sqlformat_executable*
@@ -1610,6 +1628,8 @@ g:ale_ada_gnatpp_options	ale-ada.txt	/*g:ale_ada_gnatpp_options*
 g:ale_alex_executable	ale.txt	/*g:ale_alex_executable*
 g:ale_alex_use_global	ale.txt	/*g:ale_alex_use_global*
 g:ale_ansible_ansible_lint_executable	ale-ansible.txt	/*g:ale_ansible_ansible_lint_executable*
+g:ale_ansible_language_server	ale-ansible.txt	/*g:ale_ansible_language_server*
+g:ale_ansible_language_server_config	ale-ansible.txt	/*g:ale_ansible_language_server_config*
 g:ale_apkbuild_apkbuild_lint_executable	ale-apkbuild.txt	/*g:ale_apkbuild_apkbuild_lint_executable*
 g:ale_apkbuild_secfixes_check_executable	ale-apkbuild.txt	/*g:ale_apkbuild_secfixes_check_executable*
 g:ale_asm_gcc_executable	ale-asm.txt	/*g:ale_asm_gcc_executable*
@@ -1762,6 +1782,7 @@ g:ale_disable_lsp	ale.txt	/*g:ale_disable_lsp*
 g:ale_dockerfile_dockerfile_lint_executable	ale-dockerfile.txt	/*g:ale_dockerfile_dockerfile_lint_executable*
 g:ale_dockerfile_dockerfile_lint_options	ale-dockerfile.txt	/*g:ale_dockerfile_dockerfile_lint_options*
 g:ale_dockerfile_hadolint_image	ale-dockerfile.txt	/*g:ale_dockerfile_hadolint_image*
+g:ale_dockerfile_hadolint_options	ale-dockerfile.txt	/*g:ale_dockerfile_hadolint_options*
 g:ale_dockerfile_hadolint_use_docker	ale-dockerfile.txt	/*g:ale_dockerfile_hadolint_use_docker*
 g:ale_dprint_config	ale.txt	/*g:ale_dprint_config*
 g:ale_dprint_executable	ale.txt	/*g:ale_dprint_executable*
@@ -2023,6 +2044,8 @@ g:ale_lua_selene_executable	ale-lua.txt	/*g:ale_lua_selene_executable*
 g:ale_lua_selene_options	ale-lua.txt	/*g:ale_lua_selene_options*
 g:ale_lua_stylua_executable	ale-lua.txt	/*g:ale_lua_stylua_executable*
 g:ale_lua_stylua_options	ale-lua.txt	/*g:ale_lua_stylua_options*
+g:ale_make_checkmake_config	ale-make.txt	/*g:ale_make_checkmake_config*
+g:ale_markdown_markdownlint_executable	ale-markdown.txt	/*g:ale_markdown_markdownlint_executable*
 g:ale_markdown_markdownlint_options	ale-markdown.txt	/*g:ale_markdown_markdownlint_options*
 g:ale_markdown_mdl_executable	ale-markdown.txt	/*g:ale_markdown_mdl_executable*
 g:ale_markdown_mdl_options	ale-markdown.txt	/*g:ale_markdown_mdl_options*
@@ -2327,6 +2350,7 @@ g:ale_rust_rls_config	ale-rust.txt	/*g:ale_rust_rls_config*
 g:ale_rust_rls_executable	ale-rust.txt	/*g:ale_rust_rls_executable*
 g:ale_rust_rls_toolchain	ale-rust.txt	/*g:ale_rust_rls_toolchain*
 g:ale_rust_rustc_options	ale-rust.txt	/*g:ale_rust_rustc_options*
+g:ale_rust_rustfmt_executable	ale-rust.txt	/*g:ale_rust_rustfmt_executable*
 g:ale_rust_rustfmt_options	ale-rust.txt	/*g:ale_rust_rustfmt_options*
 g:ale_sass_stylelint_executable	ale-sass.txt	/*g:ale_sass_stylelint_executable*
 g:ale_sass_stylelint_use_global	ale-sass.txt	/*g:ale_sass_stylelint_use_global*
@@ -2380,6 +2404,8 @@ g:ale_spec_rpmlint_executable	ale-spec.txt	/*g:ale_spec_rpmlint_executable*
 g:ale_spec_rpmlint_options	ale-spec.txt	/*g:ale_spec_rpmlint_options*
 g:ale_sql_pgformatter_executable	ale-sql.txt	/*g:ale_sql_pgformatter_executable*
 g:ale_sql_pgformatter_options	ale-sql.txt	/*g:ale_sql_pgformatter_options*
+g:ale_sql_sqlfluff_executable	ale-sql.txt	/*g:ale_sql_sqlfluff_executable*
+g:ale_sql_sqlfluff_options	ale-sql.txt	/*g:ale_sql_sqlfluff_options*
 g:ale_sql_sqlfmt_executable	ale-sql.txt	/*g:ale_sql_sqlfmt_executable*
 g:ale_sql_sqlfmt_options	ale-sql.txt	/*g:ale_sql_sqlfmt_options*
 g:ale_sql_sqlformat_executable	ale-sql.txt	/*g:ale_sql_sqlformat_executable*

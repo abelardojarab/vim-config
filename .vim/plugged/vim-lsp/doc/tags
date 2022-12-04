@@ -80,6 +80,7 @@ g:lsp_max_buffer_size	vim-lsp.txt	/*g:lsp_max_buffer_size*
 g:lsp_peek_alignment	vim-lsp.txt	/*g:lsp_peek_alignment*
 g:lsp_preview_autoclose	vim-lsp.txt	/*g:lsp_preview_autoclose*
 g:lsp_preview_doubletap	vim-lsp.txt	/*g:lsp_preview_doubletap*
+g:lsp_preview_fixup_conceal	vim-lsp.txt	/*g:lsp_preview_fixup_conceal*
 g:lsp_preview_float	vim-lsp.txt	/*g:lsp_preview_float*
 g:lsp_preview_keep_focus	vim-lsp.txt	/*g:lsp_preview_keep_focus*
 g:lsp_preview_max_height	vim-lsp.txt	/*g:lsp_preview_max_height*

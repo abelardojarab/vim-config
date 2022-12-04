@@ -29,6 +29,7 @@ saga.config_values = {
     sign_priority = 40,
     virtual_text = true,
   },
+  preview_lines_above = 0,
   max_preview_lines = 15,
   scroll_in_preview = {
     scroll_down = '<C-f>',
@@ -58,6 +59,7 @@ saga.config_values = {
     tabe = '<C-c>t',
     quit = 'q',
   },
+  hover_action_quit = 'q',
   rename_action_quit = '<C-c>',
   rename_in_select = true,
   -- winbar must nightly

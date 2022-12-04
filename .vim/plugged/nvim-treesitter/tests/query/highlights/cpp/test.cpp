@@ -4,9 +4,10 @@
 //       ^ string
 
 auto main( int argc, char** argv ) -> int
+// ^ type.builtin
       //       ^ parameter
-      //    ^ type
-      //    ^ type
+      //    ^ type.builtin
+      //    ^ type.builtin
       //                  ^ operator
 {
     std::cout << "Hello world!" << std::endl;
