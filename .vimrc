@@ -1023,6 +1023,14 @@ endfunction
 
 " --- Terminal ---
 
+" vim-powered terminal in split window
+map <Leader>t :term ++close<cr>
+tmap <Leader>t <c-w>:term ++close<cr>
+
+" vim-powered terminal in new tab
+map <Leader>T :tab term ++close<cr>
+tmap <Leader>T <c-w>:tab term ++close<cr>
+
 " turn terminal to normal mode with escape
 tnoremap <Esc> <C-\><C-n>
 
