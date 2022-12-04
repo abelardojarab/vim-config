@@ -327,6 +327,7 @@ if (has('nvim'))
 endif
 
 if (has('nvim-0.5'))
+    Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
     Plug 'neovim/nvim-lspconfig'
     Plug 'ray-x/lsp_signature.nvim'
     Plug 'ojroques/nvim-lspfuzzy'
