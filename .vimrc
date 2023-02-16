@@ -294,11 +294,12 @@ endif
 Plug 'romainl/vim-cool'
 
 " Completion
+if (has('nvim'))
 Plug 'neoclide/coc.nvim', {'for':['zig','cmake','rust',
      \'java','json', 'haskell', 'ts','sh', 'cs',
      \'yaml', 'c', 'cpp', 'd', 'go',
      \'python', 'dart', 'javascript', 'vim'], 'branch': 'release'}
-
+endif
 Plug 'Shougo/deoplete.nvim',
 if (!has('nvim'))
     Plug 'prabirshrestha/asyncomplete.vim'
