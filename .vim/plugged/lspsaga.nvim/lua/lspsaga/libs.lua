@@ -1,30 +1,55 @@
-local api = vim.api
+local api, lsp = vim.api, vim.lsp
+local saga_conf = require('lspsaga').config
 local libs = {}
-local window = require('lspsaga.window')
-local server_filetype_map = require('lspsaga').config_values.server_filetype_map
 local saga_augroup = require('lspsaga').saga_augroup
 
-function libs.is_windows()
-  return vim.loop.os_uname().sysname:find('Windows', 1, true) and true
+libs.iswin = vim.loop.os_uname().sysname == 'Windows_NT'
+libs.ismac = vim.loop.os_uname().sysname == 'Darwin'
+
+libs.path_sep = libs.iswin and '\\' or '/'
+
+function libs.get_path_info(buf, level)
+  level = level or 1
+  local fname = api.nvim_buf_get_name(buf)
+  local tbl = vim.split(fname, libs.path_sep, { trimempty = true })
+  if level == 1 then
+    return { tbl[#tbl] }
+  end
+  local index = level > #tbl and #tbl or level
+  return { unpack(tbl, #tbl - index + 1, #tbl) }
 end
 
-libs.path_sep = libs.is_windows() and '\\' or '/'
+--get icon hlgroup color
+function libs.icon_from_devicon(ft, color)
+  color = color ~= nil and color or false
+  if not libs.devicons then
+    local ok, devicons = pcall(require, 'nvim-web-devicons')
+    if not ok then
+      return { '' }
+    end
+    libs.devicons = devicons
+  end
+  local icon, hl = libs.devicons.get_icon_by_filetype(ft)
+  if color then
+    local _, rgb = libs.devicons.get_icon_color_by_filetype(ft)
+    return { icon and icon .. ' ' or '', rgb }
+  end
+  return { icon and icon .. ' ' or '', hl }
+end
 
 function libs.get_home_dir()
-  if libs.is_windows() then
+  if libs.is_win then
     return os.getenv('USERPROFILE')
   end
   return os.getenv('HOME')
 end
 
--- check index in table
-function libs.has_key(tab, idx)
-  for index, _ in pairs(tab) do
-    if index == idx then
-      return true
+function libs.tbl_index(tbl, val)
+  for index, v in pairs(tbl) do
+    if v == val then
+      return index
     end
   end
-  return false
 end
 
 function libs.has_value(filetypes, val)
@@ -42,24 +67,10 @@ function libs.has_value(filetypes, val)
   return false
 end
 
-function libs.nvim_create_keymap(definitions)
-  for _, def in pairs(definitions) do
-    local mode, lhs, rhs, opts = def[1], def[2], def[3], def[4]
-
-    if type(lhs) == 'table' then
-      for _, key in ipairs(lhs) do
-        vim.keymap.set(mode, key, rhs, opts)
-      end
-    else
-      vim.keymap.set(mode, lhs, rhs, opts)
-    end
-  end
-end
-
 function libs.check_lsp_active(silent)
   silent = silent or true
   local current_buf = api.nvim_get_current_buf()
-  local active_clients = vim.lsp.get_active_clients({ buffer = current_buf })
+  local active_clients = lsp.get_active_clients({ bufnr = current_buf })
   if next(active_clients) == nil then
     if not silent then
       vim.notify('[LspSaga] Current buffer does not have any lsp server')
@@ -80,14 +91,15 @@ function libs.get_lsp_root_dir()
     return
   end
 
-  local clients = vim.lsp.get_active_clients()
+  local cur_buf = api.nvim_get_current_buf()
+  local clients = lsp.get_active_clients({ bufnr = cur_buf })
   for _, client in pairs(clients) do
     if client.config.filetypes and client.config.root_dir then
-      if libs.has_value(client.config.filetypes, vim.bo.filetype) then
+      if libs.has_value(client.config.filetypes, vim.bo[cur_buf].filetype) then
         return client.config.root_dir
       end
     else
-      for name, fts in pairs(server_filetype_map) do
+      for name, fts in pairs(saga_conf.server_filetype_map) do
         for _, ft in pairs(fts) do
           if ft == vim.bo.filetype and client.config.name == name and client.config.root_dir then
             return client.config.root_dir
@@ -114,38 +126,36 @@ function libs.get_config_lsp_filetypes()
     end
   end
 
-  if next(server_filetype_map) ~= nil then
-    for _, fts in pairs(server_filetype_map) do
-      if type(fts) == 'table' then
-        for _, ft in pairs(fts) do
-          table.insert(filetypes, ft)
-        end
-      elseif type(fts) == 'string' then
-        table.insert(filetypes, fts)
+  if next(saga_conf.server_filetype_map) == nil then
+    return filetypes
+  end
+
+  for _, fts in pairs(saga_conf.server_filetype_map) do
+    if type(fts) == 'table' then
+      for _, ft in pairs(fts) do
+        table.insert(filetypes, ft)
       end
+    elseif type(fts) == 'string' then
+      table.insert(filetypes, fts)
     end
   end
 
   return filetypes
 end
 
-function libs.close_preview_autocmd(bufnr, winids, events)
+function libs.close_preview_autocmd(bufnr, winids, events, callback)
   api.nvim_create_autocmd(events, {
     group = saga_augroup,
     buffer = bufnr,
     once = true,
     callback = function()
+      local window = require('lspsaga.window')
       window.nvim_close_valid_window(winids)
+      if callback then
+        callback()
+      end
     end,
   })
-end
-
-function libs.disable_move_keys(bufnr)
-  local keys = { 'h', 'ge', 'e', '0', '$', 'l', 'w', 'b', '<Bs>' }
-  local opts = { nowait = true, noremap = true, silent = true }
-  for _, key in pairs(keys) do
-    api.nvim_buf_set_keymap(bufnr, 'n', key, '', opts)
-  end
 end
 
 function libs.find_buffer_by_filetype(ft)
@@ -221,8 +231,7 @@ function libs.get_client_by_cap(caps)
     ['table'] = function(instance)
       libs.add_client_filetypes(instance, { vim.bo.filetype })
       if
-        instance.server_capabilities[caps[1]]
-        and instance.server_capabilities[caps[2]]
+        vim.tbl_get(instance.server_capabilities, unpack(caps))
         and libs.has_value(instance.config.filetypes, vim.bo.filetype)
       then
         return instance
@@ -231,7 +240,7 @@ function libs.get_client_by_cap(caps)
     end,
   }
 
-  local clients = vim.lsp.buf_get_clients()
+  local clients = lsp.get_active_clients({ bufnr = 0 })
   local client
   for _, instance in pairs(clients) do
     client = client_caps[type(caps)](instance)
@@ -248,62 +257,90 @@ local function feedkeys(key)
 end
 
 function libs.scroll_in_preview(bufnr, preview_winid)
-  local config = require('lspsaga').config_values
+  local config = require('lspsaga').config
   if preview_winid and api.nvim_win_is_valid(preview_winid) then
-    vim.keymap.set('n', config.scroll_in_preview.scroll_down, function()
-      api.nvim_win_call(preview_winid, function()
-        feedkeys('<C-d>')
-      end)
-    end, { buffer = bufnr })
-
-    vim.keymap.set('n', config.scroll_in_preview.scroll_up, function()
-      api.nvim_win_call(preview_winid, function()
-        feedkeys('<C-u>')
-      end)
-    end, { buffer = bufnr })
+    for i, map in ipairs({ config.scroll_preview.scroll_down, config.scroll_preview.scroll_up }) do
+      api.nvim_buf_set_keymap(bufnr, 'n', map, '', {
+        noremap = true,
+        nowait = true,
+        callback = function()
+          if api.nvim_win_is_valid(preview_winid) then
+            api.nvim_win_call(preview_winid, function()
+              local key = i == 1 and '<C-d>' or '<C-u>'
+              feedkeys(key)
+            end)
+            return
+          end
+          libs.delete_scroll_map(bufnr)
+        end,
+      })
+    end
   end
 end
 
 function libs.delete_scroll_map(bufnr)
-  local config = require('lspsaga').config_values
-  vim.keymap.del('n', config.scroll_in_preview.scroll_down, { buffer = bufnr })
-  vim.keymap.del('n', config.scroll_in_preview.scroll_up, { buffer = bufnr })
+  local config = require('lspsaga').config
+  pcall(api.nvim_buf_del_keymap, bufnr, 'n', config.scroll_preview.scroll_down)
+  pcall(api.nvim_buf_del_keymap, bufnr, 'n', config.scroll_preview.scroll_up)
 end
 
-function libs.async(routine, ...)
-  local f = coroutine.create(function(await, ...)
-    routine(await, ...)
-  end)
-  local await = { error = nil, result = nil, completed = false }
-  local complete = function(arg, err)
-    await.result = arg
-    await.error = err
-    await.completed = true
-    coroutine.resume(f)
+function libs.jump_beacon(bufpos, width)
+  if not saga_conf.beacon.enable then
+    return
   end
-  await.resolve = function(arg)
-    complete(arg, nil)
+
+  if width == 0 or not width then
+    return
   end
-  await.reject = function(err)
-    complete(nil, err)
-  end
-  await.__call = function(self, wait, ...)
-    local lastResult = self.result
-    self.completed = false
-    wait(self, ...)
-    if not self.completed then
-      coroutine.yield(f, ...)
-    end
-    if self.error then
-      assert(false, self.error)
-    end
-    self.completed = false
-    local newResult = self.result
-    self.result = lastResult
-    return newResult
-  end
-  setmetatable(await, await)
-  coroutine.resume(f, await, ...)
+
+  local opts = {
+    relative = 'win',
+    bufpos = bufpos,
+    height = 1,
+    width = width,
+    row = 0,
+    col = 0,
+    anchor = 'NW',
+    focusable = false,
+    no_size_override = true,
+    noautocmd = true,
+  }
+
+  local window = require('lspsaga.window')
+  local _, winid = window.create_win_with_border({
+    contents = { '' },
+    noborder = true,
+    winblend = 0,
+    highlight = {
+      normal = 'SagaBeacon',
+    },
+  }, opts)
+
+  local timer = vim.loop.new_timer()
+  timer:start(
+    0,
+    60,
+    vim.schedule_wrap(function()
+      if not api.nvim_win_is_valid(winid) then
+        return
+      end
+      local blend = vim.wo[winid].winblend + saga_conf.beacon.frequency
+      if blend > 100 then
+        blend = 100
+      end
+      vim.wo[winid].winblend = blend
+      if vim.wo[winid].winblend == 100 and not timer:is_closing() then
+        timer:stop()
+        timer:close()
+        api.nvim_win_close(winid, true)
+      end
+    end)
+  )
+end
+
+function libs.gen_truncate_line(width)
+  local char = '─'
+  return char:rep(math.floor(width / api.nvim_strwidth(char)))
 end
 
 return libs

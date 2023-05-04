@@ -2,63 +2,177 @@ local log = require('distant.log')
 
 local utils = {}
 
---- Builds an argument string by taking a table's keys and converting them
---- into arguments:
----
---- 1. If the key's value is not a number, string, or boolean, it is ignored
---- 2. If the key's value is nil or false, it is ignored
---- 3. If the key's value is true, it is converted into "--key"
---- 4. Otherwise, it is converted into "--key value"
----
---- Keys with underscores have them replaced with hyphens such that
---- "my_long_key" becomes "--my-long-key"
----
---- An optional table `ignore` can be provided that contains keys that should be
---- skipped from args when building the argument string
----
---- Returns the string representing the arguments
-utils.build_arg_str = function(args, ignore)
-    assert(type(args) == 'table', 'args must be a table')
+local PLUGIN_NAME = 'distant.nvim'
 
-    local s = ''
-    ignore = ignore or {}
+--- @return string
+utils.plugin_name = function() return PLUGIN_NAME end
 
-    for k, v in pairs(args) do
-        -- Skip positional arguments and nil/false values
-        if not utils.contains(ignore, k) and v then
-            local name = k:gsub('_', '-')
-            if type(v) == 'boolean' then
-                s = s .. ' --' .. name
-            elseif type(v) == 'number' or (type(v) == 'string' and string.len(v) > 0) then
-                s = s .. ' --' .. name .. ' ' .. v
+--- Represents the separator for use with local file system
+---
+--- From https://github.com/williamboman/nvim-lsp-installer/blob/main/lua/nvim-lsp-installer/path.lua
+---
+--- @type '\\'|'/'
+local SEPARATOR = (function()
+    --- @diagnostic disable-next-line: undefined-global
+    if jit then
+        --- @diagnostic disable-next-line: undefined-global
+        local os = string.lower(jit.os)
+        if os == "linux" or os == "osx" or os == "bsd" then
+            return "/"
+        else
+            return "\\"
+        end
+    else
+        return package.config:sub(1, 1)
+    end
+end)()
+
+--- @return string
+utils.seperator = function() return SEPARATOR end
+
+--- Returns path to cache directory for this plugin
+--- @param path string|string[]|nil #if provided, will be appended to path
+--- @return string
+utils.cache_path = function(path)
+    local full_path = (
+        vim.fn.stdpath('cache') ..
+            utils.seperator() ..
+            utils.plugin_name()
+        )
+
+    if vim.tbl_islist(path) then
+        for _, component in ipairs(path) do
+            full_path = full_path .. utils.seperator() .. component
+        end
+    elseif path ~= nil then
+        full_path = full_path .. utils.seperator() .. path
+    end
+
+    return full_path
+end
+
+--- Returns path to data directory for this plugin
+--- @param path string|string[]|nil #if provided, will be appended to path
+--- @return string
+utils.data_path = function(path)
+    local full_path = (
+        vim.fn.stdpath('data') ..
+            utils.seperator() ..
+            utils.plugin_name()
+        )
+
+    if vim.tbl_islist(path) then
+        for _, component in ipairs(path) do
+            full_path = full_path .. utils.seperator() .. component
+        end
+    elseif path ~= nil then
+        full_path = full_path .. utils.seperator() .. path
+    end
+
+    return full_path
+end
+
+--- @alias OperatingSystem 'windows'|'linux'|'macos'|'bsd'|'solaris'|'unknown'
+--- @alias Architecture 'x86'|'x86_64'|'powerpc'|'arm'|'mips'|'unknown'
+
+--- Original from https://gist.github.com/soulik/82e9d02a818ce12498d1
+---
+--- @return OperatingSystem, Architecture
+utils.detect_os_arch = function()
+    local raw_os_name, raw_arch_name = '', ''
+
+    -- LuaJIT shortcut
+    if jit and jit.os and jit.arch then
+        raw_os_name = jit.os
+        raw_arch_name = jit.arch
+    else
+        -- is popen supported?
+        local popen_status, popen_result = pcall(io.popen, '')
+        if popen_status then
+            if popen_result then
+                popen_result:close()
+            end
+
+            -- Unix-based OS
+            raw_os_name = io.popen('uname -s', 'r'):read('*l')
+            raw_arch_name = io.popen('uname -m', 'r'):read('*l')
+        else
+            -- Windows
+            local env_OS = os.getenv('OS')
+            local env_ARCH = os.getenv('PROCESSOR_ARCHITECTURE')
+            if env_OS and env_ARCH then
+                raw_os_name, raw_arch_name = env_OS, env_ARCH
             end
         end
     end
 
-    return vim.trim(s)
+    raw_os_name = (raw_os_name):lower()
+    raw_arch_name = (raw_arch_name):lower()
+
+    local os_patterns = {
+        ['windows'] = 'windows',
+        ['linux'] = 'linux',
+        ['osx'] = 'macos',
+        ['mac'] = 'macos',
+        ['darwin'] = 'macos',
+        ['^mingw'] = 'windows',
+        ['^cygwin'] = 'windows',
+        ['bsd$'] = 'bsd',
+        ['SunOS'] = 'solaris',
+    }
+
+    local arch_patterns = {
+        ['^x86$'] = 'x86',
+        ['i[%d]86'] = 'x86',
+        ['amd64'] = 'x86_64',
+        ['x86_64'] = 'x86_64',
+        ['x64'] = 'x86_64',
+        ['Power Macintosh'] = 'powerpc',
+        ['^arm'] = 'arm',
+        ['^mips'] = 'mips',
+    }
+
+    local os_name, arch_name = 'unknown', 'unknown'
+
+    for pattern, name in pairs(os_patterns) do
+        if raw_os_name:match(pattern) then
+            os_name = name
+            break
+        end
+    end
+    for pattern, name in pairs(arch_patterns) do
+        if raw_arch_name:match(pattern) then
+            arch_name = name
+            break
+        end
+    end
+    return os_name, arch_name
 end
+
+--- @class JobHandle
+--- @field id function():string
+--- @field write function(data):void
+--- @field stop function():void
+--- @field running function():boolean
+
+--- @class JobStartOpts
+--- @field env? table<string, string> @a table of process environment variables
+--- @field on_stdout_line fun(line:string) @a function that is triggered once per line of stdout
+--- @field on_stderr_line fun(line:string) @a function that is triggered once per line of stderr
+--- @field on_success? fun() @a function that is triggered with no arguments once the job finishes successfully
+--- @field on_failure? fun(exit_code:number) @a function that is triggered with an exit code as the single argument once the job finishes unsuccessfully
 
 --- Start an async job using the given cmd and options
 ---
---- Options supports the following:
----
---- * env: table of process environment variables
---- * on_success: a function that is triggered with no arguments once the
----               job finishes successfully
---- * on_failure: a function that is triggered with an exit code as the single
----               argument once the job finishes unsuccessfully
---- * on_stdout_line: a function that is triggered once per line of stdout
---- * on_stderr_line: a function that is triggered once per line of stderr
----
---- Returned is a new table that contains two functions:
----
---- * id: a function that returns the id of the job
---- * write: a function that takes a string as the single argument to send to
----          the stdin of the running job
---- * stop: a function that takes no arguments and stops the running job
+--- @param cmd any
+--- @param opts? JobStartOpts
+--- @return JobHandle
 utils.job_start = function(cmd, opts)
+    opts = opts or {}
+
+    --- @param cb fun(line:string)
     local function make_on_data(cb)
-        local lines = {''}
+        local lines = { '' }
         return function(_, data, _)
             local send_back = function() end
             if type(cb) == 'function' then
@@ -83,8 +197,8 @@ utils.job_start = function(cmd, opts)
             if #data == 1 and data[1] == '' then
                 send_back(lines[1])
 
-            -- Otherwise, we want to report all of our lines except the last one
-            -- which may be partial
+                -- Otherwise, we want to report all of our lines except the last one
+                -- which may be partial
             else
                 for i, v in ipairs(lines) do
                     if i < #data then
@@ -93,12 +207,12 @@ utils.job_start = function(cmd, opts)
                 end
 
                 -- Remove all lines but the last one
-                lines = {lines[#lines]}
+                lines = { lines[#lines] }
             end
         end
     end
 
-    local job_id =  vim.fn.jobstart(cmd, {
+    local job_id = vim.fn.jobstart(cmd, {
         env = opts.env;
         on_stdout = make_on_data(opts.on_stdout_line);
         on_stderr = make_on_data(opts.on_stderr_line);
@@ -129,18 +243,304 @@ utils.job_start = function(cmd, opts)
             end,
             stop = function()
                 vim.fn.jobstop(job_id)
-            end
+            end,
+            running = function()
+                return vim.fn.jobwait({ job_id }, 0)[1] == -1
+            end,
         }
     end
 end
 
+--- @class Destination
+--- @field host string
+--- @field port number|nil
+--- @field scheme string|nil
+--- @field username string|nil
+--- @field password string|nil
+
+--- Parses a string into a destination [SCHEME://][[USER][:PASSWORD]@]HOST[:PORT] where
+--- everything in square brackets is optional.
+---
+--- @param destination string
+--- @return Destination
+utils.parse_destination = function(destination)
+    destination = tostring(destination)
+
+    --- Parse scheme, returning {new_str}, {scheme} where scheme can be nil
+    local function parse_scheme(s)
+        local i, j = string.find(s, '.+://')
+        local scheme
+
+        -- Not matching at start, so exit!
+        if i ~= 1 then
+            return s
+        end
+
+        -- If we have a match, get the scheme as everything before ://
+        -- and update our overall string to be everything after ://
+        if i ~= nil and j ~= nil and j > 3 then
+            scheme = string.sub(s, i, j - 3)
+            s = string.sub(s, j + 1)
+        end
+
+        return s, scheme
+    end
+
+    --- Parse username/password, returning {new_str}, {username}, {password} where username/password can be nil
+    ---
+    --- Additionally, username will be empty string if it is not provided but a password is.
+    --- Same situation with username provided but no password
+    local function parse_username_password(s)
+        local username, password, i, has_password, old_s
+        i = 1
+        username = ''
+        password = ''
+        has_password = false
+        is_valid = false
+        old_s = s
+
+        -- Build up our username
+        while i <= #s do
+            local c = string.sub(s, i, i)
+            if c == ':' then
+                has_password = true
+                break
+            elseif c == '@' then
+                is_valid = true
+                break
+            else
+                username = username .. c
+            end
+
+            i = i + 1
+        end
+
+        -- Update destination string to everything after username (and optional : or @)
+        s = string.sub(s, i + 1)
+
+        -- Build up our password
+        if has_password then
+            i = 1
+            while i <= #s do
+                local c = string.sub(s, i, i)
+                if c == '@' then
+                    is_valid = true
+                    break
+                else
+                    password = password .. c
+                end
+
+                i = i + 1
+            end
+
+            -- Update destination string to everything after password (and @)
+            s = string.sub(s, i + 1)
+        end
+
+        -- Assert that our string starts with @ for username/password parsing
+        if is_valid then
+            return s, username, password
+        else
+            return old_s
+        end
+    end
+
+    --- Parse host/port, returning {new_str}, {host}, {port} where port can be nil
+    local function parse_host_port(s)
+        local host, port, i, has_port, old_s
+        host = ''
+        port = nil
+        i = 1
+        has_port = false
+        old_s = s
+
+        -- Build up our host
+        while i <= #s do
+            local c = string.sub(s, i, i)
+            if c == ':' then
+                has_port = true
+                break
+            else
+                host = host .. c
+            end
+
+            i = i + 1
+        end
+
+        -- Update destination string to everything after host (and optional :)
+        s = string.sub(s, i + 1)
+
+        -- Build up our port
+        if has_port then
+            port = tonumber(s)
+            s = ''
+        end
+
+        -- If we have a port but it was invalid, we want to return our old s
+        -- because this isn't a valid host[:port] combination
+        if has_port and not port then
+            return old_s
+        else
+            return s, host, port
+        end
+
+    end
+
+    local scheme, username, password, host, port
+    destination, scheme = parse_scheme(destination)
+    destination, username, password = parse_username_password(destination)
+    destination, host, port = parse_host_port(destination)
+
+    if type(username) == 'string' and #username == 0 then
+        username = nil
+    end
+
+    if type(password) == 'string' and #password == 0 then
+        password = nil
+    end
+
+    -- If destination still has content remaining, return nil result!
+    -- If host is empty, return nil result!
+    if #destination > 0 or not host or #host == 0 then
+        return nil
+    end
+
+    return {
+        scheme = scheme,
+        username = username,
+        password = password,
+        host = host,
+        port = port,
+    }
+end
+
+--- @class Version
+--- @field major number
+--- @field minor number
+--- @field patch number
+--- @field pre_release string|nil
+--- @field pre_release_version number|nil
+
+--- @param vstr string
+--- @return Version|nil #Returns version if valid, otherwise nil
+utils.parse_version = function(vstr)
+    local semver, ext = unpack(vim.split(vstr, '-', true))
+    local major, minor, patch = unpack(vim.split(semver, '.', true))
+
+    local pre_release, pre_release_version
+    if ext then
+        pre_release, pre_release_version = unpack(vim.split(ext, '.', true))
+    end
+
+    local version = {
+        major = major,
+        minor = minor,
+        patch = patch,
+        pre_release = pre_release,
+        pre_release_version = pre_release_version,
+    }
+
+    for key, value in pairs(version) do
+        version[key] = tonumber(value) or value
+    end
+
+    return version
+end
+
+--- Determines if safe to upgrade from version a to version b.
+---
+--- @param a Version
+--- @param b Version
+--- @param opts {allow_unstable_upgrade:boolean}|nil
+--- @return boolean
+utils.can_upgrade_version = function(a, b, opts)
+    opts = opts or {}
+    local unstable = a.major == 0
+
+    -- If we allow for unstable upgrades, then the patch number
+    -- is significant
+    --
+    -- NOTE: Pre-release version has a lower precedence than normal version in
+    --       semver 2.0.0
+    if unstable and opts.allow_unstable_upgrade then
+        -- For the pre-release, we check multiple situations
+        --
+        -- 1. Pre-release is the same (e.g. alpha == alpha) and current version is <= new version (e.g. 2 <= 4)
+        -- 2. Pre-release is an upgrade (e.g. alpha < beta)
+        -- 3. Pre-release is an upgrade to non-pre-release (e.g. alpha to full release)
+        return a.major == b.major and
+            a.minor == b.minor and
+            a.patch <= b.patch and
+            (
+                a.pre_release < b.pre_release or
+                (a.pre_release ~= nil and b.pre_release == nil) or
+                (a.pre_release == b.pre_release and a.pre_release_version <= b.pre_release_version)
+            )
+    elseif unstable then
+        return a.major == b.major and
+            a.minor == b.minor and
+            a.patch == b.patch and
+            a.pre_release == b.pre_release
+    else
+        return a.major == b.major and a.minor <= b.minor
+    end
+end
+
+--- Run some binary with `--version` and parse the result.
+--- @param bin string
+--- @return Version|nil
+utils.exec_version = function(bin)
+    assert(vim.fn.executable(bin) == 1, tostring(bin) .. ' is not executable')
+    local raw_version = vim.fn.system(bin .. ' --version')
+    if not raw_version then
+        return nil
+    end
+
+    local version_string = vim.trim(utils.strip_prefix(
+        vim.trim(raw_version),
+        'distant'
+    ))
+    if not version_string then
+        return nil
+    end
+
+    return utils.parse_version(version_string)
+end
+
+--- @param version Version
+--- @return string
+utils.version_to_string = function(version)
+    local vstr = tostring(version.major) .. '.' .. tostring(version.minor) .. '.' .. tostring(version.patch)
+    if version.pre_release then
+        vstr = vstr .. '-' .. version.pre_release .. '.' .. version.pre_release_version
+    end
+    return vstr
+end
+
 --- Returns a string with the given prefix removed if it is found in the string
+--- @param s string
+--- @param prefix string
+--- @return string
 utils.strip_prefix = function(s, prefix)
-    local offset = string.find(s, prefix, 1, true)
+    local offset = string.find(s, prefix)
     if offset == 1 then
         return string.sub(s, string.len(prefix) + 1)
     else
         return s
+    end
+end
+
+--- Returns a string with the given prefix removed if it is found in the string
+--- in the form "file/path:line,col" -> "file/path", line, col
+---
+--- @param s string
+--- @return string, number|nil, number|nil
+utils.strip_line_col = function(s)
+    local _, _, new_s, line, col = string.find(s, '^(.+):(%d+),(%d+)$', 1, false)
+    if new_s == nil then
+        return s
+    else
+        return new_s, tonumber(line), tonumber(col)
     end
 end
 
@@ -210,29 +610,16 @@ utils.contains = function(tbl, value)
     return false
 end
 
---- Short wrapper to check if a specific global variable exists
-utils.nvim_has_var = function(name)
-    return vim.fn.exists('g:' .. name) == 1
-end
-
---- Short wrapper to remove a global variable if it exists, returning its
---- value; if it does not exist, nil is returned
-utils.nvim_remove_var = function(name)
-    if not utils.nvim_has_var(name) then
-        return nil
-    end
-
-    local value = vim.api.nvim_get_var(name)
-    vim.api.nvim_del_var(name)
-
-    return value
-end
-
 --- Returns a new id for use in sending messages
 --- @return number id Randomly generated id
-utils.next_id = function()
-    return math.floor(math.random() * 10000)
-end
+utils.next_id = (function()
+    -- Ensure that we have something kind-of random
+    math.randomseed(os.time())
+
+    return function()
+        return math.floor(math.random() * 10000)
+    end
+end)()
 
 --- Defines an augroup
 --- From https://github.com/wincent/wincent
@@ -265,60 +652,6 @@ utils.autocmd = function(name, pattern, cmd)
         error('autocmd(): unsupported cmd type: ' .. cmd_type)
     end
     vim.cmd('autocmd ' .. name .. ' ' .. pattern .. ' ' .. cmd)
-end
-
---- Merges N tables together into a new table
-utils.merge = function(...)
-    local dst = {}
-
-    -- For each vararg, process it and merge items if it is a table;
-    -- otherwise, skip it
-    for _, tbl in ipairs({...}) do
-        if type(tbl) == 'table' then
-            -- For each item in the table, we merge in one of three ways:
-            -- 1. If the dst does not have a matching key, we assign the current
-            --    table's value to it
-            -- 2. If the types of dst and current table are both table, we
-            --    recursively apply a merge
-            -- 3. Otherwise, we assign the current table's value to dst's key
-            for k, v in pairs(tbl) do
-                if dst[k] == nil or type(dst[k]) ~= 'table' or type(v) ~= 'table' then
-                    dst[k] = utils.deepcopy(v)
-                else
-                    dst[k] = utils.merge(dst[k], v)
-                end
-            end
-        end
-    end
-
-    return dst
-end
-
---- Performs a deep copy of some data
---- From http://lua-users.org/wiki/CopyTable
----
---- @param orig any The data to deeply copy
---- @param copies table Internal parameter used for recursion (do not use externally)
---- @return any data The newly-copied instance
-utils.deepcopy = function(orig, copies)
-    copies = copies or {}
-    local orig_type = type(orig)
-    local copy
-    if orig_type == 'table' then
-        if copies[orig] then
-            copy = copies[orig]
-        else
-            copy = {}
-            copies[orig] = copy
-            for orig_key, orig_value in next, orig, nil do
-                copy[utils.deepcopy(orig_key, copies)] = utils.deepcopy(orig_value, copies)
-            end
-            setmetatable(copy, utils.deepcopy(getmetatable(orig), copies))
-        end
-    else -- number, string, boolean, etc
-        copy = orig
-    end
-    return copy
 end
 
 --- Produces a table of N lines all with the same text
@@ -381,6 +714,7 @@ utils.clean_term_line = function(text)
 end
 
 --- Returns the parent path of the given path, or nil if there is no parent
+--- @return string|nil
 utils.parent_path = function(path)
     -- Pattern from https://stackoverflow.com/a/12191225/3164172
     local parent = string.match(path, '(.-)([^\\/]-%.?([^%.\\/]*))$')
@@ -390,14 +724,18 @@ utils.parent_path = function(path)
 end
 
 --- Join multiple path components together, separating by /
+--- @param sep string
+--- @param paths string[]
 --- @return string #The path as a string
-utils.join_path = function(...)
+utils.join_path = function(sep, paths)
+    assert(type(sep) == 'string', 'sep must be a string')
+    assert(vim.tbl_islist(paths), 'paths must be a list')
     local path = ''
 
-    for _, component in ipairs({...}) do
+    for _, component in ipairs(paths) do
         -- If we already have a partial path, we need to add the separator
-        if path ~= '' and not vim.endswith(path, '/') then
-            path = path .. '/'
+        if path ~= '' and not vim.endswith(path, sep) then
+            path = path .. sep
         end
 
         path = path .. component
@@ -406,24 +744,112 @@ utils.join_path = function(...)
     return path
 end
 
+--- @class MkdirOpts
+--- @field path string
+--- @field parents? boolean
+--- @field mode? number
+
+--- @param opts MkdirOpts
+--- @param cb fun(err:string|nil)
+utils.mkdir = function(opts, cb)
+    opts = opts or {}
+
+    local path = opts.path
+    local parents = opts.parents
+    local mode = opts.mode or 448 -- 0o700
+
+    cb = vim.schedule_wrap(cb)
+
+    vim.loop.fs_stat(path, function(err, stat)
+        local exists = not err and not (not stat)
+        local is_dir = exists and stat.type == 'directory'
+        local is_file = exists and stat.type == 'file'
+
+        if is_dir then
+            return cb(nil)
+        elseif is_file then
+            return cb(string.format('Cannot create dir: %s is file', path))
+        else
+            --- @diagnostic disable-next-line:redefined-local
+            return vim.loop.fs_mkdir(path, mode, function(err, success)
+                if success then
+                    return cb(nil)
+                elseif parents then
+                    local parent_path = utils.parent_path(path)
+                    if not parent_path then
+                        return cb('Cannot create parent directory: reached top!')
+                    end
+
+                    -- If cannot create directory on its own, we try to
+                    -- recursively create it until we succeed or fail
+                    return utils.mkdir({
+                        path = parent_path,
+                        parents = parents,
+                        mode = mode
+                    },
+                        --- @diagnostic disable-next-line:unused-local
+                        function(_err)
+                            --- @diagnostic disable-next-line:redefined-local
+                            return vim.loop.fs_mkdir(path, mode, function(err, success)
+                                if not err and not success then
+                                    err = 'Something went wrong creating ' .. path
+                                end
+                                return cb(err)
+                            end)
+                        end)
+                else
+                    return cb(string.format('Cannot create dir: %s', err or '???'))
+                end
+            end)
+        end
+    end)
+end
+
+--- From https://stackoverflow.com/a/32389020
+--- @param a integer #number to be masked
+--- @param b integer #mask
+--- @param op 'or'|'xor'|'and'
+--- @return integer
+utils.bitmask = function(a, b, op)
+    --- @type number
+    local oper
+    if op == 'or' then
+        oper = 1
+    elseif op == 'xor' then
+        oper = 3
+    elseif op == 'and' then
+        oper = 4
+    else
+        error('op must be any of "or", "xor", "and"')
+    end
+
+    local r, m = 0, 2 ^ 31
+    local s = nil
+    repeat
+        s, a, b = a + b + m, a % m, b % m
+        r, m = r + m * oper % (s - a - b), m / 2
+    until m < 1
+    return r
+end
+
 --- Produces a send/receive pair in the form of {tx, rx} where
 --- tx is a function that sends a message and rx is a function that
 --- waits for the message
 ---
 --- @param timeout number is the milliseconds that rx will wait
 --- @param interval number is the milliseconds to wait inbetween checking for a message
---- @return function tx, function rx #tx sends the value and rx receives the value
+--- @return fun(...) tx, fun():string|nil, ... rx #tx sends the value and rx receives the value
 utils.oneshot_channel = function(timeout, interval)
     vim.validate({
-        timeout = {timeout, 'number'},
-        interval = {interval, 'number'},
+        timeout = { timeout, 'number' },
+        interval = { interval, 'number' },
     })
 
     -- Will store our result
     local data
 
     local tx = function(...)
-        data = {...}
+        data = { ... }
     end
 
     local rx = function()
@@ -441,9 +867,9 @@ utils.oneshot_channel = function(timeout, interval)
         -- Add our error to beginning of the result list
         if not vim.tbl_islist(result) then
             local err = 'Timeout of ' .. tostring(timeout) .. ' exceeded!'
-            result = {err, result}
+            result = { err, result }
 
-        -- Otherwise, add our error argument to the front
+            -- Otherwise, add our error argument to the front
         else
             table.insert(result, 1, false)
         end
@@ -452,6 +878,88 @@ utils.oneshot_channel = function(timeout, interval)
     end
 
     return tx, rx
+end
+
+--- @param s string #json string
+--- @param key string #key whose value to retrieve
+--- @return string|nil #value of key if exists
+utils.parse_json_str_for_value = function(s, key)
+    s = vim.trim(s)
+
+    -- Ensure is an object string
+    if not vim.startswith(s, '{') or not vim.endswith(s, '}') then
+        return
+    end
+
+    -- Look for each match of key in json
+    local indexes = {}
+    local i = 0
+    while true do
+        i = string.find(s, key, i + 1)
+        if i == nil then break end
+        table.insert(indexes, i)
+    end
+
+    local char_at = function(str, idx) return str:sub(idx, idx) end
+
+    -- We expect a quote to follow immediately after key,
+    -- then at some point a colon (spaces are allowed),
+    -- and then the value
+    local c, value
+    for _, idx in ipairs(indexes) do
+        -- Get position after key
+        i = idx + #key
+        c = char_at(s, i)
+
+        -- If next character is a quote, we assume this is a key
+        if c == '"' then
+            value = ''
+
+            -- Now, skip ahead to the colon
+            while c ~= ':' do
+                i = i + 1
+                c = char_at(s, i)
+            end
+
+            -- Now skip the colon
+            i = i + 1
+            c = char_at(s, i)
+
+            -- Now capture everything until the next key or end of json
+            while c ~= ',' and c ~= '}' do
+                -- Add the current character and move past it
+                value = value .. c
+                i = i + 1
+
+                -- Character was a quote - entering a quoted value - so read everything until the end quote
+                if c == '"' then
+                    local old_c = c
+
+                    -- Update our referenced character to the next one
+                    c = char_at(s, i)
+
+                    -- Read while we don't have an unescaped double quote, read and add each character to value
+                    while true do
+                        -- If our current character is not an escaped quote, keep reading,
+                        -- but if we run out of characters then exit
+                        if old_c ~= '\\' and (c == '"' or c == nil) then
+                            break
+                        end
+
+                        value = value .. c
+                        i = i + 1
+                        c = char_at(s, i)
+                    end
+                end
+
+                -- Update our referenced character to the next one
+                c = char_at(s, i)
+            end
+
+            -- Finally, trim our value to remove whitespace
+            return vim.trim(value)
+        end
+    end
 end
 
 return utils

@@ -98,6 +98,12 @@ local configurations = {
       skip = "--skip",
     },
   },
+  merge = config {
+    flags = {
+      continue = "--continue",
+      abort = "--abort",
+    },
+  },
   reset = config {
     flags = {
       hard = "--hard",
@@ -201,7 +207,6 @@ local configurations = {
   },
   branch = config {
     flags = {
-      list = "--list",
       all = "-a",
       delete = "-d",
       remotes = "-r",
@@ -210,6 +215,11 @@ local configurations = {
       move = "-m",
     },
     aliases = {
+      list = function(tbl)
+        return function(sort)
+          return tbl.args("--sort=" .. sort)
+        end
+      end,
       name = function(tbl)
         return function(name)
           return tbl.args(name)
@@ -217,6 +227,7 @@ local configurations = {
       end,
     },
   },
+  fetch = config {},
   ["read-tree"] = config {
     flags = {
       merge = "-m",
@@ -311,6 +322,11 @@ end
 
 local git_dir_path_sync = function()
   return util.trim(vim.fn.system("git rev-parse --git-dir"))
+end
+
+local git_is_repository_sync = function()
+  local result = vim.fn.system("git rev-parse --is-inside-work-tree")
+  return vim.trim(result) == "true"
 end
 
 local history = {}
@@ -748,6 +764,7 @@ local cli = setmetatable({
   git_root = git_root,
   git_root_sync = git_root_sync,
   git_dir_path_sync = git_dir_path_sync,
+  git_is_repository_sync = git_is_repository_sync,
   in_parallel = function(...)
     local calls = { ... }
     return new_parallel_builder(calls)

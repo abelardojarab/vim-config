@@ -4,6 +4,10 @@ local lib = require("neogit.lib")
 local signs = require("neogit.lib.signs")
 local hl = require("neogit.lib.hl")
 local status = require("neogit.status")
+local state = require("neogit.lib.state")
+
+local cli = require("neogit.lib.git.cli")
+local notification = require("neogit.lib.notification")
 
 local neogit = {
   lib = require("neogit.lib"),
@@ -20,6 +24,12 @@ local neogit = {
   notif = require("neogit.lib.notification"),
   open = function(opts)
     opts = opts or {}
+
+    if not cli.git_is_repository_sync() then
+      notification.create("The current working directory is not a git repository", vim.log.levels.ERROR)
+      return
+    end
+
     if opts[1] ~= nil then
       local popup_name = opts[1]
       local has_pop, popup = pcall(require, "neogit.popups." .. popup_name)
@@ -57,6 +67,7 @@ local neogit = {
       config.values.mappings.status["p"] = ""
     end
     hl.setup()
+    state.setup()
 
     require("neogit.autocmds").setup()
   end,

@@ -1,3 +1,4 @@
+DistantClientVersion	distant.txt	/*DistantClientVersion*
 DistantConnect	distant.txt	/*DistantConnect*
 DistantCopy	distant.txt	/*DistantCopy*
 DistantInstall	distant.txt	/*DistantInstall*
@@ -8,11 +9,14 @@ DistantOpen	distant.txt	/*DistantOpen*
 DistantRemove	distant.txt	/*DistantRemove*
 DistantRename	distant.txt	/*DistantRename*
 DistantRun	distant.txt	/*DistantRun*
+DistantSearch	distant.txt	/*DistantSearch*
 DistantSessionInfo	distant.txt	/*DistantSessionInfo*
+DistantShell	distant.txt	/*DistantShell*
 DistantSystemInfo	distant.txt	/*DistantSystemInfo*
 distant-changelog	distant.txt	/*distant-changelog*
 distant-commands	distant.txt	/*distant-commands*
 distant-credits	distant.txt	/*distant-credits*
+distant-extensions	distant.txt	/*distant-extensions*
 distant-faq	distant.txt	/*distant-faq*
 distant-faq-sshfs	distant.txt	/*distant-faq-sshfs*
 distant-installation	distant.txt	/*distant-installation*

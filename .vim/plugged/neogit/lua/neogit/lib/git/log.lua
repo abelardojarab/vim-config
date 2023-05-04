@@ -17,9 +17,9 @@ local commit_header_pat = "([| ]*)(%*?)([| ]*)commit (%w+)"
 ---@field description string a list of lines
 ---@field diffs any[]
 
---- parses the provided list of lines into a CommitLogEntry
--- @param raw a list of lines
--- @return CommitLogEntry[]
+---Parses the provided list of lines into a CommitLogEntry
+---@param raw string[]
+---@return CommitLogEntry[]
 local function parse(raw)
   local commits = {}
   local idx = 1
@@ -45,7 +45,7 @@ local function parse(raw)
 
     if not commit.oid or commit.oid == "" then
       error("Failed to parse line: " .. line)
-      return
+      return {}
     end
 
     -- Consume this line
@@ -158,6 +158,7 @@ local function parse(raw)
   return commits
 end
 
+---@return CommitLogEntry[]
 local function parse_log(output)
   if type(output) == "string" then
     output = vim.split(output, "\n")
@@ -176,10 +177,15 @@ local function parse_log(output)
 
       local commit = {
         level = util.str_count(level, "|"),
+        --TODO remove
         hash = hash,
+        oid = hash,
         remote = remote or "",
+        --TODO remove
         message = message,
+        description = { message },
       }
+
       table.insert(commits, commit)
     end
   end
@@ -187,28 +193,33 @@ local function parse_log(output)
   return commits
 end
 
+local M = {}
+
 local function update_recent(state)
   local count = config.values.status.recent_commit_count
   if count < 1 then
     return
   end
 
-  local result = cli.log.oneline.max_count(count).show_popup(false).call():trim()
+  local result = M.list { "--max-count", tostring(count) }
 
-  state.recent.items = util.map(result.stdout, function(x)
-    return { name = x }
+  state.recent.items = util.map(result, function(v)
+    return { name = string.format("%s %s", v.oid, v.description[1] or "<empty>"), oid = v.oid, commit = v }
   end)
 end
 
-return {
-  list = function(options)
-    options = util.split(options, " ")
-    local result = cli.log.oneline.args(unpack(options)).call()
-    return parse_log(result.stdout)
-  end,
-  register = function(meta)
-    meta.update_recent = update_recent
-  end,
-  parse_log = parse_log,
-  parse = parse,
-}
+---@param options any
+---@return CommitLogEntry[]
+function M.list(options)
+  local result = cli.log.oneline.max_count(36).arg_list(options or {}).call()
+  return parse_log(result.stdout)
+end
+
+M.parse_log = parse_log
+M.parse = parse
+
+function M.register(meta)
+  meta.update_recent = update_recent
+end
+
+return M

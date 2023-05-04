@@ -31,7 +31,7 @@ end
 
 function harness.test_directory_command(command)
   local split_string = vim.split(command, " ")
-  local directory = table.remove(split_string, 1)
+  local directory = vim.fn.expand(table.remove(split_string, 1))
 
   local opts = assert(loadstring("return " .. table.concat(split_string, " ")))()
 
@@ -41,6 +41,7 @@ end
 function harness.test_directory(directory, opts)
   print "Starting..."
   opts = vim.tbl_deep_extend("force", {
+    nvim_cmd = vim.v.progpath,
     winopts = { winblend = 3 },
     sequential = false,
     keep_going = true,
@@ -95,7 +96,7 @@ function harness.test_directory(directory, opts)
     end
 
     local job = Job:new {
-      command = vim.v.progpath,
+      command = opts.nvim_cmd,
       args = args,
 
       -- Can be turned on to debug

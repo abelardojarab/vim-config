@@ -1,6 +1,6 @@
 local SignsConfig = require('gitsigns.config').Config.SignsConfig
 
-local M = {Sign = {}, }
+local M = {Sign = {}, HlDef = {}, }
 
 
 
@@ -22,6 +22,16 @@ local M = {Sign = {}, }
 
 
 
+
+
+
+
+
+
+   -- Used by signs/extmarks.tl
+
+
+   -- Used by signs/vimfn.tl
 
 
 

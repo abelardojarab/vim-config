@@ -6,6 +6,7 @@ local global_handlers = {}
 
 M.Event = {
   Ready = "Ready",
+  WillRenameNode = "WillRenameNode",
   NodeRenamed = "NodeRenamed",
   TreeOpen = "TreeOpen",
   TreeClose = "TreeClose",
@@ -14,6 +15,7 @@ M.Event = {
   FolderCreated = "FolderCreated",
   FolderRemoved = "FolderRemoved",
   Resize = "Resize",
+  TreeAttachedPost = "TreeAttachedPost",
 }
 
 local function get_handlers(event_name)
@@ -38,6 +40,11 @@ end
 --@private
 function M._dispatch_ready()
   dispatch(M.Event.Ready)
+end
+
+--@private
+function M._dispatch_will_rename_node(old_name, new_name)
+  dispatch(M.Event.WillRenameNode, { old_name = old_name, new_name = new_name })
 end
 
 --@private
@@ -80,49 +87,9 @@ function M._dispatch_on_tree_resize(size)
   dispatch(M.Event.Resize, size)
 end
 
---- @deprecated
-function M.on_nvim_tree_ready(handler)
-  M.subscribe(M.Event.Ready, handler)
-end
-
---- @deprecated
-function M.on_node_renamed(handler)
-  M.subscribe(M.Event.NodeRenamed, handler)
-end
-
---- @deprecated
-function M.on_file_created(handler)
-  M.subscribe(M.Event.FileCreated, handler)
-end
-
---- @deprecated
-function M.on_file_removed(handler)
-  M.subscribe(M.Event.FileRemoved, handler)
-end
-
---- @deprecated
-function M.on_folder_created(handler)
-  M.subscribe(M.Event.FolderCreated, handler)
-end
-
---- @deprecated
-function M.on_folder_removed(handler)
-  M.subscribe(M.Event.FolderRemoved, handler)
-end
-
---- @deprecated
-function M.on_tree_open(handler)
-  M.subscribe(M.Event.TreeOpen, handler)
-end
-
---- @deprecated
-function M.on_tree_close(handler)
-  M.subscribe(M.Event.TreeClose, handler)
-end
-
---- @deprecated
-function M.on_tree_resize(handler)
-  M.subscribe(M.Event.Resize, handler)
+--@private
+function M._dispatch_tree_attached_post(buf)
+  dispatch(M.Event.TreeAttachedPost, buf)
 end
 
 return M

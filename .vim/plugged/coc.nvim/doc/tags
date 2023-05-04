@@ -114,7 +114,6 @@ CocAction('quickfixes')	coc.txt	/*CocAction('quickfixes')*
 CocAction('rangeSelect')	coc.txt	/*CocAction('rangeSelect')*
 CocAction('refactor')	coc.txt	/*CocAction('refactor')*
 CocAction('references')	coc.txt	/*CocAction('references')*
-CocAction('refreshSource')	coc.txt	/*CocAction('refreshSource')*
 CocAction('reloadExtension')	coc.txt	/*CocAction('reloadExtension')*
 CocAction('rename')	coc.txt	/*CocAction('rename')*
 CocAction('resolveWorkspaceSymbol')	coc.txt	/*CocAction('resolveWorkspaceSymbol')*
@@ -281,7 +280,6 @@ b:coc_trim_final_newlines	coc.txt	/*b:coc_trim_final_newlines*
 b:coc_trim_trailing_whitespace	coc.txt	/*b:coc_trim_trailing_whitespace*
 coc#_select_confirm()	coc.txt	/*coc#_select_confirm()*
 coc#add_command()	coc.txt	/*coc#add_command()*
-coc#add_extension()	coc.txt	/*coc#add_extension()*
 coc#config()	coc.txt	/*coc#config()*
 coc#expandable()	coc.txt	/*coc#expandable()*
 coc#expandableOrJumpable()	coc.txt	/*coc#expandableOrJumpable()*
@@ -538,6 +536,8 @@ coc-config-suggest-defaultSortMethod	coc-config.txt	/*coc-config-suggest-default
 coc-config-suggest-detailField	coc-config.txt	/*coc-config-suggest-detailField*
 coc-config-suggest-enableFloat	coc-config.txt	/*coc-config-suggest-enableFloat*
 coc-config-suggest-enablePreselect	coc-config.txt	/*coc-config-suggest-enablePreselect*
+coc-config-suggest-filterGraceful	coc-config.txt	/*coc-config-suggest-filterGraceful*
+coc-config-suggest-filterOnBackspace	coc-config.txt	/*coc-config-suggest-filterOnBackspace*
 coc-config-suggest-floatConfig	coc-config.txt	/*coc-config-suggest-floatConfig*
 coc-config-suggest-formatItems	coc-config.txt	/*coc-config-suggest-formatItems*
 coc-config-suggest-highPrioritySourceLimit	coc-config.txt	/*coc-config-suggest-highPrioritySourceLimit*
@@ -584,10 +584,10 @@ coc-config-workspace-ignoredFiletypes	coc-config.txt	/*coc-config-workspace-igno
 coc-config-workspace-ignoredFolders	coc-config.txt	/*coc-config-workspace-ignoredFolders*
 coc-config-workspace-openOutputCommand	coc-config.txt	/*coc-config-workspace-openOutputCommand*
 coc-config-workspace-openResourceCommand	coc-config.txt	/*coc-config-workspace-openResourceCommand*
+coc-config-workspace-rootPatterns	coc-config.txt	/*coc-config-workspace-rootPatterns*
 coc-config-workspace-workspaceFolderCheckCwd	coc-config.txt	/*coc-config-workspace-workspaceFolderCheckCwd*
 coc-config-workspace-workspaceFolderFallbackCwd	coc-config.txt	/*coc-config-workspace-workspaceFolderFallbackCwd*
 coc-config.txt	coc-config.txt	/*coc-config.txt*
-coc-configu-workspace-rootPatterns	coc-config.txt	/*coc-configu-workspace-rootPatterns*
 coc-configuration	coc.txt	/*coc-configuration*
 coc-configuration-expand	coc.txt	/*coc-configuration-expand*
 coc-configuration-scope	coc.txt	/*coc-configuration-scope*
@@ -678,6 +678,7 @@ coc-preferences-excludeImageLinksInMarkdownDocument	coc-config.txt	/*coc-prefere
 coc-preferences-extensionUpdateCheck	coc-config.txt	/*coc-preferences-extensionUpdateCheck*
 coc-preferences-floatActions	coc-config.txt	/*coc-preferences-floatActions*
 coc-preferences-formatOnSave	coc-config.txt	/*coc-preferences-formatOnSave*
+coc-preferences-formatOnSaveTimeout	coc-config.txt	/*coc-preferences-formatOnSaveTimeout*
 coc-preferences-formatOnType	coc-config.txt	/*coc-preferences-formatOnType*
 coc-preferences-jumpCommand	coc-config.txt	/*coc-preferences-jumpCommand*
 coc-preferences-maxFileSize	coc-config.txt	/*coc-preferences-maxFileSize*

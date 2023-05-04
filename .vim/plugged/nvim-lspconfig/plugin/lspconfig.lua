@@ -76,8 +76,8 @@ api.nvim_create_user_command('LspStart', function(info)
     end
   end
 
-  local other_matching_configs = require('lspconfig.util').get_other_matching_providers(vim.bo.filetype)
-  for _, config in ipairs(other_matching_configs) do
+  local matching_configs = require('lspconfig.util').get_config_by_ft(vim.bo.filetype)
+  for _, config in ipairs(matching_configs) do
     config.launch()
   end
 end, {
@@ -87,12 +87,28 @@ end, {
 })
 
 api.nvim_create_user_command('LspRestart', function(info)
+  local detach_clients = {}
   for _, client in ipairs(get_clients_from_cmd_args(info.args)) do
     client.stop()
-    vim.defer_fn(function()
-      require('lspconfig.configs')[client.name].launch()
-    end, 500)
+    detach_clients[client.name] = client
   end
+  local timer = vim.loop.new_timer()
+  timer:start(
+    500,
+    100,
+    vim.schedule_wrap(function()
+      for client_name, client in pairs(detach_clients) do
+        if client.is_stopped() then
+          require('lspconfig.configs')[client_name].launch()
+          detach_clients[client_name] = nil
+        end
+      end
+
+      if next(detach_clients) == nil and not timer:is_closing() then
+        timer:close()
+      end
+    end)
+  )
 end, {
   desc = 'Manually restart the given language client(s)',
   nargs = '?',
@@ -101,19 +117,26 @@ end, {
 
 api.nvim_create_user_command('LspStop', function(info)
   local current_buf = vim.api.nvim_get_current_buf()
-  local server_name = string.len(info.args) > 0 and info.args or nil
+  local server_id, force
+  local arguments = vim.split(info.args, '%s')
+  for _, v in pairs(arguments) do
+    if v == '++force' then
+      force = true
+    elseif v:find '^[0-9]+$' then
+      server_id = v
+    end
+  end
 
-  if not server_name then
-    local servers_on_buffer = lsp.get_active_clients { buffer = current_buf }
+  if not server_id then
+    local servers_on_buffer = lsp.get_active_clients { bufnr = current_buf }
     for _, client in ipairs(servers_on_buffer) do
-      local filetypes = client.config.filetypes
-      if filetypes and vim.tbl_contains(filetypes, vim.bo[current_buf].filetype) then
-        client.stop()
+      if client.attached_buffers[current_buf] then
+        client.stop(force)
       end
     end
   else
-    for _, client in ipairs(get_clients_from_cmd_args(server_name)) do
-      client.stop()
+    for _, client in ipairs(get_clients_from_cmd_args(server_id)) do
+      client.stop(force)
     end
   end
 end, {

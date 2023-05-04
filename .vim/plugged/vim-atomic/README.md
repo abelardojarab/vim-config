@@ -1,18 +1,31 @@
-Vim-atomic is a dark & light color scheme designed to use on vim, gvim and neovim. It consists of 16 colors selected procedurally (algorithms) and it's part of a bigger project: [Atomic](https://github.com/gerardbm/atomic), which includes themes and color schemes for more code editors (Sublime Text and NetBeans), terminals (URxvt, XTerm, xfce4-terminal and konsole) and some terminal programs (tmux, zsh, irssi, cmus).
+# Atomic for Vim/Neovim
+
+Vim-atomic is a dark & light color scheme designed to use on vim, gvim and neovim. It consists of 16 colors selected procedurally (algorithms) and it's part of a bigger project: [Atomic](https://github.com/gerardbm/atomic), which also includes themes and color schemes for terminals (URxvt, XTerm) and some terminal programs (tmux, zsh, irssi, cmus).
+
+![Atomic Space Screenshot](https://github.com/gerardbm/vim-atomic/blob/master/img/Atomic-Space-Screenshot.png)
+
+![Atomic Night Screenshot](https://github.com/gerardbm/vim-atomic/blob/master/img/Atomic-Night-Screenshot.png)
+
+![Atomic Light Screenshot](https://github.com/gerardbm/vim-atomic/blob/master/img/Atomic-Light-Screenshot.png)
+
+![Testing dark modes in vim](https://github.com/gerardbm/vim-atomic/blob/master/img/vim.png)
 
 Atomic has support for 8, 16 and 256 colors, and *True Color* (24 bits) on the last versions of vim, gvim, neovim and nvim-qt. It uses the setting `termguicolors` properly (some color schemes don't).
 
-It also includes ten modes of color:
-- Dark blue, soft contrast
-- Dark blue, hard contrast
-- Dark cyan, soft contrast
-- Dark cyan, hard contrast
-- Night orange, soft contrast
-- Night orange, hard contrast
-- Night red, soft contrast
-- Night red, hard contrast
-- Light sepia, soft contrast
-- Light sepia, hard contrast
+It also includes 7 modes of color (6 darks and 1 light):
+- Space mode is dark with blue hue (240°).
+- Onion mode is dark with purple hue (300°).
+- Blood mode is dark with red hue (0°).
+- Night mode is dark with orange hue (60°).
+- Grass mode is dark with green hue (120°).
+- Ocean mode is dark with cyan hue (180°).
+- Light mode is light with orange hue (60°).
+
+Each mode has 3 contrasts:
+
+- High contrast (HC), +3%
+- Medium contrast (MC), 0
+- Low contrast (LC), -3%
 
 ## Installation
 
@@ -75,36 +88,46 @@ More info, see `:h xterm-true-color`.
 
 If your terminal have *True color* support or if you are using a GUI (like gvim or nvim-qt), you have the following commands to switch between the different color palettes:
 
-- (1) `AtomicDarkBlueSoft`: sets the dark blue mode, default contrast.
-- (2) `AtomicDarkBlueHard`: sets the dark blue mode, +5% contrast (background darker).
-- (3) `AtomicDarkCyanSoft`
-- (4) `AtomicDarkCyanHard`
-- (5) `AtomicNightOrangeSoft`
-- (6) `AtomicNightOrangeHard`
-- (7) `AtomicNightRedSoft`
-- (8) `AtomicNightRedHard`
-- (9) `AtomicLightSoft`
-- (10) `AtomicLightHard`
+- (1) `AtomicSpaceHC`: sets the space mode (blue hue, dark background) in hard contrast (+3%).
+- (2) `AtomicSpaceMC`: sets the space mode (blue hue, dark background) in medium contrast (default).
+- (3) `AtomicSpaceLC`: sets the space mode (blue hue, dark background) in hard contrast (-3%).
+- (4) `AtomicOnionHC`: sets the onion mode (purple hue, dark background) in hard contrast (+3%).
+- (5) `AtomicOnionMC`: sets the onion mode (purple hue, dark background) in medium contrast (default).
+- (6) `AtomicOnionLC`: sets the onion mode (purple hue, dark background) in hard contrast (-3%).
+- (7) `AtomicBloodHC`: sets the blood mode (red hue, dark background) in hard contrast (+3%).
+- (8) `AtomicBloodMC`: sets the blood mode (red hue, dark background) in medium contrast (default).
+- (9) `AtomicBloodLC`: sets the blood mode (red hue, dark background) in hard contrast (-3%).
+- (10) `AtomicNightHC`: sets the night mode (orange hue, dark background) in hard contrast (+3%).
+- (11) `AtomicNightMC`: sets the night mode (orange hue, dark background) in medium contrast (default).
+- (12) `AtomicNightLC`: sets the night mode (orange hue, dark background) in hard contrast (-3%).
+- (13) `AtomicGrassHC`: sets the grass mode (green hue, dark background) in hard contrast (+3%).
+- (14) `AtomicGrassMC`: sets the grass mode (green hue, dark background) in medium contrast (default).
+- (15) `AtomicGrassLC`: sets the grass mode (green hue, dark background) in hard contrast (-3%).
+- (16) `AtomicOceanHC`: sets the ocean mode (cyan hue, dark background) in hard contrast (+3%).
+- (17) `AtomicOceanMC`: sets the ocean mode (cyan hue, dark background) in medium contrast (default).
+- (18) `AtomicOceanLC`: sets the ocean mode (cyan hue, dark background) in hard contrast (-3%).
+- (19) `AtomicLightHC`: sets the light mode (orange hue, light background) in hard contrast (+3%).
+- (20) `AtomicLightMC`: sets the light mode (orange hue, light background) in medium contrast (default).
+- (21) `AtomicLightLC`: sets the light mode (orange hue, light background) in hard contrast (-3%).
 
 Use one of them **after** the color scheme definition in your `~/.vimrc` or `~/.gvimrc`.
 
-Switch them automatically depending on the current time. For example, if you would like to use the AtomicLightSoft between 8 am and 8 pm and switch to AtomicNightRedHard at night, simply paste this in your `~/.vimrc` or `~/.gvimrc`:
+Switch them automatically depending on the current time. For example, if you would like to use the AtomicLightHC between 8 am and 8 pm and switch to AtomicNightHC at night, simply paste this in your `~/.vimrc` or `~/.gvimrc`:
 
 ```viml
 function! AtomicSwitcher()
-	if (strftime("%H") > 8) && (strftime("%H") < 20)
-		AtomicLightSoft
+	if (strftime('%H') > 8) && (strftime('%H') < 20)
+		AtomicLightHC
 	else
-		AtomicNightRedHard
+		AtomicNightHC
 	endif
 endfunction
 ```
 
-Alternatively, you can cycle them (from 1 to  10) with a shortcut (for example: <kbd>Shift</kbd>+<kbd>F9</kbd>). Paste this in your `~/.gvimrc` or `~/.gvimrc`:
+Alternatively, you can cycle them (from 1 to 21) with a shortcut (for example: <kbd>Shift</kbd>+<kbd>F9</kbd>). Paste this in your `~/.vimrc` or `~/.gvimrc`:
 
 ```viml
 nnoremap <S-F9> :call CycleModes()<CR>:colorscheme atomic<CR>
-vnoremap <S-F9> :<C-u>call CycleModes()<CR>:colorscheme atomic<CR>gv
 ```
 #### Emphasis
 
@@ -134,5 +157,5 @@ syntax enable
 
 let g:atomic_italic = 0
 colorscheme atomic
-AtomicNightRedSoft
+AtomicNightMC
 ```

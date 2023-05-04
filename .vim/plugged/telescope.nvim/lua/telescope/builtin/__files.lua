@@ -71,11 +71,16 @@ local opts_contain_invert = function(args)
     end
 
     if #v >= 2 and v:sub(1, 1) == "-" and v:sub(2, 2) ~= "-" then
+      local non_option = false
       for i = 2, #v do
         local vi = v:sub(i, i)
-        if vi == "v" then
+        if vi == "=" then -- ignore option -g=xxx
+          break
+        elseif vi == "g" or vi == "f" or vi == "m" or vi == "e" or vi == "r" or vi == "t" or vi == "T" then
+          non_option = true
+        elseif non_option == false and vi == "v" then
           invert = true
-        elseif vi == "l" then
+        elseif non_option == false and vi == "l" then
           files_with_matches = true
         end
       end
@@ -157,10 +162,20 @@ files.live_grep = function(opts)
 end
 
 files.grep_string = function(opts)
-  -- TODO: This should probably check your visual selection as well, if you've got one
   opts.cwd = opts.cwd and vim.fn.expand(opts.cwd) or vim.loop.cwd()
   local vimgrep_arguments = vim.F.if_nil(opts.vimgrep_arguments, conf.vimgrep_arguments)
-  local word = vim.F.if_nil(opts.search, vim.fn.expand "<cword>")
+  local word
+  local visual = vim.fn.mode() == "v"
+
+  if visual == true then
+    local saved_reg = vim.fn.getreg "v"
+    vim.cmd [[noautocmd sil norm "vy]]
+    local sele = vim.fn.getreg "v"
+    vim.fn.setreg("v", saved_reg)
+    word = vim.F.if_nil(opts.search, sele)
+  else
+    word = vim.F.if_nil(opts.search, vim.fn.expand "<cword>")
+  end
   local search = opts.use_regex and word or escape_chars(word)
 
   local additional_args = {}
@@ -178,12 +193,22 @@ files.grep_string = function(opts)
     search = { "--", search }
   end
 
-  local args = flatten {
-    vimgrep_arguments,
-    additional_args,
-    opts.word_match,
-    search,
-  }
+  local args
+  if visual == true then
+    args = flatten {
+      vimgrep_arguments,
+      additional_args,
+      search,
+    }
+  else
+    args = flatten {
+      vimgrep_arguments,
+      additional_args,
+      opts.word_match,
+      search,
+    }
+  end
+
   opts.__inverted, opts.__matches = opts_contain_invert(args)
 
   if opts.grep_open_files then
@@ -383,6 +408,12 @@ files.treesitter = function(opts)
     end
   end
 
+  results = utils.filter_symbols(results, opts)
+  if results == nil then
+    -- error message already printed in `utils.filter_symbols`
+    return
+  end
+
   if vim.tbl_isempty(results) then
     return
   end
@@ -427,12 +458,10 @@ files.current_buffer_fuzzy_find = function(opts)
   local _, ts_configs = pcall(require, "nvim-treesitter.configs")
 
   local parser_ok, parser = pcall(vim.treesitter.get_parser, opts.bufnr, filetype)
-  local query_ok, query = pcall(vim.treesitter.get_query, filetype, "highlights")
+  local get_query = vim.treesitter.query.get or vim.treesitter.get_query
+  local query_ok, query = pcall(get_query, filetype, "highlights")
   if parser_ok and query_ok and ts_ok and ts_configs.is_enabled("highlight", filetype, opts.bufnr) then
     local root = parser:parse()[1]:root()
-
-    local highlighter = vim.treesitter.highlighter.new(parser)
-    local highlighter_query = highlighter:get_query(filetype)
 
     local line_highlights = setmetatable({}, {
       __index = function(t, k)
@@ -444,9 +473,23 @@ files.current_buffer_fuzzy_find = function(opts)
 
     -- update to changes on Neovim master, see https://github.com/neovim/neovim/pull/19931
     -- TODO(clason): remove when dropping support for Neovim 0.7
-    local on_nvim_master = vim.fn.has "nvim-0.8" == 1
+    local get_hl_from_capture = (function()
+      if vim.fn.has "nvim-0.8" == 1 then
+        return function(q, id)
+          return "@" .. q.captures[id]
+        end
+      else
+        local highlighter = vim.treesitter.highlighter.new(parser)
+        local highlighter_query = highlighter:get_query(filetype)
+
+        return function(_, id)
+          return highlighter_query:_get_hl_from_capture(id)
+        end
+      end
+    end)()
+
     for id, node in query:iter_captures(root, opts.bufnr, 0, -1) do
-      local hl = on_nvim_master and query.captures[id] or highlighter_query:_get_hl_from_capture(id)
+      local hl = get_hl_from_capture(query, id)
       if hl and type(hl) ~= "number" then
         local row1, col1, row2, col2 = node:range()
 
@@ -495,6 +538,7 @@ files.current_buffer_fuzzy_find = function(opts)
 
         return true
       end,
+      push_cursor_on_edit = true,
     })
     :find()
 end

@@ -26,7 +26,7 @@ file IO.
 USAGE                                                         *gitsigns-usage*
 
 For basic setup with all batteries included:
->
+>lua
     require('gitsigns').setup()
 <
 
@@ -64,6 +64,16 @@ having to redefine the whole field.
 {{CONFIG}}
 
 ==============================================================================
+HIGHLIGHT GROUPS                                   *gitsigns-highlight-groups*
+
+These are the highlights groups used by Gitsigns.
+
+Note if a highlight is not defined, it will be automatically derived by
+searching for other defined highlights in order.
+
+{{HIGHLIGHTS}}
+
+==============================================================================
 COMMAND                                                      *gitsigns-command*
 
                                                                     *:Gitsigns*
@@ -74,10 +84,10 @@ COMMAND                                                      *gitsigns-command*
                            if this fails the argument will remain as the
                            string given by |<f-args>|.
 
-                           Note this command is equivalent to:
-                             `:lua require('gitsigns').{subcmd}({args})`
-
-                           Examples: >
+                           Note this command is equivalent to: >vim
+                             :lua require('gitsigns').{subcmd}({args})
+<
+                           Examples: >vim
                              :Gitsigns diffthis HEAD~1
                              :Gitsigns blame_line
                              :Gitsigns toggle_signs
@@ -85,6 +95,7 @@ COMMAND                                                      *gitsigns-command*
                              :Gitsigns change_base ~
                              :Gitsigns reset_buffer
                              :Gitsigns change_base nil true
+<
 
 ==============================================================================
 SPECIFYING OBJECTS                          *gitsigns-object* *gitsigns-revision*
@@ -122,7 +133,7 @@ provided. `b:gitsigns_status` is formatted using `config.status_formatter`
         • `gitdir` - .git directory.
 
 Example:
->
+>vim
     set statusline+=%{get(b:,'gitsigns_status','')}
 <
                                             *b:gitsigns_head* *g:gitsigns_head*
@@ -152,7 +163,7 @@ EVENT                                                         *gitsigns-event*
 
 Every time Gitsigns updates its knowledge about hunks, it issues a custom
 |User| event named `GitSignsUpdate`. You can use it via usual autocommands,
-like so: >
+like so: >lua
 
     vim.api.nvim_create_autocmd('User', {
       pattern = 'GitSignsUpdate',

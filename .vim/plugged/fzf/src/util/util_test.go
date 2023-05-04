@@ -70,7 +70,7 @@ func TestMin32(t *testing.T) {
 	}
 }
 
-func TestContrain(t *testing.T) {
+func TestConstrain(t *testing.T) {
 	if Constrain(-3, -1, 3) != -1 {
 		t.Error("Expected", -1)
 	}
@@ -83,7 +83,7 @@ func TestContrain(t *testing.T) {
 	}
 }
 
-func TestContrain32(t *testing.T) {
+func TestConstrain32(t *testing.T) {
 	if Constrain32(-3, -1, 3) != -1 {
 		t.Error("Expected", -1)
 	}
@@ -115,7 +115,7 @@ func TestAsUint16(t *testing.T) {
 	if AsUint16(math.MinInt16) != 0 {
 		t.Error("Expected", 0)
 	}
-	if AsUint16(math.MaxUint32) != math.MaxUint16 {
+	if AsUint16(math.MaxUint16+1) != math.MaxUint16 {
 		t.Error("Expected", math.MaxUint16)
 	}
 }

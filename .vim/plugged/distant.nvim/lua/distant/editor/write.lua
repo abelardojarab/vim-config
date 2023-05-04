@@ -1,20 +1,22 @@
 local fn = require('distant.fn')
 local log = require('distant.log')
-local v = require('distant.vars')
+local vars = require('distant.vars')
+
+--- @class EditorWriteOpts
+--- @field buf number #The handle of the buffer to write
+--- @field timeout? number #Maximum time to wait for a response
+--- @field interval? number #Time in milliseconds to wait between checks for a response
 
 --- Writes a buffer to disk on the remote machine
----
---- @param buf number The handle of the buffer to write
---- @param opts.timeout number Maximum time to wait for a response (optional)
---- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+--- @param opts EditorWriteOpts
 return function(opts)
     opts = opts or {}
     if type(opts) == 'number' then
-        opts = {buf = opts}
+        opts = { buf = opts }
     end
 
     log.fmt_trace('editor.write(%s)', opts)
-    vim.validate({opts = {opts, 'table'}})
+    vim.validate({ opts = { opts, 'table' } })
 
     local buf = opts.buf
     if not buf then
@@ -22,7 +24,8 @@ return function(opts)
     end
 
     -- Load the remote path from the buffer being saved
-    local path = v.buf.remote_path(buf)
+    --- @type string|nil
+    local path = vars.buf(buf).remote_path.get()
 
     if path ~= nil then
         -- Load the contents of the buffer

@@ -5,8 +5,8 @@
 A wrapper around [`distant`](https://github.com/chipsenkbeil/distant) that
 enables users to edit remote files from the comfort of their local environment.
 
-- **Requires neovim 0.5+**
-- **Requires distant 0.15.x** (0.16+ not supported)
+- **Requires neovim 0.7+**
+- **Requires distant 0.20.0-alpha.4**
 
 🚧 **(Alpha stage software) This plugin is in rapid development and may
 break or change frequently!** 🚧
@@ -21,33 +21,15 @@ Supports the following features against remote machines:
 - [X] Copying files & directories
 - [X] Renaming files & directories
 - [X] Running [LSPs](https://neovim.io/doc/lsp/) remotely and getting live results locally
-
-Support is coming up for these features:
-
-- [ ] Optional [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration
-
-## Demo
-
-### Intro Video
-
-Demonstrates using distant.nvim to edit files and use a language server on a
-remote machine.
-
-[![Intro Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
-
-### v0.1.0 Update
-
-Demonstrates the new release of distant.nvim (v0.1.0) leveraging distant's new
-lua module (v0.15.0). Main highlights include:
-
-- integrated ssh authentication
-- ssh mode
-- refactored and simplified vim & Lua APIs
-- complete help documentation
-
-[![v0.1.0 update](https://img.youtube.com/vi/wVAsbpByQ3o/0.jpg)](https://www.youtube.com/watch?v=wVAsbpByQ3o)
+- [X] [telescope.nvim](https://github.com/nvim-telescope/telescope.nvim) integration via `:Telescope distant search`
 
 ## Installation & Setup
+
+> It is **highly** recommended to not use the master branch of this plugin.
+> Instead, prefer either a branch (`v0.1` or `v0.2`) or a specific tag (`v0.1.1`)
+> to lock in the plugin. When using a branch, you will get rolling updates to
+> that branch. When using a tag, you are locked into the features and stability
+> of the plugin at that point!
 
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim), the quickest
 way to get up and running is the following:
@@ -55,6 +37,7 @@ way to get up and running is the following:
 ```lua
 use {
   'chipsenkbeil/distant.nvim',
+  branch = 'v0.2',
   config = function()
     require('distant').setup {
       -- Applies Chip's personal settings to every machine you connect to
@@ -117,6 +100,27 @@ all of the contents of the specified directory.
 For more details on available functions, settings, commands, and more,
 please check out the vim help documentation via 
 [`:help distant.txt`](doc/distant.txt).
+
+## Demo
+
+### Intro Video
+
+Demonstrates using distant.nvim to edit files and use a language server on a
+remote machine.
+
+[![Intro Video](https://img.youtube.com/vi/BuW2b1Ii0RI/0.jpg)](https://www.youtube.com/watch?v=BuW2b1Ii0RI)
+
+### v0.1.0 Update
+
+Demonstrates the new release of distant.nvim (v0.1.0) leveraging distant's new
+lua module (v0.15.0). Main highlights include:
+
+- integrated ssh authentication
+- ssh mode
+- refactored and simplified vim & Lua APIs
+- complete help documentation
+
+[![v0.1.0 update](https://img.youtube.com/vi/wVAsbpByQ3o/0.jpg)](https://www.youtube.com/watch?v=wVAsbpByQ3o)
 
 ## License
 

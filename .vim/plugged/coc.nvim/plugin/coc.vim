@@ -265,9 +265,7 @@ function! s:Disable() abort
   if get(g:, 'coc_enabled', 0) == 0
     return
   endif
-  augroup coc_nvim
-    autocmd!
-  augroup end
+  autocmd! coc_nvim
   call coc#rpc#request('detach', [])
   echohl MoreMsg
     echom '[coc.nvim] Event disabled'
@@ -300,6 +298,11 @@ function! s:HandleTextChangedI(bufnr) abort
     unlet g:coc_feeding_keys
   endif
   call s:Autocmd('TextChangedI', a:bufnr, coc#util#change_info())
+endfunction
+
+function! s:HandleInsertLeave(bufnr) abort
+  call coc#pum#close()
+  call s:Autocmd('InsertLeave', a:bufnr)
 endfunction
 
 function! s:HandleWinScrolled(winid) abort
@@ -346,14 +349,21 @@ function! s:VimEnter() abort
   elseif get(g:, 'coc_start_at_startup', 1)
     call coc#rpc#start_server()
   endif
-  call timer_start(0, { -> s:Highlight()})
+  call s:Highlight()
 endfunction
 
 function! s:Enable(initialize)
   if get(g:, 'coc_enabled', 0) == 1
     return
   endif
+
   let g:coc_enabled = 1
+  sign define CocCurrentLine linehl=CocMenuSel
+  sign define CocListCurrent linehl=CocListLine
+  sign define CocTreeSelected linehl=CocTreeSelected
+  if s:is_vim
+    call coc#api#tabpage_ids()
+  endif
 
   augroup coc_nvim
     autocmd!
@@ -371,6 +381,7 @@ function! s:Enable(initialize)
         autocmd TerminalOpen      * call s:Autocmd('TermOpen', +expand('<abuf>'))
       endif
       autocmd CursorMoved         list:///* call coc#list#select(bufnr('%'), line('.'))
+      autocmd TabNew              * call coc#api#tabpage_ids()
     else
       autocmd DirChanged        * call s:Autocmd('DirChanged', get(v:event, 'cwd', ''))
       autocmd TermOpen          * call s:Autocmd('TermOpen', +expand('<abuf>'))
@@ -388,8 +399,8 @@ function! s:Enable(initialize)
     if exists('##WinScrolled')
       autocmd WinScrolled       * call s:HandleWinScrolled(+expand('<amatch>'))
     endif
-    autocmd TabNew              * call s:Autocmd('TabNew', tabpagenr())
-    autocmd TabClosed           * call s:Autocmd('TabClosed', +expand('<afile>'))
+    autocmd TabNew              * call s:Autocmd('TabNew', coc#util#tabnr_id(tabpagenr()))
+    autocmd TabClosed           * call s:Autocmd('TabClosed', coc#util#tabpages())
     autocmd WinLeave            * call s:Autocmd('WinLeave', win_getid())
     autocmd WinEnter            * call s:Autocmd('WinEnter', win_getid())
     autocmd BufWinLeave         * call s:Autocmd('BufWinLeave', +expand('<abuf>'), bufwinid(+expand('<abuf>')))
@@ -400,7 +411,7 @@ function! s:Enable(initialize)
       autocmd TextChangedP      * call s:Autocmd('TextChangedP', +expand('<abuf>'), coc#util#change_info())
     endif
     autocmd TextChangedI        * call s:HandleTextChangedI(+expand('<abuf>'))
-    autocmd InsertLeave         * call s:Autocmd('InsertLeave', +expand('<abuf>'))
+    autocmd InsertLeave         * call s:HandleInsertLeave(+expand('<abuf>'))
     autocmd InsertEnter         * call s:Autocmd('InsertEnter', +expand('<abuf>'))
     autocmd BufHidden           * call s:Autocmd('BufHidden', +expand('<abuf>'))
     autocmd BufEnter            * call s:Autocmd('BufEnter', +expand('<abuf>'))
@@ -503,15 +514,6 @@ function! s:Highlight() abort
   hi default link CocInputBoxVirtualText   CocVirtualText
   hi default link CocFloatDividingLine     CocVirtualText
 
-  if !exists('*sign_getdefined') || empty(sign_getdefined('CocCurrentLine'))
-    sign define CocCurrentLine linehl=CocMenuSel
-  endif
-  if !exists('*sign_getdefined') || empty(sign_getdefined('CocListCurrent'))
-    sign define CocListCurrent linehl=CocListLine
-  endif
-  if !exists('*sign_getdefined') || empty(sign_getdefined('CocTreeSelected'))
-    sign define CocTreeSelected linehl=CocTreeSelected
-  endif
   if has('nvim-0.5.0')
     hi default CocCursorTransparent gui=strikethrough blend=100
   endif
@@ -555,76 +557,76 @@ function! s:Highlight() abort
 
   if get(g:, 'coc_default_semantic_highlight_groups', 1)
     let hlMap = {
-        \ 'Namespace': ['TSNamespace', 'Include'],
-        \ 'Type': ['TSType', 'Type'],
-        \ 'Class': ['TSConstructor', 'Special'],
-        \ 'Enum': ['TSEnum', 'Type'],
-        \ 'Interface': ['TSInterface', 'Type'],
-        \ 'Struct': ['TSStruct', 'Identifier'],
-        \ 'TypeParameter': ['TSParameter', 'Identifier'],
-        \ 'Parameter': ['TSParameter', 'Identifier'],
-        \ 'Variable': ['TSSymbol', 'Identifier'],
-        \ 'Property': ['TSProperty', 'Identifier'],
-        \ 'EnumMember': ['TSEnumMember', 'Constant'],
-        \ 'Event': ['TSEvent', 'Keyword'],
-        \ 'Function': ['TSFunction', 'Function'],
-        \ 'Method': ['TSMethod', 'Function'],
-        \ 'Macro': ['TSConstMacro', 'Define'],
-        \ 'Keyword': ['TSKeyword', 'Keyword'],
-        \ 'Modifier': ['TSModifier', 'StorageClass'],
-        \ 'Comment': ['TSComment', 'Comment'],
-        \ 'String': ['TSString', 'String'],
-        \ 'Number': ['TSNumber', 'Number'],
-        \ 'Boolean': ['TSBoolean', 'Boolean'],
-        \ 'Regexp': ['TSStringRegex', 'String'],
-        \ 'Operator': ['TSOperator', 'Operator'],
-        \ 'Decorator': ['TSSymbol', 'Identifier'],
-        \ 'Deprecated': ['TSStrike', 'CocDeprecatedHighlight']
+        \ 'Namespace': ['@namespace', 'Include'],
+        \ 'Type': ['@type', 'Type'],
+        \ 'Class': ['@constructor', 'Special'],
+        \ 'Enum': ['@type', 'Type'],
+        \ 'Interface': ['@type', 'Type'],
+        \ 'Struct': ['@structure', 'Identifier'],
+        \ 'TypeParameter': ['@parameter', 'Identifier'],
+        \ 'Parameter': ['@parameter', 'Identifier'],
+        \ 'Variable': ['@variable', 'Identifier'],
+        \ 'Property': ['@property', 'Identifier'],
+        \ 'EnumMember': ['@property', 'Constant'],
+        \ 'Event': ['@keyword', 'Keyword'],
+        \ 'Function': ['@function', 'Function'],
+        \ 'Method': ['@method', 'Function'],
+        \ 'Macro': ['@constant.macro', 'Define'],
+        \ 'Keyword': ['@keyword', 'Keyword'],
+        \ 'Modifier': ['@storageclass', 'StorageClass'],
+        \ 'Comment': ['@comment', 'Comment'],
+        \ 'String': ['@string', 'String'],
+        \ 'Number': ['@number', 'Number'],
+        \ 'Boolean': ['@boolean', 'Boolean'],
+        \ 'Regexp': ['@string.regex', 'String'],
+        \ 'Operator': ['@operator', 'Operator'],
+        \ 'Decorator': ['@symbol', 'Identifier'],
+        \ 'Deprecated': ['@text.strike', 'CocDeprecatedHighlight']
         \ }
     for [key, value] in items(hlMap)
       let ts = get(value, 0, '')
       let fallback = get(value, 1, '')
-      execute 'hi default link CocSem'.key.' '.(hlexists(ts) ? ts : fallback)
+      execute 'hi default link CocSem'.key.' '.(coc#highlight#valid(ts) ? ts : fallback)
     endfor
   endif
   let symbolMap = {
-      \ 'Keyword': ['TSKeyword', 'Keyword'],
-      \ 'Namespace': ['TSNamespace', 'Include'],
-      \ 'Class': ['TSConstructor', 'Special'],
-      \ 'Method': ['TSMethod', 'Function'],
-      \ 'Property': ['TSProperty', 'Identifier'],
-      \ 'Text': ['TSText', 'CocSymbolDefault'],
-      \ 'Unit': ['TSUnit', 'CocSymbolDefault'],
-      \ 'Value': ['TSValue', 'CocSymbolDefault'],
-      \ 'Snippet': ['TSSnippet', 'CocSymbolDefault'],
-      \ 'Color': ['TSColor', 'Float'],
-      \ 'Reference': ['TSTextReference', 'Constant'],
-      \ 'Folder': ['TSFolder', 'CocSymbolDefault'],
-      \ 'File': ['TSFile', 'Statement'],
-      \ 'Module': ['TSModule', 'Statement'],
-      \ 'Package': ['TSPackage', 'Statement'],
-      \ 'Field': ['TSField', 'Identifier'],
-      \ 'Constructor': ['TSConstructor', 'Special'],
-      \ 'Enum': ['TSEnum', 'CocSymbolDefault'],
-      \ 'Interface': ['TSInterface', 'CocSymbolDefault'],
-      \ 'Function': ['TSFunction', 'Function'],
-      \ 'Variable': ['TSVariableBuiltin', 'Special'],
-      \ 'Constant': ['TSConstant', 'Constant'],
-      \ 'String': ['TSString', 'String'],
-      \ 'Number': ['TSNumber', 'Number'],
-      \ 'Boolean': ['TSBoolean', 'Boolean'],
-      \ 'Array': ['TSArray', 'CocSymbolDefault'],
-      \ 'Object': ['TSObject', 'CocSymbolDefault'],
-      \ 'Key': ['TSKey', 'Identifier'],
-      \ 'Null': ['TSNull', 'Type'],
-      \ 'EnumMember': ['TSEnumMember', 'Identifier'],
-      \ 'Struct': ['TSStruct', 'Keyword'],
-      \ 'Event': ['TSEvent', 'Constant'],
-      \ 'Operator': ['TSOperator', 'Operator'],
-      \ 'TypeParameter': ['TSParameter', 'Identifier'],
+      \ 'Keyword': ['@keyword', 'Keyword'],
+      \ 'Namespace': ['@namespace', 'Include'],
+      \ 'Class': ['@constructor', 'Special'],
+      \ 'Method': ['@method', 'Function'],
+      \ 'Property': ['@property', 'Identifier'],
+      \ 'Text': ['@text', 'CocSymbolDefault'],
+      \ 'Unit': ['@unit', 'CocSymbolDefault'],
+      \ 'Value': ['@value', 'CocSymbolDefault'],
+      \ 'Snippet': ['@snippet', 'CocSymbolDefault'],
+      \ 'Color': ['@color', 'Float'],
+      \ 'Reference': ['@text.reference', 'Constant'],
+      \ 'Folder': ['@folder', 'CocSymbolDefault'],
+      \ 'File': ['@file', 'Statement'],
+      \ 'Module': ['@module', 'Statement'],
+      \ 'Package': ['@package', 'Statement'],
+      \ 'Field': ['@field', 'Identifier'],
+      \ 'Constructor': ['@constructor', 'Special'],
+      \ 'Enum': ['@type', 'CocSymbolDefault'],
+      \ 'Interface': ['@type', 'CocSymbolDefault'],
+      \ 'Function': ['@function', 'Function'],
+      \ 'Variable': ['@variable.builtin', 'Special'],
+      \ 'Constant': ['@constant', 'Constant'],
+      \ 'String': ['@string', 'String'],
+      \ 'Number': ['@number', 'Number'],
+      \ 'Boolean': ['@boolean', 'Boolean'],
+      \ 'Array': ['@array', 'CocSymbolDefault'],
+      \ 'Object': ['@object', 'CocSymbolDefault'],
+      \ 'Key': ['@key', 'Identifier'],
+      \ 'Null': ['@null', 'Type'],
+      \ 'EnumMember': ['@property', 'Identifier'],
+      \ 'Struct': ['@structure', 'Keyword'],
+      \ 'Event': ['@constant', 'Constant'],
+      \ 'Operator': ['@operator', 'Operator'],
+      \ 'TypeParameter': ['@parameter', 'Identifier'],
       \ }
   for [key, value] in items(symbolMap)
-    let hlGroup = hlexists(value[0]) ? value[0] : get(value, 1, 'CocSymbolDefault')
+    let hlGroup = coc#highlight#valid(value[0]) ? value[0] : get(value, 1, 'CocSymbolDefault')
     if hlexists(hlGroup)
       execute 'hi default CocSymbol'.key.' '.coc#highlight#get_hl_command(synIDtrans(hlID(hlGroup)), 'fg', '223', '#ebdbb2')
     endif
@@ -710,6 +712,12 @@ command! -nargs=0 -bar CocUpdateSync   :call coc#util#update_extensions()
 command! -nargs=* -bar -complete=custom,s:InstallOptions CocInstall   :call coc#util#install_extension([<f-args>])
 
 call s:Enable(1)
+augroup coc_dynamic_autocmd
+augroup END
+augroup coc_dynamic_content
+augroup END
+augroup coc_dynamic_option
+augroup END
 
 " Default key-mappings for completion
 if empty(mapcheck('<C-n>', 'i'))

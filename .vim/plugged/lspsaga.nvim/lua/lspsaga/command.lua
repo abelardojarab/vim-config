@@ -1,46 +1,59 @@
 local command = {}
-local lsprename = require('lspsaga.rename')
-local diagnostic = require('lspsaga.diagnostic')
-local codeaction = require('lspsaga.codeaction')
-local finder = require('lspsaga.finder')
 
 local subcommands = {
   lsp_finder = function()
-    finder:lsp_finder()
-  end,
-  preview_definition = function()
-    vim.notify(
-      'preview_definition will be removed after three days,Please use peek_definition instead of',
-      vim.log.levels.WARN
-    )
+    require('lspsaga.finder'):lsp_finder()
   end,
   peek_definition = function()
-    require('lspsaga.definition'):peek_definition()
+    require('lspsaga.definition'):peek_definition(1)
   end,
-  rename = function()
-    lsprename:lsp_rename()
+  goto_definition = function()
+    require('lspsaga.definition'):goto_definition(1)
   end,
-  hover_doc = function()
-    require('lspsaga.hover'):render_hover_doc()
+  peek_type_definition = function()
+    require('lspsaga.definition'):peek_definition(2)
   end,
-  show_cursor_diagnostics = diagnostic.show_cursor_diagnostics,
-  show_line_diagnostics = diagnostic.show_line_diagnostics,
-  diagnostic_jump_next = diagnostic.goto_next,
-  diagnostic_jump_prev = diagnostic.goto_prev,
+  goto_type_definition = function()
+    require('lspsaga.definition'):goto_definition(2)
+  end,
+  rename = function(arg)
+    require('lspsaga.rename'):lsp_rename(arg)
+  end,
+  hover_doc = function(arg)
+    require('lspsaga.hover'):render_hover_doc(arg)
+  end,
+  show_workspace_diagnostics = function(arg)
+    require('lspsaga.showdiag'):show_diagnostics({ workspace = true, arg = arg })
+  end,
+  show_line_diagnostics = function(arg)
+    require('lspsaga.showdiag'):show_diagnostics({ line = true, arg = arg })
+  end,
+  show_buf_diagnostics = function(arg)
+    require('lspsaga.showdiag'):show_diagnostics({ buffer = true, arg = arg })
+  end,
+  show_cursor_diagnostics = function(arg)
+    require('lspsaga.showdiag'):show_diagnostics({ cursor = true, arg = arg })
+  end,
+  diagnostic_jump_next = function()
+    require('lspsaga.diagnostic'):goto_next()
+  end,
+  diagnostic_jump_prev = function()
+    require('lspsaga.diagnostic'):goto_prev()
+  end,
   code_action = function()
-    codeaction:code_action()
+    require('lspsaga.codeaction'):code_action()
   end,
-  range_code_action = function()
-    vim.notify(
-      'range_code_action will be removed after three days,Please use code_action instead of. check example config',
-      vim.log.levels.WARN
-    )
+  outline = function()
+    require('lspsaga.outline'):outline()
   end,
-  open_floaterm = function(cmd)
+  incoming_calls = function()
+    require('lspsaga.callhierarchy'):send_method(2)
+  end,
+  outgoing_calls = function()
+    require('lspsaga.callhierarchy'):send_method(3)
+  end,
+  term_toggle = function(cmd)
     require('lspsaga.floaterm'):open_float_terminal(cmd)
-  end,
-  close_floaterm = function()
-    require('lspsaga.floaterm'):close_float_terminal()
   end,
 }
 
@@ -48,13 +61,8 @@ function command.command_list()
   return vim.tbl_keys(subcommands)
 end
 
-function command.load_command(cmd, ...)
-  local args = { ... }
-  if next(args) ~= nil then
-    subcommands[cmd](args[1])
-  else
-    subcommands[cmd]()
-  end
+function command.load_command(cmd, arg)
+  subcommands[cmd](arg)
 end
 
 return command

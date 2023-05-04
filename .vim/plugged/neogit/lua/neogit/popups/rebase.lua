@@ -12,6 +12,7 @@ function M.create()
   local p = popup
     .builder()
     :name("NeogitRebasePopup")
+    :switch("a", "autosquash", "Autosquash fixup and squash commits", false)
     :action_if(status and status.repo.rebase.head, "r", "Continue rebase", function()
       rebase.continue()
       a.util.scheduler()
@@ -30,8 +31,8 @@ function M.create()
     :action(
       "p",
       "Rebase onto master",
-      a.void(function()
-        rebase.rebase_onto("master")
+      a.void(function(popup)
+        rebase.rebase_onto("master", popup:get_arguments())
         a.util.scheduler()
         status.refresh(true, "rebase_master")
       end)
@@ -39,9 +40,10 @@ function M.create()
     :action(
       "e",
       "Rebase onto elsewhere",
-      a.void(function()
-        local branch = git.branch.prompt_for_branch(git.branch.get_all_branches())
-        rebase.rebase_onto(branch)
+      a.void(function(popup)
+        local BranchSelectViewBuffer = require("neogit.buffers.branch_select_view")
+        local branch = BranchSelectViewBuffer.new(git.branch.get_all_branches()):open_async()
+        rebase.rebase_onto(branch, popup:get_arguments())
         a.util.scheduler()
         status.refresh(true, "rebase_elsewhere")
       end)
@@ -49,14 +51,18 @@ function M.create()
     :action(
       "i",
       "Interactive",
-      a.void(function()
-        local commits = rebase.commits()
-        CommitSelectViewBuffer.new(commits, function(_view, selected)
-          rebase.run_interactive(selected.oid)
-          a.util.scheduler()
-          _view:close()
-          status.refresh(true, "rebase_interactive")
-        end):open()
+      a.void(function(popup)
+        local commits = require("neogit.lib.git.log").list()
+
+        local commit = CommitSelectViewBuffer.new(commits):open_async()
+
+        if not commit then
+          return
+        end
+
+        rebase.rebase_interactive(commit.oid, unpack(popup:get_arguments()))
+        a.util.scheduler()
+        status.refresh(true, "rebase_interactive")
       end)
     )
     :build()

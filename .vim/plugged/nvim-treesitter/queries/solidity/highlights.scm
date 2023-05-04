@@ -1,73 +1,86 @@
-(comment) @comment
-;; Handles natspec comments
-((comment) @preproc
- (#match? @preproc "^/// .*"))
-
 ; Pragma
-(pragma_directive) @attribute
 
+[
+  "pragma" 
+  "solidity"
+] @preproc
+
+(solidity_pragma_token
+  "||" @symbol)
+(solidity_pragma_token
+  "-" @symbol)
+
+(solidity_version_comparison_operator) @operator
+
+(solidity_version) @text.underline @string.special
 
 ; Literals
+
 [
  (string)
- (hex_string_literal)
- (unicode_string_literal)
  (yul_string_literal)
 ] @string
+
+(hex_string_literal
+  "hex" @symbol
+  (_) @string)
+
+(unicode_string_literal
+  "unicode" @symbol
+  (_) @string)
+
 [
  (number_literal)
  (yul_decimal_number)
  (yul_hex_number)
 ] @number
+
+(yul_boolean) @boolean
+
+; Variables
+
 [
- (true)
- (false)
-] @constant.builtin
+  (identifier)
+  (yul_identifier)
+] @variable
 
+; Types
 
-; Type
 (type_name (identifier) @type)
-(type_name "mapping" @type)
-(primitive_type) @type
+(type_name (user_defined_type (identifier) @type))
+(type_name "mapping" @function.builtin)
+
+[
+  (primitive_type)
+  (number_unit)
+] @type.builtin
+
 (contract_declaration name: (identifier) @type)
-(struct_declaration struct_name: (identifier) @type)
+(struct_declaration name: (identifier) @type)
 (struct_member name: (identifier) @field)
-(enum_declaration enum_type_name: (identifier) @type)
+(enum_declaration name: (identifier) @type)
 (emit_statement . (identifier) @type)
 ; Handles ContractA, ContractB in function foo() override(ContractA, contractB) {}
-(override_specifier (identifier) @type)
-; Ensures that delimiters in mapping( ... => .. ) are not colored like types
-(type_name
-  "(" @punctuation.bracket
-  "=>" @punctuation.delimiter
-  ")" @punctuation.bracket)
-
+(override_specifier (user_defined_type) @type)
 
 ; Functions and parameters
 
 (function_definition
-  function_name:  (identifier) @function)
+  name: (identifier) @function)
 (modifier_definition
-  name:  (identifier) @function)
+  name: (identifier) @function)
 (yul_evm_builtin) @function.builtin
 
-; Use contructor coloring for special functions
+; Use constructor coloring for special functions
 (constructor_definition "constructor" @constructor)
-(fallback_receive_definition "receive" @constructor)
-(fallback_receive_definition "fallback" @constructor)
 
 (modifier_invocation (identifier) @function)
 
 ; Handles expressions like structVariable.g();
-(call_expression . (member_expression (property_identifier) @method.call))
+(call_expression . (member_expression (identifier) @method.call))
 
 ; Handles expressions like g();
 (call_expression . (identifier) @function.call)
-(function_definition
- function_name: (identifier) @function)
-
-; Handles the field in struct literals like MyStruct({MyField: MyVar * 2})
-(call_expression (identifier) @field . ":")
 
 ; Function parameters
 (event_paramater name: (identifier) @parameter)
@@ -81,100 +94,116 @@
 
 (meta_type_expression "type" @keyword)
 
-(member_expression (property_identifier) @field)
-(property_identifier) @field
-(struct_expression ((identifier) @field . ":"))
+(member_expression property: (identifier) @field)
+(call_struct_argument name: (identifier) @field)
+(struct_field_assignment name: (identifier) @field)
 (enum_value) @constant
 
-
 ; Keywords
+
 [
- "contract"
- "interface"
- "library"
- "is"
- "struct"
- "enum"
- "event"
- "assembly"
- "emit"
- "modifier"
- "var"
- (virtual)
- (override_specifier)
+  "contract"
+  "interface"
+  "library"
+  "is"
+  "struct"
+  "enum"
+  "event"
+  "assembly"
+  "emit"
+  "override"
+  "modifier"
+  "var"
+  "let"
+  "emit"
+  "fallback"
+  "receive"
+  (virtual)
 ] @keyword
 
+; FIXME: update grammar
+; (block_statement "unchecked" @keyword)
+
+(event_paramater "indexed" @keyword)
+
 [
- "public"
- "internal"
- "private"
- "external"
- "pure"
- "view"
- "payable"
+  "public"
+  "internal"
+  "private"
+  "external"
+  "pure"
+  "view"
+  "payable"
+  (immutable)
 ] @type.qualifier
 
 [
- "memory"
- "storage"
- "calldata"
- (constant)
+  "memory"
+  "storage"
+  "calldata"
+  "constant"
 ] @storageclass
 
 [
- "for"
- "while"
- "do"
+  "for"
+  "while"
+  "do"
+  "break"
+  "continue"
 ] @repeat
 
 [
- "break"
- "continue"
- "if"
- "else"
- "switch"
- "case"
- "default"
+  "if"
+  "else"
+  "switch"
+  "case"
+  "default"
 ] @conditional
 
+(ternary_expression
+  "?" @conditional.ternary
+  ":" @conditional.ternary)
+
 [
- "try"
- "catch"
+  "try"
+  "catch"
+  "revert"
 ] @exception
 
 [
- "return"
- "returns"
- (yul_leave)
+  "return"
+  "returns"
+  (yul_leave)
 ] @keyword.return
 
 "function" @keyword.function
 
-"pragma" @preproc
-
-["import" "using"] @include
+[
+  "import" 
+  "using"
+] @include
 (import_directive "as" @include)
 (import_directive "from" @include)
-
-(event_paramater "indexed" @keyword)
+((import_directive source: (string) @text.underline)
+  (#offset! @text.underline 0 1 0 -1))
 
 ; Punctuation
 
-[
-  "("
-  ")"
-  "["
-  "]"
-  "{"
-  "}"
-] @punctuation.bracket
+[ "{" "}" ] @punctuation.bracket
 
+[ "[" "]" ] @punctuation.bracket
+
+[ "(" ")" ] @punctuation.bracket
 
 [
   "."
   ","
+  ":"
+  ; FIXME: update grammar
+  ; (semicolon)
+  "->"
+  "=>"
 ] @punctuation.delimiter
-
 
 ; Operators
 
@@ -193,6 +222,7 @@
   "/"
   "%"
   "**"
+  "="
   "<"
   "<="
   "=="
@@ -206,6 +236,7 @@
   "+"
   "++"
   "--"
+  ":="
 ] @operator
 
 [
@@ -213,5 +244,20 @@
   "new"
 ] @keyword.operator
 
-(identifier) @variable
-(yul_identifier) @variable
+(import_directive "*" @character.special)
+
+; Comments
+
+(comment) @comment @spell
+
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^///[^/]"))
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^///$"))
+
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^/[*][*][^*].*[*]/$"))
+
+; Errors
+
+(ERROR) @error

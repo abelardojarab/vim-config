@@ -51,13 +51,17 @@ function M.create_watcher(node)
   local function callback(watcher)
     log.line("watcher", "node event scheduled refresh %s", watcher.context)
     utils.debounce(watcher.context, M.debounce_delay, function()
+      if watcher.destroyed then
+        return
+      end
       if node.link_to then
         log.line("watcher", "node event executing refresh '%s' -> '%s'", node.link_to, node.absolute_path)
       else
         log.line("watcher", "node event executing refresh '%s'", node.absolute_path)
       end
-      require("nvim-tree.explorer.reload").refresh_node(node)
-      require("nvim-tree.renderer").draw()
+      require("nvim-tree.explorer.reload").refresh_node(node, function()
+        require("nvim-tree.renderer").draw()
+      end)
     end)
   end
 

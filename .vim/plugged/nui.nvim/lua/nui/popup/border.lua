@@ -85,13 +85,34 @@ local function normalize_border_char(internal)
 
   for position, item in pairs(internal.char) do
     if is_type("string", item) then
-      internal.char[position] = Text(item)
+      internal.char[position] = Text(item, "FloatBorder")
     elseif not item.content then
-      internal.char[position] = Text(item[1], item[2])
+      internal.char[position] = Text(item[1], item[2] or "FloatBorder")
+    elseif item.extmark then
+      item.extmark.hl_group = item.extmark.hl_group or "FloatBorder"
+    else
+      item.extmark = { hl_group = "FloatBorder" }
     end
   end
 
   return internal.char
+end
+
+---@param text? nil | string | NuiText
+local function normalize_border_text(text)
+  if not text then
+    return text
+  end
+
+  if is_type("string", text) then
+    return Text(text, "FloatTitle")
+  end
+
+  text.extmark = vim.tbl_deep_extend("keep", text.extmark or {}, {
+    hl_group = "FloatTitle",
+  })
+
+  return text
 end
 
 ---@param internal nui_popup_border_internal
@@ -106,21 +127,14 @@ local function calculate_winhighlight(internal, popup_winhighlight)
   -- @deprecated
   if internal.highlight then
     if not string.match(internal.highlight, ":") then
-      local highlight = internal.highlight
-      internal.highlight = nil
-      return "Normal:" .. highlight
+      internal.highlight = "FloatBorder:" .. internal.highlight
     end
 
     winhl = internal.highlight
     internal.highlight = nil
   end
 
-  if winhl and winhl:match("FloatBorder:") then
-    local highlight = string.match(winhl, "FloatBorder:([^,]+)")
-    return "Normal:" .. highlight
-  end
-
-  return "Normal:WinSeparator"
+  return winhl
 end
 
 ---@return nui_popup_border_internal_padding|nil
@@ -142,7 +156,7 @@ local function parse_padding(padding)
 end
 
 ---@param edge "'top'" | "'bottom'"
----@param text? nil | string | table # string or NuiText
+---@param text? nil | string | NuiText
 ---@param align? nil | "'left'" | "'center'" | "'right'"
 ---@return table NuiLine
 local function calculate_buf_edge_line(internal, edge, text, align)
@@ -363,7 +377,7 @@ end
 ---@alias nui_popup_border_internal_padding { top: number, right: number, bottom: number, left: number }
 ---@alias nui_popup_border_internal_position { row: number, col: number }
 ---@alias nui_popup_border_internal_size { width: number, height: number }
----@alias nui_popup_border_internal_text { top?: string, top_align?: nui_t_text_align, bottom?: string, bottom_align?: nui_t_text_align }
+---@alias nui_popup_border_internal_text { top?: string|NuiText, top_align?: nui_t_text_align, bottom?: string|NuiText, bottom_align?: nui_t_text_align }
 ---@alias nui_popup_border_internal { type: "'simple'"|"'complex'", style: table, char: any, padding?: nui_popup_border_internal_padding, position: nui_popup_border_internal_position, size: nui_popup_border_internal_size, size_delta: nui_popup_border_internal_size, text: nui_popup_border_internal_text, lines?: table[], winhighlight?: string }
 
 --luacheck: pop
@@ -390,6 +404,11 @@ function Border:init(popup, options)
   }
 
   local internal = self._
+
+  if internal.text then
+    internal.text.top = normalize_border_text(internal.text.top)
+    internal.text.bottom = normalize_border_text(internal.text.bottom)
+  end
 
   local style = internal.style
 
@@ -434,6 +453,10 @@ function Border:init(popup, options)
     zindex = self.popup.win_config.zindex - 1,
     anchor = self.popup.win_config.anchor,
   }
+
+  if type(internal.char) == "string" then
+    self.win_config.border = internal.char
+  end
 end
 
 function Border:_open_window()
@@ -504,9 +527,8 @@ function Border:unmount()
   end
 
   if self.bufnr then
-    u.clear_namespace(self.bufnr, self.popup.ns_id)
-
     if vim.api.nvim_buf_is_valid(self.bufnr) then
+      u.clear_namespace(self.bufnr, self.popup.ns_id)
       vim.api.nvim_buf_delete(self.bufnr, { force = true })
     end
     self.bufnr = nil
@@ -562,7 +584,7 @@ function Border:set_text(edge, text, align)
     return
   end
 
-  internal.text[edge] = text
+  internal.text[edge] = normalize_border_text(text)
   internal.text[edge .. "_align"] = defaults(align, internal.text[edge .. "_align"])
 
   local line = calculate_buf_edge_line(internal, edge, internal.text[edge], internal.text[edge .. "_align"])

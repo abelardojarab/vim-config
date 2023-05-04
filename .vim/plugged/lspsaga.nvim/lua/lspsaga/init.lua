@@ -1,123 +1,165 @@
 local api = vim.api
-
 local saga = {}
-
 saga.saga_augroup = api.nvim_create_augroup('Lspsaga', { clear = true })
 
-saga.config_values = {
-  debug_print = false,
-  border_style = 'single',
-  saga_winblend = 0,
-  -- when cusor in saga float window
-  -- config these keys to move
-  move_in_saga = {
-    prev = '<C-p>',
-    next = '<C-n>',
+local default_config = {
+  ui = {
+    border = 'single',
+    title = true,
+    winblend = 0,
+    expand = '',
+    collapse = '',
+    code_action = '💡',
+    incoming = ' ',
+    outgoing = ' ',
+    actionfix = ' ',
+    hover = ' ',
+    theme = 'arrow',
+    lines = { '┗', '┣', '┃', '━' },
+    kind = {},
   },
-  -- Error,Warn,Info,Hint
-  diagnostic_header = { ' ', ' ', ' ', ' ' },
-  -- code action title icon
-  code_action_icon = '💡',
-  -- if true can press number to execute the codeaction in codeaction window
-  code_action_num_shortcut = true,
-  code_action_lightbulb = {
+  hover = {
+    max_width = 0.6,
+    open_link = 'gx',
+    open_browser = '!chrome',
+  },
+  diagnostic = {
+    on_insert = false,
+    on_insert_follow = false,
+    insert_winblend = 0,
+    show_code_action = true,
+    show_source = true,
+    jump_num_shortcut = true,
+    max_width = 0.7,
+    max_height = 0.6,
+    max_show_width = 0.9,
+    max_show_height = 0.6,
+    text_hl_follow = true,
+    border_follow = true,
+    extend_relatedInformation = false,
+    keys = {
+      exec_action = 'o',
+      quit = 'q',
+      expand_or_jump = '<CR>',
+      quit_in_show = { 'q', '<ESC>' },
+    },
+  },
+  code_action = {
+    num_shortcut = true,
+    show_server_name = false,
+    extend_gitsigns = false,
+    keys = {
+      quit = 'q',
+      exec = '<CR>',
+    },
+  },
+  lightbulb = {
     enable = true,
     enable_in_insert = true,
-    cache_code_action = true,
     sign = true,
-    update_time = 150,
     sign_priority = 40,
     virtual_text = true,
   },
-  preview_lines_above = 0,
-  max_preview_lines = 15,
-  scroll_in_preview = {
+  preview = {
+    lines_above = 0,
+    lines_below = 10,
+  },
+  scroll_preview = {
     scroll_down = '<C-f>',
     scroll_up = '<C-b>',
   },
-  finder_icons = {
-    def = ' ',
-    imp = ' ',
-    ref = ' ',
+  request_timeout = 2000,
+  finder = {
+    max_height = 0.5,
+    min_width = 30,
+    force_max_height = false,
+    keys = {
+      jump_to = 'p',
+      expand_or_jump = 'o',
+      vsplit = 's',
+      split = 'i',
+      tabe = 't',
+      tabnew = 'r',
+      quit = { 'q', '<ESC>' },
+      close_in_preview = '<ESC>',
+    },
   },
-  finder_request_timeout = 1500,
-  finder_action_keys = {
-    open = { 'o', '<CR>' },
-    vsplit = 's',
-    split = 'i',
-    tabe = 't',
-    quit = { 'q', '<ESC>' },
-  },
-  code_action_keys = {
-    quit = 'q',
-    exec = '<CR>',
-  },
-  definition_action_keys = {
+  definition = {
+    width = 0.6,
+    height = 0.5,
     edit = '<C-c>o',
     vsplit = '<C-c>v',
     split = '<C-c>i',
     tabe = '<C-c>t',
     quit = 'q',
   },
-  hover_action_quit = 'q',
-  rename_action_quit = '<C-c>',
-  rename_in_select = true,
-  -- winbar must nightly
-  symbol_in_winbar = {
-    in_custom = false,
-    enable = false,
-    separator = ' ',
-    show_file = true,
-    click_support = false,
+  rename = {
+    quit = '<C-c>',
+    exec = '<CR>',
+    mark = 'x',
+    confirm = '<CR>',
+    in_select = true,
   },
-  show_outline = {
+  symbol_in_winbar = {
+    enable = true,
+    ignore_patterns = {},
+    separator = ' ',
+    hide_keyword = true,
+    show_file = true,
+    folder_level = 2,
+    respect_root = false,
+    color_mode = true,
+  },
+  outline = {
     win_position = 'right',
     win_with = '',
     win_width = 30,
-    auto_enter = true,
     auto_preview = true,
-    virt_text = '┃',
-    jump_key = 'o',
     auto_refresh = true,
+    auto_close = true,
+    custom_sort = nil,
+    preview_width = 0.4,
+    close_after_jump = false,
+    keys = {
+      expand_or_jump = 'o',
+      quit = 'q',
+    },
   },
-  custom_kind = {},
+  callhierarchy = {
+    show_detail = false,
+    keys = {
+      edit = 'e',
+      vsplit = 's',
+      split = 'i',
+      tabe = 't',
+      jump = 'o',
+      quit = 'q',
+      expand_collapse = 'u',
+    },
+  },
+  beacon = {
+    enable = true,
+    frequency = 7,
+  },
   server_filetype_map = {},
 }
 
-local extend_config = function(opts)
+function saga.setup(opts)
   opts = opts or {}
-  if next(opts) == nil then
-    return
-  end
-  for key, value in pairs(opts) do
-    if saga.config_values[key] == nil then
-      error(string.format('[LspSaga] Key %s not exist in config values', key))
-      return
-    end
-    if type(saga.config_values[key]) == 'table' then
-      for k, v in pairs(value) do
-        saga.config_values[key][k] = v
-      end
-    else
-      saga.config_values[key] = value
-    end
-  end
-end
+  saga.config = vim.tbl_deep_extend('force', default_config, opts)
 
-function saga.init_lsp_saga(opts)
-  extend_config(opts)
-  local conf = saga.config_values
-
-  if conf.code_action_lightbulb.enable then
+  require('lspsaga.highlight'):init_highlight()
+  require('lspsaga.lspkind').init_kind_hl()
+  if saga.config.lightbulb.enable then
     require('lspsaga.lightbulb').lb_autocmd()
   end
 
-  local kind = require('lspsaga.lspkind')
-  kind.load_custom_kind()
+  if saga.config.symbol_in_winbar.enable then
+    require('lspsaga.symbolwinbar'):symbol_autocmd()
+  end
 
-  if conf.symbol_in_winbar.enable or conf.symbol_in_winbar.in_custom then
-    kind.gen_symbol_winbar_hi()
-    require('lspsaga.symbolwinbar').config_symbol_autocmd()
+  if saga.config.diagnostic.on_insert then
+    require('lspsaga.diagnostic'):on_insert()
   end
 end
 

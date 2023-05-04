@@ -22,9 +22,20 @@ M.prev_autochdir = nil
 M.repo = repository.create()
 M.status_buffer = nil
 M.commit_view = nil
+---@class Section
+---@field first number
+---@field last number
+---@field files StatusItem[]
 M.locations = {}
 
 M.outdated = {}
+
+---@class StatusItem
+---@field name string
+---@field first number
+---@field last number
+---@field oid string|nil optional object id
+---@field commit CommitLogEntry|nil optional object id
 
 local hunk_header_matcher = vim.regex("^@@.*@@")
 local diff_add_matcher = vim.regex("^+")
@@ -56,6 +67,7 @@ local function get_section_item_idx_for_line(linenr)
   return section_idx, nil
 end
 
+---@return Section|nil, StatusItem|nil
 local function get_section_item_for_line(linenr)
   local section_idx, item_idx = get_section_item_idx_for_line(linenr)
   local section = M.locations[section_idx]
@@ -67,6 +79,7 @@ local function get_section_item_for_line(linenr)
   return section, section.files[item_idx]
 end
 
+---@return Section|nil, StatusItem|nil
 local function get_current_section_item()
   return get_section_item_for_line(vim.fn.line("."))
 end
@@ -81,6 +94,8 @@ local mode_to_text = {
   UU = "Both Modified",
   R = "Renamed",
 }
+
+local max_len = #"Both Modified"
 
 local function draw_sign_for_item(item, name)
   if item.folded then
@@ -109,6 +124,27 @@ local function draw_signs()
   end
 end
 
+local function format_mode(mode)
+  if not mode then
+    return ""
+  end
+  local res = mode_to_text[mode]
+  if res then
+    return res
+  end
+
+  local res = mode_to_text[mode:sub(1, 1)]
+  if res then
+    return res .. " by us"
+  end
+
+  return mode
+end
+
+local function pad_right(s, len)
+  return s .. string.rep(" ", math.max(len - #s, 0))
+end
+
 local function draw_buffer()
   M.status_buffer:clear_sign_group("hl")
   M.status_buffer:clear_sign_group("fold_markers")
@@ -118,14 +154,21 @@ local function draw_buffer()
     output:append("Hint: [<tab>] toggle diff | [s]tage | [u]nstage | [x] discard | [c]ommit | [?] more help")
     output:append("")
   end
+
   output:append(
     string.format("Head: %s %s", M.repo.head.branch, M.repo.head.commit_message or "(no commits)")
   )
+
   if M.repo.upstream.branch then
     output:append(
       string.format("Push: %s %s", M.repo.upstream.branch, M.repo.upstream.commit_message or "(no commits)")
     )
   end
+
+  if M.repo.merge.head then
+    output:append(string.format("Merge: %s", M.repo.merge.msg or "(no message)"))
+  end
+
   output:append("")
 
   local new_locations = {}
@@ -156,10 +199,15 @@ local function draw_buffer()
       location.files = {}
 
       for _, f in ipairs(data.items) do
+        local label = pad_right(format_mode(f.mode), max_len)
+        if label and vim.o.columns < 120 then
+          label = vim.trim(label)
+        end
+
         if f.mode and f.original_name then
-          output:append(string.format("%s %s -> %s", mode_to_text[f.mode], f.original_name, f.name))
+          output:append(string.format("%s %s -> %s", label, f.original_name, f.name))
         elseif f.mode then
-          output:append(string.format("%s %s", mode_to_text[f.mode], f.name))
+          output:append(string.format("%s %s", label, f.name))
         else
           output:append(f.name)
         end
@@ -372,6 +420,13 @@ local function refresh(which, reason)
       table.insert(refreshes, function()
         logger.debug("[STATUS BUFFER]: Refreshing rebase information")
         M.repo:update_rebase_status()
+      end)
+    end
+
+    if which == true or which.rebase then
+      table.insert(refreshes, function()
+        logger.debug("[STATUS BUFFER]: Refreshing merge information")
+        M.repo:update_merge_status()
       end)
     end
 
@@ -749,9 +804,9 @@ local discard = function()
   local mode = vim.api.nvim_get_mode()
   -- Make sure the index is in sync as git-status skips it
   -- Do this manually since the `cli` add --no-optional-locks
-  local result
-  require("neogit.process").new({ cmd = { "git", "update-index", "--refresh" } }):spawn_async()
-  logger.debug("Refreshed index: " .. vim.inspect(result))
+  require("neogit.process")
+    .new({ cmd = { "git", "update-index", "-q", "--refresh" }, verbose = true })
+    :spawn_async()
   -- TODO: fix nesting
   if mode.mode == "V" then
     local section, item, hunk, from, to = get_selection()
@@ -816,7 +871,7 @@ local set_folds = function(to)
 end
 
 --- These needs to be a function to avoid a circular dependency
---  between this module and the popup modules
+--- between this module and the popup modules
 local cmd_func_map = function()
   return {
     ["Close"] = function()
@@ -859,18 +914,24 @@ local cmd_func_map = function()
     end,
     ["TabOpen"] = function()
       local _, item = get_current_section_item()
-      vim.cmd("tabedit " .. item.name)
+      if item then
+        vim.cmd("tabedit " .. item.name)
+      end
     end,
     ["VSplitOpen"] = function()
       local _, item = get_current_section_item()
-      vim.cmd("vsplit " .. item.name)
+      if item then
+        vim.cmd("vsplit " .. item.name)
+      end
     end,
     ["SplitOpen"] = function()
       local _, item = get_current_section_item()
-      vim.cmd("split " .. item.name)
+      if item then
+        vim.cmd("split " .. item.name)
+      end
     end,
     ["GoToFile"] = a.void(function()
-      local repo_root = cli.git_root()
+      -- local repo_root = cli.git_root()
       a.util.scheduler()
       local section, item = get_current_section_item()
 
@@ -886,7 +947,7 @@ local cmd_func_map = function()
           notif.delete_all()
           M.status_buffer:close()
 
-          local relpath = vim.fn.fnamemodify(repo_root .. "/" .. path, ":.")
+          local relpath = vim.fn.fnamemodify(path, ":.")
 
           if not vim.o.hidden and vim.bo.buftype == "" and not vim.bo.readonly and vim.fn.bufname() ~= "" then
             vim.cmd("update")
@@ -894,7 +955,7 @@ local cmd_func_map = function()
 
           vim.cmd("e " .. relpath)
 
-          if hunk then
+          if hunk and hunk_lines then
             local line_offset = cursor_row - hunk.first
             local row = hunk.disk_from + line_offset - 1
             for i = 1, line_offset do
@@ -946,6 +1007,7 @@ local cmd_func_map = function()
     ["DiffPopup"] = require("neogit.popups.diff").create,
     ["PullPopup"] = require("neogit.popups.pull").create,
     ["RebasePopup"] = require("neogit.popups.rebase").create,
+    ["MergePopup"] = require("neogit.popups.merge").create,
     ["PushPopup"] = require("neogit.popups.push").create,
     ["CommitPopup"] = require("neogit.popups.commit").create,
     ["LogPopup"] = require("neogit.popups.log").create,
@@ -957,6 +1019,7 @@ local cmd_func_map = function()
       }
     end,
     ["BranchPopup"] = require("neogit.popups.branch").create,
+    ["FetchPopup"] = require("neogit.popups.fetch").create,
   }
 end
 
@@ -1056,6 +1119,7 @@ M.refresh = refresh
 M.dispatch_refresh = dispatch_refresh
 M.refresh_viml_compat = refresh_viml_compat
 M.refresh_manually = refresh_manually
+M.get_current_section_item = get_current_section_item
 M.close = close
 
 function M.enable()

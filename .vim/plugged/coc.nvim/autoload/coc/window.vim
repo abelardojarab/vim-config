@@ -69,7 +69,7 @@ function! coc#window#get_var(winid, name, ...) abort
   else
     try
       return coc#api#exec('win_get_var', [a:winid, a:name, get(a:, 1, v:null)])
-    catch /.*/
+    catch /Invalid window id/
       return get(a:, 1, v:null)
     endtry
   endif
@@ -94,17 +94,12 @@ endfunction
 
 function! coc#window#is_float(winid) abort
   if s:is_vim
-    if exists('*popup_list')
-      return index(popup_list(), a:winid) != -1
-    else
-      try
-        return !empty(popup_getpos(a:winid))
-      catch /^Vim\%((\a\+)\)\=:E993/
-        return 0
-      endtry
-    endif
-    return 0
-  elseif exists('*nvim_win_get_config')
+    try
+      return !empty(popup_getpos(a:winid))
+    catch /^Vim\%((\a\+)\)\=:E993/
+      return 0
+    endtry
+  else
     let config = nvim_win_get_config(a:winid)
     return !empty(config) && !empty(get(config, 'relative', ''))
   endif
@@ -188,19 +183,8 @@ function! coc#window#close(winid) abort
     if nvim_win_is_valid(a:winid)
       call nvim_win_close(a:winid, 1)
     endif
-  elseif exists('*win_execute')
-    call coc#compat#execute(a:winid, 'noa close!', 'silent!')
   else
-    let curr = win_getid()
-    if curr == a:winid
-      silent! close!
-    else
-      let res = win_gotoid(a:winid)
-      if res
-        silent! close!
-        call win_gotoid(curr)
-      endif
-    endif
+    call coc#compat#execute(a:winid, 'noa close!', 'silent!')
   endif
 endfunction
 

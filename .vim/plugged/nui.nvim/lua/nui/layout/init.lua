@@ -69,9 +69,9 @@ local function wire_up_layout_components(layout, box)
       autocmd.create({ "BufWipeout", "QuitPre" }, {
         group = layout._.augroup.unmount,
         buffer = child.component.bufnr,
-        callback = function()
+        callback = vim.schedule_wrap(function()
           layout:unmount()
-        end,
+        end),
       }, child.component.bufnr)
 
       autocmd.create("BufWinEnter", {
@@ -212,6 +212,7 @@ function Layout:_process_layout()
 
     split_layout.process(self._.box, {
       position = info.position,
+      relative = info.relative,
       container_size = info.size,
       container_fallback_size = info.container_info.size,
     })
@@ -377,6 +378,8 @@ function Layout:update(config, box)
   autocmd.create_group(self._.augroup.hide, { clear = true })
   autocmd.create_group(self._.augroup.unmount, { clear = true })
 
+  local prev_box = self._.box
+
   if box then
     self._.box = Layout.Box(box)
     self._.type = get_layout_type(self._.box)
@@ -389,7 +392,10 @@ function Layout:update(config, box)
 
     if self.winid then
       vim.api.nvim_win_set_config(self.winid, info.win_config)
+
       self:_process_layout()
+
+      float_layout.process_box_change(self._.box, prev_box)
     end
 
     wire_up_layout_components(self, self._.box)
@@ -398,11 +404,31 @@ function Layout:update(config, box)
   if self._.type == "split" then
     local info = self._.split
 
-    self:hide()
+    local relative_winid = info.relative and info.relative.win
+
+    local prev_winid = vim.api.nvim_get_current_win()
+    if relative_winid then
+      vim.api.nvim_set_current_win(relative_winid)
+    end
+
+    local curr_box = self._.box
+    if prev_box ~= curr_box then
+      self._.box = prev_box
+      self:hide()
+      self._.box = curr_box
+    end
 
     u.split.update_layout_config(info, config)
 
-    self:show()
+    if prev_box == curr_box then
+      self:_process_layout()
+    else
+      self:show()
+    end
+
+    if vim.api.nvim_win_is_valid(prev_winid) then
+      vim.api.nvim_set_current_win(prev_winid)
+    end
 
     wire_up_layout_components(self, self._.box)
   end

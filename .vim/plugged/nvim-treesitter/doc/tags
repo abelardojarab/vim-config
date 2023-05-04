@@ -18,7 +18,13 @@ nvim-treesitter-commands	nvim-treesitter.txt	/*nvim-treesitter-commands*
 nvim-treesitter-functions	nvim-treesitter.txt	/*nvim-treesitter-functions*
 nvim-treesitter-highlight-mod	nvim-treesitter.txt	/*nvim-treesitter-highlight-mod*
 nvim-treesitter-incremental-selection-mod	nvim-treesitter.txt	/*nvim-treesitter-incremental-selection-mod*
+nvim-treesitter-indentation-aligned_indent.align	nvim-treesitter.txt	/*nvim-treesitter-indentation-aligned_indent.align*
+nvim-treesitter-indentation-indent.begin	nvim-treesitter.txt	/*nvim-treesitter-indentation-indent.begin*
+nvim-treesitter-indentation-indent.branch	nvim-treesitter.txt	/*nvim-treesitter-indentation-indent.branch*
+nvim-treesitter-indentation-indent.dedent	nvim-treesitter.txt	/*nvim-treesitter-indentation-indent.dedent*
+nvim-treesitter-indentation-indent.end	nvim-treesitter.txt	/*nvim-treesitter-indentation-indent.end*
 nvim-treesitter-indentation-mod	nvim-treesitter.txt	/*nvim-treesitter-indentation-mod*
+nvim-treesitter-indentation-queries	nvim-treesitter.txt	/*nvim-treesitter-indentation-queries*
 nvim-treesitter-intro	nvim-treesitter.txt	/*nvim-treesitter-intro*
 nvim-treesitter-modules	nvim-treesitter.txt	/*nvim-treesitter-modules*
 nvim-treesitter-performance	nvim-treesitter.txt	/*nvim-treesitter-performance*
@@ -29,7 +35,6 @@ nvim_treesitter#statusline()	nvim-treesitter.txt	/*nvim_treesitter#statusline()*
 ts_utils.get_named_children	nvim-treesitter.txt	/*ts_utils.get_named_children*
 ts_utils.get_next_node	nvim-treesitter.txt	/*ts_utils.get_next_node*
 ts_utils.get_node_at_cursor	nvim-treesitter.txt	/*ts_utils.get_node_at_cursor*
-ts_utils.get_node_range	nvim-treesitter.txt	/*ts_utils.get_node_range*
 ts_utils.get_previous_node	nvim-treesitter.txt	/*ts_utils.get_previous_node*
 ts_utils.goto_node	nvim-treesitter.txt	/*ts_utils.goto_node*
 ts_utils.highlight_node	nvim-treesitter.txt	/*ts_utils.highlight_node*

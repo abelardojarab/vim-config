@@ -8,9 +8,11 @@ DISTANT_PORT?=22
 DISTANT_IDENTITY_FILE?=
 DISTANT_BIN?="$(HOME)/.cargo/bin/distant"
 DISTANT_LOG_LEVEL?=info
+DISTANT_LOG_FILE?=
 DISTANT_USER?=$(shell whoami)
 DISTANT_PASSWORD?=
 DISTANT_MODE?=
+DISTANT_SSH_BACKEND?=ssh2
 
 DOCKER_IMAGE=distant_nvim_test
 DOCKER_NETWORK=distant_nvim_network
@@ -29,7 +31,7 @@ define docker_exec
 @docker rm -f $(DOCKER_CLIENT) > /dev/null 2>&1 || true
 @docker rm -f $(DOCKER_SERVER) > /dev/null 2>&1 || true
 @docker network rm $(DOCKER_NETWORK) > /dev/null 2>&1 || true
-@docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE)
+@docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE) --build-arg DISTANT_PASSWORD=$(DISTANT_PASSWORD)
 @docker network create $(DOCKER_NETWORK)
 @docker run \
 	--rm \
@@ -41,13 +43,17 @@ define docker_exec
 	--rm \
 	--name $(DOCKER_CLIENT) \
 	--network=$(DOCKER_NETWORK) \
+	--memory=4g \
+	--memory-swap=8g \
 	-e DISTANT_HOST=$(DOCKER_SERVER) \
 	-e DISTANT_PORT=22 \
 	-e DISTANT_BIN=/usr/local/bin/distant \
 	-e DISTANT_USER=$(DISTANT_USER) \
 	-e DISTANT_PASSWORD=$(DISTANT_PASSWORD) \
 	-e DISTANT_MODE=$(DISTANT_MODE) \
+	-e DISTANT_SSH_BACKEND=$(DISTANT_SSH_BACKEND) \
 	-e DISTANT_LOG_LEVEL=$(DISTANT_LOG_LEVEL) \
+	-e DISTANT_LOG_FILE=$(DISTANT_LOG_FILE) \
 	$(2) \
 	$(DOCKER_IMAGE) sh -c "cd app && ssh-keyscan -H $(DOCKER_SERVER) >> ~/.ssh/known_hosts && sudo rm /usr/bin/rls && $(1)"; \
 	STATUS=$$?; \
@@ -126,7 +132,7 @@ docker-test-e2e: ## Runs all e2e tests using a pair of docker containers that ha
 
 docker-build: DISTANT_USER=docker
 docker-build:
-	@docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE)
+	@docker build . --file Dockerfile --tag $(DOCKER_IMAGE) --cache-from=$(DOCKER_IMAGE) --build-arg DISTANT_PASSWORD=$(DISTANT_PASSWORD)
 
 docker-save: DISTANT_USER=docker
 docker-save:

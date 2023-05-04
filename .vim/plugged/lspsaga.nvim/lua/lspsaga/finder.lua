@@ -1,83 +1,112 @@
+local api, lsp, fn, uv = vim.api, vim.lsp, vim.fn, vim.loop
+local config = require('lspsaga').config
+local ui = config.ui
 local window = require('lspsaga.window')
-local api, lsp, fn = vim.api, vim.lsp, vim.fn
-local config = require('lspsaga').config_values
 local libs = require('lspsaga.libs')
-local path_sep = libs.path_sep
-local icons = config.finder_icons
-local insert = table.insert
-local uv = vim.loop
-local indent = '    '
+local nvim_buf_set_extmark = api.nvim_buf_set_extmark
+local nvim_buf_set_keymap = api.nvim_buf_set_keymap
+local ns_id = api.nvim_create_namespace('lspsagafinder')
+local co = coroutine
 
-local methods = {
-  'textDocument/definition',
-  'textDocument/implementation',
-  'textDocument/references',
-}
+local finder = {}
+local ctx = {}
 
-local msgs = {
-  [methods[1]] = 'No Definitions Found',
-  [methods[2]] = 'No Implements  Found',
-  [methods[3]] = 'No References  Found',
-}
-
-local Finder = {}
-
-function Finder:lsp_finder()
-  if not libs.check_lsp_active() then
-    return
+local function clean_ctx()
+  for k, _ in pairs(ctx) do
+    ctx[k] = nil
   end
+end
 
-  self.client = libs.get_client_by_cap('implementationProvider')
+finder.__index = finder
+finder.__newindex = function(t, k, v)
+  rawset(t, k, v)
+end
 
+local function get_titles(index)
+  local t = {
+    '● Definition',
+    '● Implements',
+    '● References',
+  }
+  return t[index]
+end
+
+local function methods(index)
+  local t = {
+    'textDocument/definition',
+    'textDocument/implementation',
+    'textDocument/references',
+  }
+
+  return index and t[index] or t
+end
+
+local function supports_implement(buf)
+  local support = false
+  for _, client in ipairs(lsp.get_active_clients({ bufnr = buf })) do
+    if client.supports_method('textDocument/implementation') then
+      support = true
+      break
+    end
+  end
+  return support
+end
+
+function finder:lsp_finder()
   -- push a tag stack
   local pos = api.nvim_win_get_cursor(0)
-  local current_word = vim.fn.expand('<cword>')
-  local from = { api.nvim_get_current_buf(), pos[1], pos[2], 0 }
-  local items = { { tagname = current_word, from = from } }
-  vim.fn.settagstack(api.nvim_get_current_win(), { items = items }, 't')
+  self.main_buf = api.nvim_get_current_buf()
+  self.main_win = api.nvim_get_current_win()
+  local from = { self.main_buf, pos[1], pos[2], 0 }
+  local items = { { tagname = fn.expand('<cword>'), from = from } }
+  fn.settagstack(self.main_win, { items = items }, 't')
 
-  self.param = '  ' .. current_word
+  self.request_status = {}
+  self.lspdata = {}
 
-  self.request_result = {}
   local params = lsp.util.make_position_params()
-  for i, method in pairs(methods) do
-    if i == 2 and self.client then
-      self:do_request(params, method)
-    end
-
-    if i ~= 2 then
-      self:do_request(params, method)
-    end
+  ---@diagnostic disable-next-line: param-type-mismatch
+  local meths = methods()
+  if not supports_implement(self.main_buf) then
+    self.request_status[meths[2]] = true
+    ---@diagnostic disable-next-line: param-type-mismatch
+    table.remove(meths, 2)
   end
-
-  self:get_file_icon()
+  ---@diagnostic disable-next-line: param-type-mismatch
+  for _, method in ipairs(meths) do
+    self:do_request(params, method)
+  end
   -- make a spinner
   self:loading_bar()
 end
 
-function Finder:loading_bar()
-  self.WIN_WIDTH = fn.winwidth(0)
-  self.WIN_HEIGHT = fn.winheight(0)
+function finder:request_done()
+  local done = true
+  ---@diagnostic disable-next-line: param-type-mismatch
+  for _, method in ipairs(methods()) do
+    if not self.request_status[method] then
+      done = false
+      break
+    end
+  end
+  return done
+end
 
-  -- calculate our floating window size
-  local win_height = math.ceil(self.WIN_HEIGHT * 0.6)
-  local win_width = math.ceil(self.WIN_WIDTH * 0.8)
-
-  -- and its starting position
-  local row = math.ceil((self.WIN_HEIGHT - win_height) / 2 - 1)
-  local col = math.ceil(self.WIN_WIDTH - win_width)
-
+function finder:loading_bar()
   local opts = {
-    relative = 'editor',
+    relative = 'cursor',
     height = 2,
     width = 20,
-    row = row,
-    col = col,
   }
 
   local content_opts = {
     contents = {},
-    highlight = 'FinderSpinnerBorder',
+    buftype = 'nofile',
+    border = 'solid',
+    highlight = {
+      normal = 'FinderNormal',
+      border = 'FinderBorder',
+    },
     enter = false,
   }
 
@@ -95,18 +124,10 @@ function Finder:loading_bar()
       '█████████▁',
       '██████████',
     },
-    interval = 15,
-    timeout = config.finder_request_timeout,
+    interval = 50,
+    timeout = config.request_timeout,
   }
   api.nvim_buf_set_option(spin_buf, 'modifiable', true)
-
-  self.request_status = {}
-
-  -- if server not support textDocument/implementation
-  if not self.client then
-    self.request_status[methods[2]] = true
-    self.request_result[methods[2]] = {}
-  end
 
   local spin_frame = 1
   local spin_timer = uv.new_timer()
@@ -134,13 +155,7 @@ function Finder:loading_bar()
         return
       end
 
-      if
-        (
-          self.request_status[methods[1]]
-          and self.request_status[methods[2]]
-          and self.request_status[methods[3]]
-        ) and not spin_timer:is_closing()
-      then
+      if self:request_done() and not spin_timer:is_closing() then
         spin_timer:stop()
         spin_timer:close()
         if api.nvim_buf_is_loaded(spin_buf) then
@@ -153,8 +168,8 @@ function Finder:loading_bar()
   )
 end
 
-function Finder:do_request(params, method)
-  if method == methods[3] then
+function finder:do_request(params, method)
+  if method == methods(3) then
     params.context = { includeDeclaration = false }
   end
   lsp.buf_request_all(self.current_buf, method, params, function(results)
@@ -163,634 +178,731 @@ function Finder:do_request(params, method)
       if res.result and not (res.result.uri or res.result.targetUri) then
         libs.merge_table(result, res.result)
       elseif res.result and (res.result.uri or res.result.targetUri) then
-        -- this work for some servers like exlixir
-        table.insert(result, res.result)
+        result[#result + 1] = res.result
       end
     end
 
-    self.request_result[method] = result
+    if vim.tbl_isempty(result) then
+      self.request_status[method] = true
+      return
+    end
+
+    local uri = result[1].uri or result[1].targetUri
+    local range = result[1].targetRange or result[1].range
+    local line = api.nvim_win_get_cursor(0)[1]
+    if
+      method == methods(1)
+      and vim.uri_to_bufnr(uri) == api.nvim_get_current_buf()
+      and range.start.line == line
+    then
+      local col = api.nvim_win_get_cursor(0)[2]
+      if col >= range.start.character and col <= range['end'].character then
+        self.request_status[method] = true
+        return
+      end
+    end
+
+    self:create_finder_data(result, method)
     self.request_status[method] = true
   end)
 end
 
-function Finder:get_file_icon()
-  local ok, devicons = pcall(require, 'nvim-web-devicons')
-  self.f_icon = ''
-  self.f_hl = ''
-  if ok then
-    self.f_icon, self.f_hl = devicons.get_icon_by_filetype(vim.bo.filetype)
-  end
-  -- if filetype doesn't match devicon will set f_icon to nil so add a patch
-  self.f_icon = self.f_icon == nil and '' or (self.f_icon .. ' ')
-  self.f_hl = self.f_hl == nil and '' or self.f_hl
-end
-
-function Finder:get_uri_scope(method, start_lnum, end_lnum)
-  if method == methods[1] then
-    self.def_scope = { start_lnum, end_lnum }
-  end
-
-  if method == methods[2] then
-    self.imp_scope = { start_lnum, end_lnum }
-  end
-
-  if method == methods[3] then
-    self.ref_scope = { start_lnum, end_lnum }
-  end
-end
-
-function Finder:render_finder()
-  self.root_dir = libs.get_lsp_root_dir()
-  if not self.root_dir then
-    vim.notify('[LspSaga] get root dir failed')
-  end
-
-  self.contents = {}
-  self.short_link = {}
-  self.buf_filetype = api.nvim_buf_get_option(0, 'filetype')
-
-  local lnum, start_lnum = 0, 0
-
-  local generate_contents = function(tbl, method)
-    start_lnum = lnum
-    for _, val in pairs(tbl) do
-      insert(self.contents, val[1])
-      lnum = lnum + 1
-
-      if val[2] then
-        self.short_link[lnum] = val[2]
-      end
-    end
-    self:get_uri_scope(method, start_lnum, lnum - 1)
-  end
-
-  for i, method in pairs(methods) do
-    local tbl = self:create_finder_contents(self.request_result[method], method)
-    if i ~= 2 then
-      generate_contents(tbl, method)
-    end
-
-    if i == 2 and not tbl[1][1]:find('0') then
-      generate_contents(tbl, method)
-    end
-  end
-  self:render_finder_result()
-end
-
-local titles = {
-  [methods[1]] = icons.def .. 'Definition ',
-  [methods[2]] = icons.imp .. 'Implements ',
-  [methods[3]] = icons.ref .. 'References ',
-}
-
-function Finder:create_finder_contents(result, method)
-  local contents = {}
-
-  insert(contents, { titles[method] .. #result .. ' results', false })
-  insert(contents, { ' ', false })
-
-  if #result == 0 then
-    insert(contents, { indent .. self.f_icon .. msgs[method], false })
-    insert(contents, { ' ', false })
-    return contents
-  end
-
-  for _, res in ipairs(result) do
-    local uri = res.targetUri or res.uri
-    if uri == nil then
-      vim.notify('miss uri in server response')
-      return
-    end
-    local bufnr = vim.uri_to_bufnr(uri)
-    if not api.nvim_buf_is_loaded(bufnr) then
-      fn.bufload(bufnr)
-    end
-    local link = vim.uri_to_fname(uri) -- returns lowercase drive letters on Windows
-    if libs.is_windows() then
-      link = link:gsub('^%l', link:sub(1, 1):upper())
-    end
-    local short_name
-
-    -- reduce filename length by root_dir or home dir
-    if self.root_dir and link:find(self.root_dir, 1, true) then
-      short_name = link:sub(self.root_dir:len() + 2)
-    else
-      local _split = vim.split(link, path_sep)
-      if #_split >= 4 then
-        short_name = table.concat(_split, path_sep, #_split - 2, #_split)
-      end
-    end
-
-    local target_line = indent .. self.f_icon .. short_name
-
-    local range = res.targetRange or res.range
-    local lines = api.nvim_buf_get_lines(
-      bufnr,
-      range.start.line - config.preview_lines_above,
-      range['end'].line + 1 + config.max_preview_lines,
-      false
-    )
-
-    local link_with_preview = {
-      link = link,
-      preview = lines,
-      row = range.start.line + 1,
-      col = range.start.character + 1,
-      _end_col = range['end'].character,
-    }
-    insert(contents, { target_line, link_with_preview })
-  end
-  insert(contents, { ' ', false })
-  return contents
-end
-
-local ns_id = api.nvim_create_namespace('lspsagafinder')
-
-function Finder:render_finder_result()
-  if next(self.contents) == nil then
+function finder:create_finder_data(result, method)
+  if #result == 1 and result[1].inline then
     return
   end
-  -- get dimensions
-  local width = api.nvim_get_option('columns')
-  local height = api.nvim_get_option('lines')
-
-  -- calculate our floating window size
-  local win_height = math.ceil(height * 0.8)
-  local win_width = math.ceil(width * 0.8)
-
-  -- and its starting position
-  local row = math.ceil((height - win_height) * 0.7)
-  local col = math.ceil((width - win_width))
-  local opts = {
-    style = 'minimal',
-    relative = 'editor',
-    row = row,
-    col = col,
-  }
-
-  local max_height = math.ceil((height - 4) * 0.5)
-  if #self.contents > max_height then
-    opts.height = max_height
+  if not self.wipe_buffers then
+    self.wipe_buffers = {}
   end
 
-  local content_opts = {
-    contents = self.contents,
-    filetype = 'lspsagafinder',
-    enter = true,
-    highlight = 'LspSagaLspFinderBorder',
-  }
+  if not self.lspdata[method] then
+    self.lspdata[method] = {}
+    local title = get_titles(libs.tbl_index(methods(), method))
+    self.lspdata[method].title = title .. '  ' .. #result
+    self.lspdata[method].count = #result
+  end
+  local parent = self.lspdata[method]
+  parent.data = {}
 
-  self.bufnr, self.winid = window.create_win_with_border(content_opts, opts)
-  api.nvim_buf_set_option(self.bufnr, 'buflisted', false)
-  api.nvim_win_set_var(self.winid, 'lsp_finder_win_opts', opts)
-  api.nvim_win_set_option(self.winid, 'cursorline', false)
-
-  opts.row = opts.row - 1
-  opts.col = opts.col + 1
-  opts.width = #self.param + 8
-  opts.height = 2
-  opts.no_size_override = true
-  self.titlebar_bufnr, self.titlebar_winid = window.create_win_with_border({
-    contents = { string.rep(' ', #self.param + 12), '' },
-    filetype = 'lspsagafindertitlebar',
-    border = 'none',
-  }, opts)
-
-  local titlebar_ns = api.nvim_create_namespace('FinderTitleBar')
-  api.nvim_buf_set_extmark(self.titlebar_bufnr, titlebar_ns, 0, 0, {
-    virt_text = { { 'Find: ' .. self.param, 'FinderParam' } },
-    virt_text_pos = 'overlay',
-    virt_lines_above = false,
-  })
-
-  self:set_cursor()
-
-  local finder_group = api.nvim_create_augroup('lspsaga_finder', { clear = true })
-  api.nvim_create_autocmd('CursorMoved', {
-    group = finder_group,
-    buffer = self.bufnr,
-    callback = function()
-      self:set_cursor()
-      self:auto_open_preview()
-    end,
-  })
-
-  local events = { 'WinClosed', 'WinLeave' }
-
-  api.nvim_create_autocmd(events, {
-    group = finder_group,
-    buffer = self.bufnr,
-    callback = function()
-      self:quit_with_clear()
-      if finder_group then
-        pcall(api.nvim_del_augroup_by_id, finder_group)
-      end
-      -- make sure close all finder preview window
-      for _, win in pairs(api.nvim_list_wins()) do
-        local ok, id = pcall(api.nvim_win_get_var, win, 'finder_preview')
-        if ok then
-          pcall(api.nvim_win_close, id, true)
-        end
-      end
-    end,
-  })
-
-  local virt_hi = 'FinderVirtText'
-
-  api.nvim_buf_set_extmark(0, ns_id, 1, 0, {
-    virt_text = { { '│', virt_hi } },
-    virt_text_pos = 'overlay',
-  })
-
-  for i = self.def_scope[1] + 2, self.def_scope[2] - 1, 1 do
-    local virt_texts = {}
-    api.nvim_buf_add_highlight(self.bufnr, -1, 'TargetFileName', 1 + i, 0, -1)
-    api.nvim_buf_add_highlight(self.bufnr, -1, self.f_hl, i, 0, #indent + #self.f_icon)
-
-    if i == self.def_scope[2] - 1 then
-      insert(virt_texts, { '└', virt_hi })
-      insert(virt_texts, { '───', virt_hi })
-    else
-      insert(virt_texts, { '├', virt_hi })
-      insert(virt_texts, { '───', virt_hi })
+  for i, res in ipairs(result) do
+    local uri = res.targetUri or res.uri
+    if not uri then
+      vim.notify('[Lspsaga] miss uri in server response', vim.log.levels.WARN)
+      return
     end
 
-    api.nvim_buf_set_extmark(0, ns_id, i, 0, {
-      virt_text = virt_texts,
-      virt_text_pos = 'overlay',
-    })
-  end
+    local bufnr = vim.uri_to_bufnr(uri)
+    local fname = vim.uri_to_fname(uri) -- returns lowercase drive letters on Windows
+    local range = res.targetSelectionRange or res.targetRange or res.range
+    if libs.iswin then
+      fname = fname:gsub('^%l', fname:sub(1, 1):upper())
+    end
+    fname = table.concat(libs.get_path_info(bufnr, 2), libs.path_sep)
 
-  if self.imp_scope then
-    api.nvim_buf_set_extmark(0, ns_id, self.imp_scope[1] + 1, 0, {
-      virt_text = { { '│', virt_hi } },
-      virt_text_pos = 'overlay',
-    })
+    local node = {
+      bufnr = bufnr,
+      fname = fname,
+      row = range.start.line,
+      col = range.start.character,
+      ecol = range['end'].character,
+      method = method,
+      winline = -1,
+    }
 
-    for i = self.imp_scope[1] + 2, self.imp_scope[2] - 1, 1 do
-      local virt_texts = {}
-      api.nvim_buf_add_highlight(self.bufnr, -1, 'TargetFileName', 1 + i, 0, -1)
-      api.nvim_buf_add_highlight(self.bufnr, -1, self.f_hl, i, 0, #indent + #self.f_icon)
-
-      if i == self.imp_scope[2] - 1 then
-        insert(virt_texts, { '└', virt_hi })
-        insert(virt_texts, { '───', virt_hi })
-      else
-        insert(virt_texts, { '├', virt_hi })
-        insert(virt_texts, { '───', virt_hi })
+    if not api.nvim_buf_is_loaded(bufnr) then
+      node.wipe = true
+      --ignore the FileType event avoid trigger the lsp
+      vim.opt.eventignore:append({ 'FileType' })
+      fn.bufload(bufnr)
+      --restore eventignore
+      vim.opt.eventignore:remove({ 'FileType' })
+      if not vim.tbl_contains(self.wipe_buffers, bufnr) then
+        self.wipe_buffers[#self.wipe_buffers + 1] = bufnr
       end
-
-      api.nvim_buf_set_extmark(0, ns_id, i, 0, {
-        virt_text = virt_texts,
-        virt_text_pos = 'overlay',
-      })
-    end
-  end
-
-  api.nvim_buf_set_extmark(0, ns_id, self.ref_scope[1] + 1, 0, {
-    virt_text = { { '│', virt_hi } },
-    virt_text_pos = 'overlay',
-  })
-
-  for i = self.ref_scope[1] + 2, self.ref_scope[2] - 1 do
-    local virt_texts = {}
-    api.nvim_buf_add_highlight(self.bufnr, -1, 'TargetFileName', i, 0, -1)
-    api.nvim_buf_add_highlight(self.bufnr, -1, self.f_hl, i, 0, #indent + #self.f_icon)
-
-    if i == self.ref_scope[2] - 1 then
-      insert(virt_texts, { '└', virt_hi })
-      insert(virt_texts, { '───', virt_hi })
-    else
-      insert(virt_texts, { '├', virt_hi })
-      insert(virt_texts, { '───', virt_hi })
     end
 
-    api.nvim_buf_set_extmark(0, ns_id, i, 0, {
-      virt_text = virt_texts,
-      virt_text_pos = 'overlay',
-    })
+    if node.ecol < node.col then
+      local tmp = node.ecol
+      node.ecol = node.col
+      node.col = tmp
+    end
+
+    local start_col = 0
+    --avoid the preview code too long
+    if node.col > 15 then
+      start_col = node.col - 10
+    end
+    node.word = api.nvim_buf_get_text(node.bufnr, node.row, start_col, node.row, node.ecol, {})[1]
+    if node.word:find('^%s') then
+      node.word = node.word:sub(node.word:find('%S'), #node.word)
+    end
+
+    if not parent.data[node.fname] then
+      parent.data[node.fname] = {
+        expand = true,
+        nodes = {},
+      }
+    end
+    if i == #result then
+      node.tail = true
+    end
+    parent.data[node.fname].nodes[#parent.data[node.fname].nodes + 1] = node
   end
-  -- disable some move keys in finder window
-  libs.disable_move_keys(self.bufnr)
-  -- load float window map
-  self:apply_float_map()
-  self:lsp_finder_highlight()
 end
 
-function Finder:apply_float_map()
-  local action = config.finder_action_keys
-  local move = config.move_in_saga
-  local nvim_create_keymap = require('lspsaga.libs').nvim_create_keymap
+local function get_max_height()
+  return math.floor(vim.o.lines * config.finder.max_height)
+end
+
+function finder:render_finder()
+  local width = {}
+  self.bufnr = api.nvim_create_buf(false, false)
+  local float_height = get_max_height()
+
+  self.render_fn = co.create(function(need_yield)
+    local indent = (' '):rep(2)
+    local virt_hi = 'Finderlines'
+    local line_count = 0
+
+    ---@diagnostic disable-next-line: param-type-mismatch
+    for i, method in pairs(methods()) do
+      local meth_data = self.lspdata[method]
+      if not meth_data then
+        goto skip
+      end
+      local title = { meth_data.title }
+      if i > 1 and api.nvim_buf_line_count(self.bufnr) ~= 1 then
+        table.insert(title, 1, '')
+      end
+      api.nvim_buf_set_lines(self.bufnr, line_count, line_count, false, title)
+      width[#width + 1] = #meth_data.title
+      line_count = line_count + #title
+      api.nvim_buf_add_highlight(self.bufnr, ns_id, 'FinderType', line_count - 1, 4, 16)
+      api.nvim_buf_add_highlight(self.bufnr, ns_id, 'FinderIcon', line_count - 1, 0, 4)
+      api.nvim_buf_add_highlight(self.bufnr, ns_id, 'FinderCount', line_count - 1, 16, -1)
+
+      local first = true
+      for fname, item in pairs(meth_data.data) do
+        local text = indent .. ui.collapse .. ' ' .. fname .. ' ' .. #item.nodes
+        indent = (' '):rep(5)
+        api.nvim_buf_set_lines(self.bufnr, line_count, line_count + 1, false, { text })
+        width[#width + 1] = #text
+        line_count = line_count + 1
+        local start = line_count
+        api.nvim_buf_add_highlight(self.bufnr, ns_id, 'SagaCollapse', line_count - 1, 0, 5)
+        api.nvim_buf_add_highlight(self.bufnr, ns_id, 'FinderFname', line_count - 1, 6, -1)
+
+        for k, v in pairs(item.nodes) do
+          local tbl = {
+            { k == #item.nodes and ui.lines[1] or ui.lines[2], virt_hi },
+            { ui.lines[4]:rep(2), virt_hi },
+          }
+          if first then
+            v.first = true
+            first = false
+            meth_data.start = start
+          end
+          v.start = start
+          text = indent .. v.word
+          api.nvim_buf_set_lines(self.bufnr, line_count, line_count + 1, false, { text })
+          width[#width + 1] = #text
+          line_count = line_count + 1
+          api.nvim_buf_add_highlight(self.bufnr, ns_id, 'FinderCode', line_count - 1, 5, -1)
+          v.winline = v.winline > -1 and v.winline or line_count
+          nvim_buf_set_extmark(self.bufnr, ns_id, line_count - 1, 2, {
+            virt_text = tbl,
+            virt_text_pos = 'overlay',
+          })
+
+          if line_count > float_height + 10 and need_yield then
+            table.sort(width)
+            need_yield = co.yield(width[#width])
+          end
+        end
+        indent = '  '
+      end
+      ::skip::
+    end
+
+    if api.nvim_buf_line_count(self.bufnr) == 0 then
+      clean_ctx()
+      vim.notify('[Lspsaga] finder nothing to show', vim.log.levels.WARN)
+      return
+    end
+    api.nvim_buf_set_lines(self.bufnr, line_count, line_count + 1, false, { '' })
+    vim.bo[self.bufnr].modifiable = false
+  end)
+
+  self:apply_map()
+
+  while true do
+    local _, float_width = co.resume(self.render_fn, true)
+    if not float_width and co.status(self.render_fn) == 'dead' then
+      table.sort(width)
+      float_width = width[#width]
+    end
+
+    if not float_width then
+      print('[lspsaga] no data to show')
+      return
+    end
+    self:create_finder_win(float_width)
+    break
+  end
+end
+
+function finder:create_finder_win(width)
+  self.group = api.nvim_create_augroup('lspsaga_finder', { clear = true })
+
+  local opt = {
+    relative = 'editor',
+    width = width,
+    height = get_max_height(),
+    no_size_override = true,
+  }
+
+  local winline = fn.winline()
+  if vim.o.lines - 6 - opt.height - winline <= 0 then
+    vim.cmd('normal! zz')
+    local keycode = api.nvim_replace_termcodes('6<C-e>', true, false, true)
+    api.nvim_feedkeys(keycode, 'x', false)
+  end
+  winline = fn.winline()
+  opt.row = winline + 1
+  local wincol = fn.wincol()
+  opt.col = fn.screencol() - math.floor(wincol * 0.4)
+
+  local side_char = window.border_chars()['top'][config.ui.border]
+  local normal_right_side = ' '
+  local content_opts = {
+    contents = {},
+    filetype = 'lspsagafinder',
+    bufhidden = 'wipe',
+    bufnr = self.bufnr,
+    enter = true,
+    border_side = {
+      ['right'] = config.ui.border == 'shadow' and '' or normal_right_side,
+      ['righttop'] = config.ui.border == 'shadow' and '' or side_char,
+      ['rightbottom'] = config.ui.border == 'shadow' and '' or side_char,
+    },
+    highlight = {
+      border = 'finderBorder',
+      normal = 'finderNormal',
+    },
+  }
+  vim.bo[self.bufnr].buftype = 'nofile'
+
+  self.restore_opts = window.restore_option()
+  _, self.winid = window.create_win_with_border(content_opts, opt)
+
+  -- make sure close preview window by using wincmd
+  api.nvim_create_autocmd('WinClosed', {
+    buffer = self.bufnr,
+    once = true,
+    callback = function()
+      local ok, buf = pcall(api.nvim_win_get_buf, self.peek_winid)
+      if ok then
+        pcall(api.nvim_buf_clear_namespace, buf, self.preview_hl_ns, 0, -1)
+      end
+      pcall(api.nvim_del_augroup_by_id, self.group)
+      self:close_auto_preview_win()
+      self:clean_data()
+      clean_ctx()
+    end,
+  })
+
+  local before, start = 0, 0
+  local ns_select = api.nvim_create_namespace('FinderSelect')
+  api.nvim_create_autocmd('CursorMoved', {
+    buffer = self.bufnr,
+    callback = function()
+      local curline = api.nvim_win_get_cursor(self.winid)[1]
+      api.nvim_buf_clear_namespace(self.bufnr, ns_select, 0, -1)
+      local col = 5
+      local buf_lines = api.nvim_buf_line_count(self.bufnr)
+      local text = api.nvim_get_current_line()
+      local in_fname = text:find(ui.expand) or text:find(ui.collapse)
+      local node
+
+      if curline == 1 or curline > buf_lines - 1 then
+        curline = 3
+        start = 2
+        node = self:get_node({ lnum = 3 })
+      elseif curline == 2 and curline < before then
+        curline = buf_lines - 1
+        node = self:get_node({ lnum = curline })
+        start = node.start
+      elseif text:find('%sDef') or text:find('%sRef') or text:find('%sImp') or #text == 0 then
+        local increase = curline > before and 1 or -1
+        for _, v in ipairs({
+          curline,
+          curline + increase,
+          curline + increase * 2,
+          curline + increase * 3,
+        }) do
+          node = self:get_node({ lnum = v })
+          if node then
+            curline = node.winline
+            start = node.start
+          end
+        end
+      elseif not in_fname then
+        node = self:get_node({ lnum = curline })
+        start = node.start
+      end
+
+      col = in_fname and 7 or col
+      before = curline
+      api.nvim_win_set_cursor(self.winid, { curline, col })
+      api.nvim_buf_add_highlight(
+        self.bufnr,
+        ns_select,
+        'FinderStart',
+        start - 1,
+        #ui.collapse + 2,
+        -1
+      )
+      api.nvim_buf_add_highlight(self.bufnr, ns_select, 'FinderSelection', curline - 1, 5, -1)
+
+      if node then
+        self:open_preview(node)
+      end
+    end,
+  })
+
+  if self.render_fn and co.status(self.render_fn) == 'suspended' then
+    co.resume(self.render_fn, false)
+  end
+end
+
+local function unpack_map()
+  local map = {}
+  for k, v in pairs(config.finder.keys) do
+    if k ~= 'jump_to' and k ~= 'close_in_preview' and k ~= 'expand_or_jump' then
+      map[k] = v
+    end
+  end
+  return map
+end
+
+function finder:apply_map()
   local opts = {
     buffer = self.bufnr,
-    noremap = true,
+    nowait = true,
     silent = true,
   }
+  local unpacked = unpack_map()
 
-  local open_func = function()
-    self:open_link(1)
+  for action, map in pairs(unpacked) do
+    if type(map) == 'string' then
+      map = { map }
+    end
+    for _, key in pairs(map) do
+      if key ~= 'quit' then
+        vim.keymap.set('n', key, function()
+          local curline = api.nvim_win_get_cursor(self.winid)[1]
+          local node = self:get_node({ lnum = curline })
+          if not node then
+            return
+          end
+          self:do_action(node, action)
+        end, opts)
+      end
+    end
   end
 
-  local vsplit_func = function()
-    self:open_link(2)
+  for _, key in pairs(config.finder.keys.quit) do
+    vim.keymap.set('n', key, function()
+      local ok, buf = pcall(api.nvim_win_get_buf, self.peek_winid)
+      if ok then
+        pcall(api.nvim_buf_clear_namespace, buf, self.preview_hl_ns, 0, -1)
+      end
+      window.nvim_close_valid_window({ self.winid, self.peek_winid })
+      self:clean_data()
+      clean_ctx()
+    end, opts)
   end
 
-  local split_func = function()
-    self:open_link(3)
-  end
+  vim.keymap.set('n', config.finder.keys.jump_to, function()
+    if self.peek_winid and api.nvim_win_is_valid(self.peek_winid) then
+      api.nvim_set_current_win(self.peek_winid)
+    end
+  end, opts)
 
-  local tabe_func = function()
-    self:open_link(4)
-  end
-
-  local quit_func = function()
-    self:quit_with_clear()
-  end
-
-  local keymaps = {
-    { 'n', move.prev, '<Up>', opts },
-    { 'n', move.next, '<Down>', opts },
-    { 'n', action.vsplit, vsplit_func, opts },
-    { 'n', action.split, split_func, opts },
-    { 'n', action.tabe, tabe_func, opts },
-    { 'n', action.open, open_func, opts },
-    { 'n', action.quit, quit_func, opts },
-  }
-
-  nvim_create_keymap(keymaps)
-end
-
-function Finder:lsp_finder_highlight()
-  local def_len = string.len('Definition')
-  local ref_len = string.len('References')
-  local imp_len = string.len('Implements')
-  -- add syntax
-  api.nvim_buf_add_highlight(self.bufnr, -1, 'DefinitionsIcon', 0, 0, #icons.def)
-  api.nvim_buf_add_highlight(self.bufnr, -1, 'Definitions', 0, #icons.def, #icons.def + def_len)
-  api.nvim_buf_add_highlight(self.bufnr, -1, 'DefinitionCount', 0, #icons.def + def_len, -1)
-
-  if self.imp_scope then
-    api.nvim_buf_add_highlight(self.bufnr, -1, 'ImplementsIcon', self.imp_scope[1], 0, #icons.imp)
-    api.nvim_buf_add_highlight(
-      self.bufnr,
-      -1,
-      'Implements',
-      self.imp_scope[1],
-      #icons.imp,
-      #icons.imp + imp_len
-    )
-    api.nvim_buf_add_highlight(
-      self.bufnr,
-      -1,
-      'ImplementsCount',
-      self.imp_scope[1],
-      #icons.imp + imp_len,
-      -1
-    )
-  end
-
-  api.nvim_buf_add_highlight(self.bufnr, -1, 'ReferencesIcon', self.ref_scope[1], 0, #icons.ref)
-  api.nvim_buf_add_highlight(
-    self.bufnr,
-    -1,
-    'References',
-    self.ref_scope[1],
-    #icons.ref,
-    #icons.ref + ref_len
-  )
-  api.nvim_buf_add_highlight(
-    self.bufnr,
-    -1,
-    'ReferencesCount',
-    self.ref_scope[1],
-    #icons.ref + ref_len,
-    -1
-  )
-end
-
-local finder_ns = api.nvim_create_namespace('finder_select')
-
-function Finder:set_cursor()
-  local current_line = api.nvim_win_get_cursor(0)[1]
-  local column = #indent + #self.f_icon + 1
-
-  local first_def_uri_lnum = self.def_scope[1] + 3
-  local last_def_uri_lnum = self.def_scope[2]
-  local first_ref_uri_lnum = self.ref_scope[1] + 3
-  local last_ref_uri_lnum = self.ref_scope[2]
-
-  local first_imp_uri_lnum = self.imp_scope and self.imp_scope[1] + 3 or -2
-  local last_imp_uri_lnum = self.imp_scope and self.imp_scope[2] or -2
-
-  if current_line == 1 then
-    fn.cursor(first_def_uri_lnum, column)
-  elseif current_line == last_def_uri_lnum + 1 then
-    fn.cursor(first_imp_uri_lnum > 0 and first_imp_uri_lnum or first_ref_uri_lnum, column)
-  elseif current_line == last_imp_uri_lnum + 1 then
-    fn.cursor(first_ref_uri_lnum, column)
-  elseif current_line == last_ref_uri_lnum + 1 then
-    fn.cursor(first_def_uri_lnum, column)
-  elseif current_line == first_ref_uri_lnum - 1 then
-    fn.cursor(last_imp_uri_lnum > 0 and last_imp_uri_lnum or last_def_uri_lnum, column)
-  elseif current_line == first_imp_uri_lnum - 1 then
-    fn.cursor(last_def_uri_lnum, column)
-  elseif current_line == first_def_uri_lnum - 1 then
-    fn.cursor(last_ref_uri_lnum, column)
-  end
-
-  local actual_line = api.nvim_win_get_cursor(0)[1]
-  if actual_line == first_def_uri_lnum then
-    api.nvim_buf_add_highlight(
-      0,
-      finder_ns,
-      'LspSagaFinderSelection',
-      2,
-      #indent + #self.f_icon,
-      -1
-    )
-  end
-
-  api.nvim_buf_clear_namespace(0, finder_ns, 0, -1)
-  api.nvim_buf_add_highlight(
-    0,
-    finder_ns,
-    'LspSagaFinderSelection',
-    actual_line - 1,
-    #indent + #self.f_icon,
-    -1
-  )
-end
-
-function Finder:auto_open_preview()
-  local current_line = fn.line('.')
-  if not self.short_link[current_line] then
-    return
-  end
-  local content = self.short_link[current_line].preview or {}
-  local start_pos = self.short_link[current_line].col
-  local _end_col = self.short_link[current_line]._end_col
-
-  if next(content) ~= nil then
-    local has_var, finder_win_opts = pcall(api.nvim_win_get_var, 0, 'lsp_finder_win_opts')
-    if not has_var then
-      vim.notify('get finder window options wrong')
+  local function expand_or_collapse(text, curline)
+    local fname = text:match(ui.expand .. '%s(.+)%s')
+    if not fname then
+      fname = text:match(ui.collapse .. '%s(.+)%s')
+    end
+    if not fname then
       return
     end
-    local opts = {
-      relative = 'editor',
-      -- We'll make sure the preview window is the correct size
-      no_size_override = true,
-    }
 
-    local finder_width = fn.winwidth(0)
-    local finder_height = fn.winheight(0)
-    local screen_width = api.nvim_get_option('columns')
+    local nodes = self:find_nodes_by_fname(fname)
+    vim.bo[self.bufnr].modifiable = true
 
-    local content_width = 0
-    for _, line in ipairs(content) do
-      content_width = math.max(fn.strdisplaywidth(line), content_width)
-    end
-
-    local border_width
-    if config.border_style == 'double' then
-      border_width = 4
-    else
-      border_width = 2
-    end
-
-    local max_width = screen_width - finder_win_opts.col - finder_width - border_width - 2
-
-    if max_width > 42 then
-      -- Put preview window to the right of the finder window
-      local preview_width = math.min(content_width + border_width, max_width)
-      opts.col = finder_win_opts.col + finder_width + 2
-      opts.row = finder_win_opts.row
-      opts.width = preview_width
-      opts.height = #self.contents
-      if opts.height > finder_height then
-        opts.height = finder_height
+    if not self.lspdata[nodes[1].method].data[nodes[1].fname].expand then
+      text = text:gsub(ui.expand, ui.collapse)
+      local lines = vim.tbl_map(function(i)
+        return (' '):rep(5) .. i.word
+      end, nodes)
+      table.insert(lines, 1, text)
+      api.nvim_buf_set_lines(self.bufnr, curline - 1, curline, false, lines)
+      for i = 1, #nodes do
+        api.nvim_buf_set_extmark(self.bufnr, ns_id, curline - 1 + i, 2, {
+          virt_text = {
+            { i == #nodes and ui.lines[1] or ui.lines[2], 'FinderLines' },
+            { ui.lines[4]:rep(2), 'FinderLines' },
+          },
+          virt_text_pos = 'overlay',
+        })
+        api.nvim_buf_add_highlight(self.bufnr, ns_id, 'FinderCode', curline - 1 + i, 5, -1)
       end
-    else
-      -- Put preview window below the finder window
-      local max_height = self.WIN_HEIGHT - finder_win_opts.row - finder_height - border_width - 2
-      if max_height <= 3 then
+      self:change_node_winline(function(item)
+        return item.winline > curline
+      end, #nodes)
+      for i, v in ipairs(nodes) do
+        v.winline = curline + i
+      end
+      api.nvim_win_set_cursor(self.winid, { curline + 1, 5 })
+      api.nvim_buf_add_highlight(self.bufnr, ns_id, 'SagaCollapse', curline - 1, 0, 5)
+      vim.bo[self.bufnr].modifiable = false
+      self.lspdata[nodes[1].method].data[nodes[1].fname].expand = true
+      return
+    end
+
+    text = text:gsub(ui.collapse, ui.expand)
+    api.nvim_buf_clear_namespace(self.bufnr, ns_id, curline - 1, curline + #nodes)
+    api.nvim_buf_set_lines(self.bufnr, curline - 1, curline + #nodes, false, { text })
+    api.nvim_buf_add_highlight(self.bufnr, ns_id, 'SagaExpand', nodes[1].start - 1, 0, 5)
+    self.lspdata[nodes[1].method].data[fname].expand = false
+    self:change_node_winline(function(item)
+      return item.winline > curline + #nodes
+    end, -#nodes)
+    for _, v in ipairs(nodes) do
+      v.winline = -1
+    end
+    vim.bo[self.bufnr].modifiable = false
+  end
+
+  nvim_buf_set_keymap(self.bufnr, 'n', config.finder.keys.expand_or_jump, '', {
+    noremap = true,
+    nowait = true,
+    callback = function()
+      local curline = api.nvim_win_get_cursor(self.winid)[1]
+      local text = api.nvim_get_current_line()
+      local in_fname = text:find(ui.expand) or text:find(ui.collapse)
+      if in_fname then
+        expand_or_collapse(text, curline)
         return
-      end -- Don't show preview window if too short
-
-      opts.row = finder_win_opts.row + finder_height + 2
-      opts.col = finder_win_opts.col
-      opts.width = finder_width
-      opts.height = math.min(8, max_height)
-    end
-
-    local content_opts = {
-      contents = content,
-      filetype = self.buf_filetype,
-      highlight = 'LspSagaAutoPreview',
-    }
-
-    self:close_auto_preview_win()
-
-    vim.defer_fn(function()
-      opts.noautocmd = true
-      self.preview_bufnr, self.preview_winid = window.create_win_with_border(content_opts, opts)
-      api.nvim_buf_set_option(self.preview_bufnr, 'buflisted', false)
-      api.nvim_win_set_var(self.preview_winid, 'finder_preview', self.preview_winid)
-
-      libs.scroll_in_preview(self.bufnr, self.preview_winid)
-
-      if not self.preview_hl_ns then
-        self.preview_hl_ns = api.nvim_create_namespace('FinderPreview')
       end
-      local trimLines = 0
-      for _, v in pairs(content) do
-        if v == '' then
-          trimLines = trimLines + 1
-        else
+      local node = self:get_node({ lnum = curline })
+      if not node then
+        return
+      end
+      self:do_action(node, 'edit')
+    end,
+  })
+end
+
+function finder:find_nodes_by_fname(fname)
+  for _, meth_data in pairs(self.lspdata) do
+    for f, item in pairs(meth_data.data) do
+      if f == fname then
+        return item.nodes
+      end
+    end
+  end
+end
+
+function finder:next_node_in_meth(method, cur_fname, lnum)
+  for fname, item in pairs(self.lspdata[method].data) do
+    if fname ~= cur_fname then
+      for i = 1, #item.nodes do
+        if i == 1 and item.nodes[i].winline > lnum then
+          return item.nodes[i]
+        end
+      end
+    end
+  end
+end
+
+function finder:change_node_winline(cond, increase)
+  for _, meth_data in pairs(self.lspdata) do
+    for _, item in pairs(meth_data.data) do
+      for _, node in ipairs(item.nodes) do
+        if cond(node) then
+          node.winline = node.winline + increase
+          node.start = node.start + increase
+        end
+      end
+    end
+  end
+end
+
+function finder:get_node(opt)
+  local node
+  for meth, meth_data in pairs(self.lspdata) do
+    if opt.meth and opt.meth ~= meth then
+      goto skip
+    end
+    for _, item in pairs(meth_data.data) do
+      for _, v in ipairs(item.nodes) do
+        if
+          (opt.lnum and v.winline == opt.lnum)
+          or (opt.first and v.first)
+          or (opt.tail and v.tail)
+        then
+          node = v
           break
         end
       end
-      api.nvim_buf_add_highlight(
-        self.preview_bufnr,
-        self.preview_hl_ns,
-        'FinderPreviewSearch',
-        0 + config.preview_lines_above - trimLines,
-        start_pos - 1,
-        _end_col
-      )
-    end, 10)
+    end
+    ::skip::
   end
+  return node
 end
 
-function Finder:close_auto_preview_win()
-  if self.preview_hl_ns then
-    pcall(api.nvim_buf_clear_namespace, self.preview_bufnr, self.preview_hl_ns, 0, -1)
-  end
-  if self.preview_bufnr and api.nvim_buf_is_loaded(self.preview_bufnr) then
-    api.nvim_buf_delete(self.preview_bufnr, { force = true })
-    self.preview_bufnr = nil
-  end
-
-  if self.preview_winid and api.nvim_win_is_valid(self.preview_winid) then
-    api.nvim_win_close(self.preview_winid, true)
-    self.preview_winid = nil
-  end
-end
-
--- action 1 mean enter
--- action 2 mean vsplit
--- action 3 mean split
--- action 4 mean tabe
-function Finder:open_link(action_type)
-  local action = { 'edit ', 'vsplit ', 'split ', 'tabe ' }
-  local current_line = api.nvim_win_get_cursor(0)[1]
-
-  if self.short_link[current_line] == nil then
-    error('[LspSaga] target file uri not exist')
-    return
-  end
-
-  local short_link = self.short_link
-  self:quit_float_window()
-
-  -- if buffer not saved save it before jump
-  if vim.bo.modified then
-    vim.cmd('write')
-  end
-  api.nvim_command(action[action_type] .. short_link[current_line].link)
-  fn.cursor(short_link[current_line].row, short_link[current_line].col)
-  self:clear_tmp_data()
-end
-
-function Finder:quit_float_window()
-  if self.bufnr and api.nvim_buf_is_loaded(self.bufnr) then
-    api.nvim_buf_delete(self.bufnr, { force = true })
-    self.bufnr = nil
-  end
-
-  self:close_auto_preview_win()
-  if self.winid and self.winid > 0 then
-    window.nvim_close_valid_window(self.winid)
-    self.winid = nil
-  end
-
-  if self.titlebar_winid and self.titlebar_winid > 0 then
-    api.nvim_win_close(self.titlebar_winid, true)
-    self.titlebar_winid = nil
-  end
-end
-
-function Finder:clear_tmp_data()
-  for key, val in pairs(self) do
-    if type(val) ~= 'function' then
-      self[key] = nil
+function finder:node_in_range(range)
+  for _, lnum in ipairs(range) do
+    local node = self:get_node({ lnum = lnum })
+    if node then
+      return node
     end
   end
 end
 
-function Finder:quit_with_clear()
-  self:quit_float_window()
-  self:clear_tmp_data()
+local function create_preview_window(finder_winid)
+  if not finder_winid or not api.nvim_win_is_valid(finder_winid) then
+    return
+  end
+
+  local opts = {
+    relative = 'editor',
+    no_size_override = true,
+    zindex = 80,
+  }
+
+  local winconfig = api.nvim_win_get_config(finder_winid)
+  opts.row = winconfig.row[false]
+  opts.height = winconfig.height
+
+  local border_side = {}
+  local top = window.combine_char()['top'][config.ui.border]
+  local bottom = window.combine_char()['bottom'][config.ui.border]
+
+  --in right
+  if vim.o.columns - winconfig.col[false] - winconfig.width >= config.finder.min_width then
+    local adjust = config.ui.border == 'shadow' and -2 or 2
+    opts.col = winconfig.col[false] + winconfig.width + adjust
+    opts.width = vim.o.columns - opts.col - 2
+    border_side = {
+      ['lefttop'] = top,
+      ['leftbottom'] = bottom,
+    }
+  --in left
+  elseif winconfig.col[false] >= config.finder.min_width then
+    opts.width = math.floor(winconfig.col[false] * 0.8)
+    local adjust = config.ui.border == 'shadow' and -2 or 0
+    opts.col = winconfig.col[false] - opts.width - adjust
+    border_side = {
+      ['righttop'] = top,
+      ['rightbottom'] = bottom,
+    }
+    api.nvim_win_set_config(finder_winid, {
+      border = window.combine_border(config.ui.border, {
+        ['lefttop'] = '',
+        ['left'] = '',
+        ['leftbottom'] = '',
+      }, 'FinderBorder'),
+    })
+  end
+
+  if not opts.col then
+    vim.notify(
+      '[Lspsaga] finder previee get col failed try change finder.min_width',
+      vim.log.levels.WARN
+    )
+    return
+  end
+
+  local content_opts = {
+    contents = {},
+    border_side = border_side,
+    bufhidden = '',
+    highlight = {
+      border = 'FinderPreviewBorder',
+      normal = 'FinderNormal',
+    },
+  }
+
+  return window.create_win_with_border(content_opts, opts)
 end
 
-return Finder
+local function clear_preview_ns(ns, buf)
+  pcall(api.nvim_buf_clear_namespace, buf, ns, 0, -1)
+end
+
+function finder:open_preview(node)
+  if self.peek_winid and api.nvim_win_is_valid(self.peek_winid) then
+    local before_buf = api.nvim_win_get_buf(self.peek_winid)
+    clear_preview_ns(ns_id, before_buf)
+  end
+
+  if not node then
+    return
+  end
+
+  if not self.peek_winid or not api.nvim_win_is_valid(self.peek_winid) then
+    self.preview_bufnr, self.peek_winid = create_preview_window(self.winid)
+    if not self.peek_winid then
+      return
+    end
+    api.nvim_win_set_hl_ns(self.peek_winid, ns_id)
+  end
+
+  local function highlight_word()
+    api.nvim_buf_add_highlight(node.bufnr, ns_id, 'FinderPreview', node.row, node.col, node.ecol)
+  end
+
+  local buf_in_peek = api.nvim_win_get_buf(self.peek_winid)
+  if buf_in_peek == node.bufnr then
+    api.nvim_win_set_cursor(self.peek_winid, { node.row + 1, node.col })
+    highlight_word()
+    return
+  end
+
+  api.nvim_win_set_buf(self.peek_winid, node.bufnr)
+  api.nvim_win_set_cursor(self.peek_winid, { node.row + 1, node.col })
+  highlight_word()
+
+  api.nvim_set_option_value('winbar', '', {
+    scope = 'local',
+    win = self.peek_winid,
+  })
+
+  api.nvim_set_option_value(
+    'winhl',
+    'Normal:finderNormal,FloatBorder:finderPreviewBorder',
+    { scope = 'local', win = self.peek_winid }
+  )
+
+  if fn.has('nvim-0.9') == 1 and node.wipe then
+    local lang = require('nvim-treesitter.parsers').ft_to_lang(vim.bo[self.main_buf].filetype)
+    vim.defer_fn(function()
+      vim.treesitter.start(node.bufnr, lang)
+    end, 5)
+    node.loaded = true
+  elseif fn.has('nvim-0.8') == 1 and node.wipe then
+    vim.schedule(function()
+      api.nvim_buf_call(node.bufnr, function()
+        vim.cmd('TSBufEnable highlight')
+      end)
+    end)
+  end
+end
+
+function finder:close_auto_preview_win()
+  if self.peek_winid and api.nvim_win_is_valid(self.peek_winid) then
+    local buf = api.nvim_win_get_buf(self.peek_winid)
+    clear_preview_ns(ns_id, buf)
+    api.nvim_win_close(self.peek_winid, true)
+    self.peek_winid = nil
+  end
+end
+
+function finder:do_action(node, action)
+  if self.peek_winid and api.nvim_win_is_valid(self.peek_winid) then
+    local pbuf = api.nvim_win_get_buf(self.peek_winid)
+    clear_preview_ns(ns_id, pbuf)
+  end
+  local restore_opts
+  local data = vim.deepcopy(node)
+  local fname = api.nvim_buf_get_name(data.bufnr)
+  if not data.wipe then
+    restore_opts = self.restore_opts
+  end
+
+  window.nvim_close_valid_window({ self.winid, self.peek_winid, self.tip_winid or nil })
+  self:clean_data()
+
+  -- if buffer not saved save it before jump
+  if fname == api.nvim_buf_get_name(0) and vim.bo.modified then
+    vim.cmd('write')
+  end
+
+  vim.cmd(action .. ' ' .. fn.fnameescape(fname))
+
+  if restore_opts then
+    restore_opts.restore()
+  end
+
+  if data.row then
+    api.nvim_win_set_cursor(0, { data.row + 1, data.col })
+  end
+  local width = #api.nvim_get_current_line()
+  if not width or width <= 0 then
+    width = 10
+  end
+  if data.row then
+    libs.jump_beacon({ data.row, 0 }, width)
+  end
+  clean_ctx()
+end
+
+function finder:clean_data()
+  for _, buf in ipairs(self.wipe_buffers or {}) do
+    api.nvim_buf_delete(buf, { force = true })
+    pcall(vim.keymap.del, 'n', config.finder.keys.close_in_preview, { buffer = buf })
+  end
+
+  if self.preview_bufnr and api.nvim_buf_is_loaded(self.preview_bufnr) then
+    api.nvim_buf_delete(self.preview_bufnr, { force = true })
+  end
+
+  if self.group then
+    pcall(api.nvim_del_augroup_by_id, self.group)
+  end
+end
+
+return setmetatable(ctx, finder)

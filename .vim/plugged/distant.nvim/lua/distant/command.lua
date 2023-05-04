@@ -1,8 +1,12 @@
+local cli = require('distant.cli')
 local editor = require('distant.editor')
 local fn = require('distant.fn')
+local state = require('distant.state')
 
 local command = {}
 
+--- @param input string
+--- @return {args:string[], opts:table<string, string|table>}
 command.parse_input = function(input)
     local args = {}
     local opts = {}
@@ -39,16 +43,17 @@ command.parse_input = function(input)
         -- If in a key=value pair, we update the last item which is the key
         -- to be {key, value}
         if in_pair and (s ~= '' or ty ~= TYPES.QUOTE) then
-            segments[#segments] = {segments[#segments], s}
+            segments[#segments] = { segments[#segments], s }
             in_pair = false
 
-        -- Otherwise, this is a new segment and we add it to the list
+            -- Otherwise, this is a new segment and we add it to the list
         elseif s ~= '' then
             table.insert(segments, s)
         end
 
         s = ''
     end
+
     local ty
     for i = 1, #input do
         local char = string.sub(input, i, i)
@@ -124,16 +129,22 @@ command.parse_input = function(input)
     }
 end
 
---- Converts each path within table into a number using `tonumber()`
+--- Converts each path within table into a value using `f()`
 ---
 --- Paths are split by period, meaning `path.to.field` becomes
---- `tbl.path.to.field = tonumber(tbl.path.to.field)`
-local function paths_to_number(tbl, paths)
+--- `tbl.path.to.field = f(tbl.path.to.field)`
+--- @generic T
+--- @param tbl table
+--- @param paths string[]
+--- @param f fun(value:string):T
+local function paths_to_f(tbl, paths, f)
     tbl = tbl or {}
 
     local parts, inner
     for _, path in ipairs(paths) do
+        --- @type string[]
         parts = vim.split(path, '.', true)
+
         inner = tbl
         for i, part in ipairs(parts) do
             if inner == nil then
@@ -145,15 +156,35 @@ local function paths_to_number(tbl, paths)
             end
         end
         if inner ~= nil and inner[parts[#parts]] ~= nil then
-            inner[parts[#parts]] = tonumber(inner[parts[#parts]])
+            inner[parts[#parts]] = f(inner[parts[#parts]])
         end
     end
+end
+
+--- Converts each path within table into a number using `tonumber()`
+---
+--- Paths are split by period, meaning `path.to.field` becomes
+--- `tbl.path.to.field = tonumber(tbl.path.to.field)`
+--- @param tbl table
+--- @param paths string[]
+local function paths_to_number(tbl, paths)
+    return paths_to_f(tbl, paths, tonumber)
+end
+
+--- Converts each path within table into a bool using `value == 'true'`
+---
+--- Paths are split by period, meaning `path.to.field` becomes
+--- `tbl.path.to.field = tbl.path.to.field == 'true'`
+--- @param tbl table
+--- @param paths string[]
+local function paths_to_bool(tbl, paths)
+    return paths_to_f(tbl, paths, function(value) return value == 'true' end)
 end
 
 --- DistantOpen path [opt1=... opt2=...]
 command.open = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'buf', 'win'})
+    paths_to_number(input.opts, { 'buf', 'win' })
 
     local path = input.args[1]
     input.opts.path = path
@@ -161,65 +192,59 @@ command.open = function(input)
     editor.open(input.opts)
 end
 
---- DistantLaunch host [opt1=..., opt2=...]
+--- DistantLaunch destination [opt1=..., opt2=...]
 command.launch = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'ssh.port', 'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
-    local host = input.args[1]
-    input.opts.host = host
+    local destination = input.args[1]
+    input.opts.destination = destination
 
-    if type(host) ~= 'string' then
-        vim.api.nvim_err_writeln('Missing host')
+    if type(destination) ~= 'string' then
+        vim.api.nvim_err_writeln('Missing destination')
         return
     end
 
-    editor.launch(input.opts, function(success, msg)
-        if success then
-            print('Connected to ' .. host)
+    editor.launch(input.opts, function(err, _)
+        if not err then
+            vim.notify('Connected to ' .. destination)
         else
-            vim.api.nvim_err_writeln(tostring(msg) or 'Launch failed without cause')
+            vim.api.nvim_err_writeln(tostring(err) or 'Launch failed without cause')
         end
     end)
 end
 
---- DistantConnect host port [opt1=..., opt2=...]
+--- DistantConnect destination [opt1=..., opt2=...]
 command.connect = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
-    if #input.args == 0 then
-        vim.api.nvim_err_writeln('Missing host and port')
-        return
-    elseif #input.args == 1 then
-        vim.api.nvim_err_writeln('Missing port')
+    local destination = input.args[1]
+    input.opts.destination = destination
+
+    if type(destination) ~= 'string' then
+        vim.api.nvim_err_writeln('Missing destination')
         return
     end
 
-    local host = input.args[1]
-    input.opts.host = host
-
-    local port = tonumber(input.args[2])
-    input.opts.port = port
-
-    editor.connect(input.opts, function(success, msg)
-        if success then
-            print('Connected to ' .. host .. ':' .. tostring(port))
+    editor.connect(input.opts, function(err)
+        if not err then
+            vim.notify('Connected to ' .. destination)
         else
-            vim.api.nvim_err_writeln(tostring(msg) or 'Connect failed without cause')
+            vim.api.nvim_err_writeln(tostring(err) or 'Connect failed without cause')
         end
     end)
 end
 
---- DistantInstall [reload]
+--- DistantInstall [reinstall]
 command.install = function(input)
     input = command.parse_input(input)
-    local reload = input.args[1] == 'reload'
-    require('distant.lib').load({reload = reload}, function(success, msg)
-        if success then
-            print('Successfully installed Rust library')
+    local reinstall = input.args[1] == 'reinstall'
+    cli.install({ reinstall = reinstall }, function(err, path)
+        if err then
+            vim.api.nvim_err_writeln(err)
         else
-            vim.api.nvim_err_writeln(tostring(msg) or 'Install failed without cause')
+            vim.notify('Installed to ' .. path)
         end
     end)
 end
@@ -227,7 +252,7 @@ end
 --- DistantMetadata path [opt1=... opt2=...]
 command.metadata = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
     input.opts.path = path
@@ -248,7 +273,7 @@ end
 --- DistantCopy src dst [opt1=... opt2=...]
 command.copy = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local src = input.args[1]
     local dst = input.args[2]
@@ -261,7 +286,7 @@ end
 --- DistantMkdir path [opt1=... opt2=...]
 command.mkdir = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
     input.opts.path = path
@@ -272,7 +297,7 @@ end
 --- DistantRemove path [opt1=... opt2=...]
 command.remove = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local path = input.args[1]
     input.opts.path = path
@@ -283,7 +308,7 @@ end
 --- DistantRename src dst [opt1=... opt2=...]
 command.rename = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local src = input.args[1]
     local dst = input.args[2]
@@ -296,7 +321,7 @@ end
 --- DistantRun cmd [arg1 arg2 ...]
 command.run = function(input)
     input = command.parse_input(input)
-    paths_to_number(input.opts, {'timeout', 'interval'})
+    paths_to_number(input.opts, { 'timeout', 'interval' })
 
     local cmd = input.args[1]
     local cmd_args = vim.list_slice(input.args, 2, #input.args)
@@ -315,6 +340,92 @@ command.run = function(input)
     if #res.stderr > 0 then
         vim.api.nvim_err_writeln(res.stderr)
     end
+end
+
+--- DistantCancelSearch
+command.cancel_search = function(input)
+    input = command.parse_input(input)
+    paths_to_number(input.opts, { 'timeout', 'interval' })
+
+    editor.cancel_search({
+        timeout = input.opts.timeout,
+        interval = input.opts.interval,
+    })
+end
+
+--- DistantSearch pattern [paths ...] [opt1=... opt2=...]
+command.search = function(input)
+    input = command.parse_input(input)
+    paths_to_number(input.opts, { 'pagination', 'limit', 'max_depth', 'timeout', 'interval' })
+    paths_to_bool(input.opts, { 'follow_symbolic_links' })
+
+    local timeout = input.opts.timeout
+    local interval = input.opts.interval
+
+    local pattern = input.args[1]
+    local paths = {}
+    for i, path in ipairs(input.args) do
+        if i > 1 then
+            table.insert(paths, path)
+        end
+    end
+    local target = input.opts.target or 'contents'
+    local options = {}
+    for key, value in pairs(input.opts or {}) do
+        if key ~= 'timeout' and key ~= 'interval' and key ~= 'target' then
+            options[key] = value
+        end
+    end
+
+    -- If no path provided, default to current working directory
+    if vim.tbl_isempty(paths) then
+        table.insert(paths, '.')
+    end
+
+    local query = {
+        paths = paths,
+        target = target,
+        condition = {
+            type = 'regex',
+            value = pattern,
+        },
+        options = options,
+    }
+
+    editor.search({
+        query = query,
+        timeout = timeout,
+        interval = interval,
+    })
+end
+
+--- DistantShell [cmd arg1 arg2 ...]
+command.shell = function(input)
+    input = command.parse_input(input)
+    paths_to_number(input.opts, { 'timeout', 'interval' })
+
+    local cmd = nil
+    local cmd_prog = nil
+    if not vim.tbl_isempty(input.args) then
+        cmd_prog = input.args[1]
+        cmd = vim.list_slice(input.args, 2, #input.args)
+        table.insert(cmd, 1, cmd_prog)
+    end
+
+    --- @type Client
+    local client = assert(state.client, 'No client established')
+
+    client:shell():spawn({ cmd = cmd })
+end
+
+--- DistantClientVersion
+command.client_version = function()
+    local Client = require('distant.cli')
+    local client = Client:new()
+    local utils = require('distant.utils')
+
+    local version = assert(client:version(), 'Could not get client version')
+    print(utils.version_to_string(version))
 end
 
 return command

@@ -2,14 +2,16 @@ local fn = require('distant.fn')
 local log = require('distant.log')
 local ui = require('distant.ui')
 
+--- @class EditorShowSystemOpts
+--- @field timeout? number #Maximum time to wait for a response
+--- @field interval? number #Time in milliseconds to wait between checks for a response
+
 --- Opens a new window to display system info
----
---- @param opts.timeout number Maximum time to wait for a response (optional)
---- @param opts.interval number Time in milliseconds to wait between checks for a response (optional)
+--- @param opts? EditorShowSystemOpts
 return function(opts)
     opts = opts or {}
     log.trace('editor.show.system(%s)', opts)
-    vim.validate({opts = {opts, 'table'}})
+    vim.validate({ opts = { opts, 'table' } })
 
     local indent = '    '
     local err, info = fn.system_info(opts)
@@ -24,6 +26,8 @@ return function(opts)
             indent .. '* Arch        = "' .. info.arch .. '"';
             indent .. '* Current Dir = "' .. info.current_dir .. '"';
             indent .. '* Main Sep    = "' .. info.main_separator .. '"';
+            indent .. '* Username    = "' .. info.username .. '"';
+            indent .. '* Shell       = "' .. info.shell .. '"';
         })
     end
 end

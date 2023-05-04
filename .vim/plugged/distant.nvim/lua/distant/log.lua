@@ -6,9 +6,18 @@
 -- This library is free software; you can redistribute it and/or modify it
 -- under the terms of the MIT license. See LICENSE for details.
 
+--- @alias NeovimLogLevel 'trace'|'debug'|'info'|'warn'|'error'|'fatal'
+
+--- @type NeovimLogLevel
 local d_log_level = vim.fn.getenv('DISTANT_LOG_LEVEL')
 if d_log_level == vim.NIL then
     d_log_level = 'info'
+end
+
+--- @type string|nil
+local d_log_file = vim.fn.getenv('DISTANT_LOG_FILE')
+if d_log_file == vim.NIL then
+    d_log_file = nil
 end
 
 -- User configuration section
@@ -18,7 +27,7 @@ local default_config = {
 
     -- Should print the output to neovim while running
     -- values: 'sync','async',false
-    use_console = false,
+    use_console = 'async',
 
     -- Should highlighting be used in console (using echohl)
     highlights = true,
@@ -51,7 +60,7 @@ local unpack = unpack or table.unpack
 log.new = function(config, standalone)
     config = vim.tbl_deep_extend('force', default_config, config)
 
-    local outfile = string.format('%s/%s.log', vim.api.nvim_call_function('stdpath', { 'cache' }), config.plugin)
+    local outfile = d_log_file or string.format('%s/%s.log', vim.api.nvim_call_function('stdpath', { 'cache' }), config.plugin)
 
     local obj
     if standalone then
@@ -181,21 +190,5 @@ end
 
 log.new(default_config, true)
 -- }}}
-
--- Special function to initialize the Rust lib's logger
-log.init_lib = function(lib, opts)
-    opts = opts or {}
-
-    local file = opts.file or string.format(
-        '%s/%s.mod.log',
-        vim.api.nvim_call_function('stdpath', { 'cache' }),
-        default_config.plugin
-    )
-    local level = opts.level or default_config.level
-    lib.log.init({
-        file = file,
-        level = level,
-    })
-end
 
 return log

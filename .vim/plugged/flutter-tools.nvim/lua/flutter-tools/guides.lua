@@ -1,5 +1,7 @@
-local utils = require("flutter-tools.utils")
-local config = require("flutter-tools.config")
+local lazy = require("flutter-tools.lazy")
+local ui = lazy.require("flutter-tools.ui") ---@module "flutter-tools.ui"
+local utils = lazy.require("flutter-tools.utils") ---@module "flutter-tools.utils"
+local config = lazy.require("flutter-tools.config") ---@module "flutter-tools.config"
 
 local M = {}
 
@@ -138,11 +140,16 @@ local function render_guides(bufnum, guides, conf)
         })
       if not success and conf.debug then
         local name = api.nvim_buf_get_name(bufnum)
-        local ui = require("flutter-tools.ui")
-        ui.notify({
-          fmt("error drawing widget guide for %s at line %d, col %d.", name, lnum, start),
-          "because: " .. msg,
-        }, { level = ui.ERROR, source = "guides" })
+        ui.notify(
+          fmt(
+            "error drawing widget guide for %s at line %d, col %d.\nbecause: %s",
+            name,
+            lnum,
+            start,
+            msg
+          ),
+          ui.ERROR
+        )
       end
     end
   end
@@ -161,7 +168,7 @@ local function is_buf_valid(bufnum)
 end
 
 function M.widget_guides(_, data, _, _)
-  local conf = config.get().widget_guides
+  local conf = config.widget_guides
   if conf.enabled then
     local bufnum = vim.uri_to_bufnr(data.uri)
     if not is_buf_valid(bufnum) then return end

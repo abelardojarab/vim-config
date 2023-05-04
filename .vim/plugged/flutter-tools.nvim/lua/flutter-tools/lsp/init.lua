@@ -1,14 +1,15 @@
-local utils = require("flutter-tools.utils")
-local path = require("flutter-tools.utils.path")
-local color = require("flutter-tools.lsp.color")
+local lazy = require("flutter-tools.lazy")
+local utils = lazy.require("flutter-tools.utils") ---@module "flutter-tools.utils"
+local path = lazy.require("flutter-tools.utils.path") ---@module "flutter-tools.utils.path"
+local color = lazy.require("flutter-tools.lsp.color") ---@module "flutter-tools.lsp.color"
+local lsp_utils = lazy.require("flutter-tools.lsp.utils") ---@module "flutter-tools.lsp.utils"
 
 local api = vim.api
 local lsp = vim.lsp
-local fn = vim.fn
 local fmt = string.format
+local fs = vim.fs
 
 local FILETYPE = "dart"
-local SERVER_NAME = "dartls"
 local ROOT_PATTERNS = { ".git", "pubspec.yaml" }
 
 local M = {
@@ -20,7 +21,7 @@ local function analysis_server_snapshot_path(sdk_path)
 end
 
 ---Merge a set of default configurations with a user's own settings
----NOTE: a user can specify a function in which case this will be used
+--- NOTE: a user can specify a function in which case this will be used
 ---to determine how to merge the defaults with a user's config
 ---@param default table
 ---@param user table|function
@@ -34,7 +35,7 @@ end
 local function create_debug_log(level)
   return function(msg)
     local levels = require("flutter-tools.config").debug_levels
-    if level <= levels.DEBUG then require("flutter-tools.ui").notify({ msg }, { level = level }) end
+    if level <= levels.DEBUG then require("flutter-tools.ui").notify(msg, level) end
   end
 end
 
@@ -49,7 +50,7 @@ local function handle_progress(err, result, ctx)
   -- NOTE: this event gets called whenever the analysis server has completed some work
   -- rather than just when the server has started.
   if result and result.value and result.value.kind == "end" then
-    api.nvim_exec_autocmds("User", { pattern = "FlutterToolsLspAnalysisComplete" })
+    utils.emit_event(utils.events.LSP_ANALYSIS_COMPLETED)
   end
 end
 
@@ -74,6 +75,7 @@ local function get_defaults(opts)
           path.join(flutter_sdk_path, "packages"),
           path.join(flutter_sdk_path, ".pub-cache"),
         },
+        updateImportsOnRename = true,
       },
     },
     handlers = {
@@ -103,16 +105,10 @@ local function get_defaults(opts)
       -- @see: https://microsoft.github.io/language-server-protocol/specifications/specification-current/#workspaceEdit
       capabilities.workspace.workspaceEdit.documentChanges = true
       capabilities.textDocument.completion.completionItem.snippetSupport = true
-      capabilities.textDocument.documentColor = {
-        dynamicRegistration = true,
-      }
+      capabilities.textDocument.documentColor = { dynamicRegistration = true }
       -- @see: https://github.com/hrsh7th/nvim-compe#how-to-use-lsp-snippet
       capabilities.textDocument.completion.completionItem.resolveSupport = {
-        properties = {
-          "documentation",
-          "detail",
-          "additionalTextEdits",
-        },
+        properties = { "documentation", "detail", "additionalTextEdits" },
       }
       return capabilities
     end)(),
@@ -121,9 +117,7 @@ local function get_defaults(opts)
 end
 
 function M.restart()
-  local client = utils.find(vim.lsp.get_active_clients(), function(client)
-    return client.name == SERVER_NAME
-  end)
+  local client = lsp_utils.get_dartls_client()
   if client then
     local bufs = lsp.get_buffers_by_client_id(client.id)
     client.stop()
@@ -134,41 +128,25 @@ function M.restart()
   end
 end
 
----@param server_name string?
----@return table?
-local function get_dartls_client(server_name)
-  server_name = server_name or SERVER_NAME
-  return lsp.get_active_clients({ name = server_name })[1]
-end
-
 ---@return string?
 function M.get_lsp_root_dir()
-  local client = get_dartls_client()
+  local client = lsp_utils.get_dartls_client()
   return client and client.config.root_dir or nil
 end
 
 -- FIXME: I'm not sure how to correctly wait till a server is ready before
 -- sending this request. Ideally we would wait till the server is ready.
 M.document_color = function()
-  local active_clients = vim.tbl_map(function(c)
-    return c.id
-  end, vim.lsp.get_active_clients())
-  local dartls = get_dartls_client()
-  if
-    dartls
-    and vim.tbl_contains(active_clients, dartls.id)
-    and dartls.server_capabilities.colorProvider
-  then
-    color.document_color()
-  end
+  local client = lsp_utils.get_dartls_client()
+  if client and client.server_capabilities.colorProvider then color.document_color() end
 end
 M.on_document_color = color.on_document_color
 
 function M.dart_lsp_super()
-  local conf = require("flutter-tools.config").get()
+  local conf = require("flutter-tools.config")
   local user_config = conf.lsp
   local debug_log = create_debug_log(user_config.debug)
-  local client = get_dartls_client()
+  local client = lsp_utils.get_dartls_client()
   if client == nil then
     debug_log("No active dartls server found")
     return
@@ -176,14 +154,12 @@ function M.dart_lsp_super()
   client.request("dart/textDocument/super", nil, nil, 0)
 end
 
-function M.dart_reanalyze()
-  lsp.buf_request(0, "dart/reanalyze")
-end
+function M.dart_reanalyze() lsp.buf_request(0, "dart/reanalyze") end
 
 ---@param user_config table
 ---@param callback fun(table)
 local function get_server_config(user_config, callback)
-  local config = utils.merge({ name = SERVER_NAME }, user_config, { "color" })
+  local config = utils.merge({ name = lsp_utils.SERVER_NAME }, user_config, { "color" })
   local executable = require("flutter-tools.executable")
   --- TODO: if a user specifies a command we do not need to call executable.get
   executable.get(function(paths)
@@ -208,27 +184,6 @@ local function get_server_config(user_config, callback)
   end)
 end
 
---- TODO: deprecate this once nvim 0.8 is stable
----@param bufnr number
----@param user_config table
-local function legacy_server_init(bufnr, user_config)
-  -- Check to see if dartls is already attached, and if so attach
-  local existing_client = get_dartls_client()
-  if existing_client then lsp.buf_attach_client(bufnr, existing_client.id) end
-
-  get_server_config(user_config, function(c)
-    ---@diagnostic disable-next-line: missing-parameter
-    local current_dir = fn.expand("%:p:h")
-    c.root_dir = path.find_root(ROOT_PATTERNS, current_dir) or current_dir
-    local client_id = M.lsps[c.root_dir]
-    if not client_id then
-      client_id = lsp.start_client(c)
-      M.lsps[c.root_dir] = client_id
-      if client_id then lsp.buf_attach_client(bufnr, client_id) end
-    end
-  end)
-end
-
 --- Checks if buffer path is valid for attaching LSP
 local function is_valid_path(buffer_path)
   local start_index, _, uri_prefix = buffer_path:find("^(%w+://).*")
@@ -239,30 +194,24 @@ end
 
 ---This was heavily inspired by nvim-metals implementation of the attach functionality
 function M.attach()
-  local conf = require("flutter-tools.config").get()
+  local conf = require("flutter-tools.config")
   local user_config = conf.lsp
   local debug_log = create_debug_log(user_config.debug)
   debug_log("attaching LSP")
 
   local buf = api.nvim_get_current_buf()
-  -- FIXME: When nvim 0.8 is released remove the legacy_server_init
-  if vim.version().minor < 8 then
-    legacy_server_init(buf, user_config)
-  else
-    local fs = vim.fs
-    local buffer_path = api.nvim_buf_get_name(buf)
+  local buffer_path = api.nvim_buf_get_name(buf)
 
-    if not is_valid_path(buffer_path) then return end
+  if not is_valid_path(buffer_path) then return end
 
-    get_server_config(user_config, function(c)
-      c.root_dir = M.get_lsp_root_dir()
-        or fs.dirname(fs.find(ROOT_PATTERNS, {
-          path = buffer_path,
-          upward = true,
-        })[1])
-      vim.lsp.start(c)
-    end)
-  end
+  get_server_config(user_config, function(c)
+    c.root_dir = M.get_lsp_root_dir()
+      or fs.dirname(fs.find(ROOT_PATTERNS, {
+        path = buffer_path,
+        upward = true,
+      })[1])
+    vim.lsp.start(c)
+  end)
 end
 
 return M

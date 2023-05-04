@@ -119,6 +119,7 @@
 (go-callees)	vim-go.txt	/*(go-callees)*
 (go-callers)	vim-go.txt	/*(go-callers)*
 (go-callstack)	vim-go.txt	/*(go-callstack)*
+(go-channel-peers)	vim-go.txt	/*(go-channel-peers)*
 (go-channelpeers)	vim-go.txt	/*(go-channelpeers)*
 (go-coverage)	vim-go.txt	/*(go-coverage)*
 (go-coverage-clear)	vim-go.txt	/*(go-coverage-clear)*
@@ -150,10 +151,14 @@
 (go-doc-split)	vim-go.txt	/*(go-doc-split)*
 (go-doc-tab)	vim-go.txt	/*(go-doc-tab)*
 (go-doc-vertical)	vim-go.txt	/*(go-doc-vertical)*
+(go-extract)	vim-go.txt	/*(go-extract)*
 (go-files)	vim-go.txt	/*(go-files)*
+(go-fill-struct)	vim-go.txt	/*(go-fill-struct)*
+(go-fillstruct)	vim-go.txt	/*(go-fillstruct)*
 (go-fmt)	vim-go.txt	/*(go-fmt)*
 (go-freevars)	vim-go.txt	/*(go-freevars)*
 (go-generate)	vim-go.txt	/*(go-generate)*
+(go-if-err)	vim-go.txt	/*(go-if-err)*
 (go-iferr)	vim-go.txt	/*(go-iferr)*
 (go-implements)	vim-go.txt	/*(go-implements)*
 (go-import)	vim-go.txt	/*(go-import)*
@@ -172,6 +177,7 @@
 (go-run-vertical)	vim-go.txt	/*(go-run-vertical)*
 (go-test)	vim-go.txt	/*(go-test)*
 (go-test-compile)	vim-go.txt	/*(go-test-compile)*
+(go-test-file)	vim-go.txt	/*(go-test-file)*
 (go-test-func)	vim-go.txt	/*(go-test-func)*
 (go-vet)	vim-go.txt	/*(go-vet)*
 :AsmFmt	vim-go.txt	/*:AsmFmt*
@@ -189,6 +195,7 @@
 :GoCoverage	vim-go.txt	/*:GoCoverage*
 :GoCoverageBrowser	vim-go.txt	/*:GoCoverageBrowser*
 :GoCoverageClear	vim-go.txt	/*:GoCoverageClear*
+:GoCoverageOverlay	vim-go.txt	/*:GoCoverageOverlay*
 :GoCoverageToggle	vim-go.txt	/*:GoCoverageToggle*
 :GoDebugAttach	vim-go.txt	/*:GoDebugAttach*
 :GoDebugBreakpoint	vim-go.txt	/*:GoDebugBreakpoint*
@@ -219,6 +226,7 @@
 :GoDocBrowser	vim-go.txt	/*:GoDocBrowser*
 :GoDrop	vim-go.txt	/*:GoDrop*
 :GoErrCheck	vim-go.txt	/*:GoErrCheck*
+:GoExtract	vim-go.txt	/*:GoExtract*
 :GoFiles	vim-go.txt	/*:GoFiles*
 :GoFillStruct	vim-go.txt	/*:GoFillStruct*
 :GoFmt	vim-go.txt	/*:GoFmt*
@@ -258,6 +266,7 @@
 :GoTemplateAutoCreateToggle	vim-go.txt	/*:GoTemplateAutoCreateToggle*
 :GoTest	vim-go.txt	/*:GoTest*
 :GoTestCompile	vim-go.txt	/*:GoTestCompile*
+:GoTestFile	vim-go.txt	/*:GoTestFile*
 :GoTestFunc	vim-go.txt	/*:GoTestFunc*
 :GoUpdateBinaries	vim-go.txt	/*:GoUpdateBinaries*
 :GoVet	vim-go.txt	/*:GoVet*

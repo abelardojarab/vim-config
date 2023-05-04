@@ -6,7 +6,7 @@ View treesitter information directly in Neovim!
 
 ## Requirements
   - Neovim [nightly](https://github.com/neovim/neovim#install-from-source)
-  - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) plugin
+  - [nvim-treesitter](https://github.com/nvim-treesitter/nvim-treesitter) plugin (with the `query` grammar installed)
 
 ## Setup
 
@@ -89,12 +89,21 @@ require "nvim-treesitter.configs".setup {
 }
 ```
 
+*Note: Query linter assumes certain directory structure to identify which language queries belong to. It expect query files to be under `./queries/<language_name>`*
+
 ![image](https://user-images.githubusercontent.com/7189118/101246661-06089a00-3715-11eb-9c57-6d6439defbf8.png)
 
 ## Show treesitter and syntax highlight groups under the cursor 
 
 The playground comes with `:TSHighlightCapturesUnderCursor` that shows any treesitter or syntax highlight groups under the cursor.
 
-![image](https://user-images.githubusercontent.com/292349/119982982-6665ef00-bf74-11eb-93d5-9b214928c3a9.png)
+<img src="https://user-images.githubusercontent.com/292349/119982982-6665ef00-bf74-11eb-93d5-9b214928c3a9.png" width="450">
 
-![image](https://user-images.githubusercontent.com/292349/119983093-8c8b8f00-bf74-11eb-9fa2-3670a8253fbd.png)
+<img src="https://user-images.githubusercontent.com/292349/119983093-8c8b8f00-bf74-11eb-9fa2-3670a8253fbd.png" width="450">
+
+## Show treesitter node under the cursor
+
+If you only wish to view information about the node your cursor is currently on (without having to open up the full tree), you can use `:TSNodeUnderCursor` instead.
+A floating window containing information about the parser, node name and row/col ranges will be shown.
+
+<img src="https://user-images.githubusercontent.com/30731072/210166267-038c529b-f265-4439-8ed8-807b745cf026.png" width="450">

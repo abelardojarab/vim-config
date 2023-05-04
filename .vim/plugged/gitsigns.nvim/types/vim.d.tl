@@ -18,6 +18,12 @@ local record M
   -- Assume result_type == 'indices'
   diff: function(string|{string}, string|{string}, table): {DiffResult}
 
+  env: {string:string}
+
+  iconv: function(string, string, string): string
+
+  is_callable: function(any): boolean
+
   record go
     operatorfunc: string
   end
@@ -35,6 +41,8 @@ local record M
     {WinOption}
     diff: boolean
     signcolumn: string
+    scrolloff: integer
+    relativenumber: boolean
   end
 
   wo: WinOption
@@ -85,6 +93,7 @@ local record M
 
   record g
     gitsigns_head: string
+    loaded_fugitive: integer
   end
 
   record v
@@ -142,6 +151,14 @@ local record M
 
   pesc: function(string): string
 
+  record Regex
+    userdata
+
+    match_str: function(Regex, string): integer, integer
+  end
+
+  regex: function(string): Regex
+
   startswith: function(string, string): boolean
   endswith: function(string, string): boolean
 
@@ -166,7 +183,7 @@ local record M
   tbl_filter: function<T>((function(any): boolean), {T}): {T}
   tbl_isempty: function(table): boolean
   tbl_islist: function(table): boolean
-  tbl_keys: function(table): table
+  tbl_keys: function<K,V>({K:V}): {K}
   tbl_map: function(function, table): table
 
   record InspectOptions
@@ -211,6 +228,10 @@ local record M
   end
 
   is_thread: function(): boolean
+
+  record fs
+    find: function(string|{string}, table): {string}
+  end
 end
 
 return M

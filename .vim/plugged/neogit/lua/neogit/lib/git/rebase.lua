@@ -1,17 +1,8 @@
 local logger = require("neogit.logger")
 local client = require("neogit.client")
-local log = require("neogit.lib.git.log")
 local notif = require("neogit.lib.notification")
 
 local M = {}
-
--- Async
-function M.commits()
-  local git = require("neogit.lib.git")
-  local output = git.cli.log.format("fuller").args("--graph").call(true).stdout
-
-  return log.parse(output)
-end
 
 local a = require("plenary.async")
 
@@ -19,22 +10,25 @@ local function rebase_command(cmd)
   local git = require("neogit.lib.git")
   cmd = cmd or git.cli.rebase
   local envs = client.get_envs_git_editor()
-  return cmd.env(envs).show_popup(false):in_pty(true).call(true)
+  return cmd.env(envs).show_popup(true):in_pty(true).call(true)
 end
 
-function M.run_interactive(commit)
+function M.rebase_interactive(...)
   a.util.scheduler()
   local git = require("neogit.lib.git")
-  local result = rebase_command(git.cli.rebase.interactive.args(commit))
+  local result = rebase_command(git.cli.rebase.interactive.args(...))
   if result.code ~= 0 then
     notif.create("Rebasing failed. Resolve conflicts before continuing", vim.log.levels.ERROR)
   end
+  a.util.scheduler()
+  local status = require("neogit.status")
+  status.refresh(true, "rebase_interactive")
 end
 
-function M.rebase_onto(branch)
+function M.rebase_onto(branch, args)
   a.util.scheduler()
   local git = require("neogit.lib.git")
-  local result = rebase_command(git.cli.rebase.args(branch))
+  local result = rebase_command(git.cli.rebase.args(branch).arg_list(args))
   if result.code ~= 0 then
     notif.create("Rebasing failed. Resolve conflicts before continuing", vim.log.levels.ERROR)
   end

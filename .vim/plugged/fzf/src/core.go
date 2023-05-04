@@ -213,21 +213,13 @@ func Run(opts *Options, version string, revision string) {
 	clearSelection := util.Once(false)
 	ticks := 0
 	var nextCommand *string
-	restart := func(command string) {
-		reading = true
-		clearCache = util.Once(true)
-		clearSelection = util.Once(true)
-		chunkList.Clear()
-		itemIndex = 0
-		header = make([]string, 0, opts.HeaderLines)
-		go reader.restart(command)
-	}
 	eventBox.Watch(EvtReadNew)
 	total := 0
 	query := []rune{}
 	determine := func(final bool) {
 		if heightUnknown {
 			if total >= maxFit || final {
+				deferred = false
 				heightUnknown = false
 				terminal.startChan <- fitpad{util.Min(total, maxFit), padHeight}
 			}
@@ -235,6 +227,25 @@ func Run(opts *Options, version string, revision string) {
 			deferred = false
 			terminal.startChan <- fitpad{-1, -1}
 		}
+	}
+
+	useSnapshot := false
+	var snapshot []*Chunk
+	var prevSnapshot []*Chunk
+	var count int
+	restart := func(command string) {
+		reading = true
+		clearCache = util.Once(true)
+		clearSelection = util.Once(true)
+		// We should not update snapshot if reload is triggered again while
+		// the previous reload is in progress
+		if useSnapshot && prevSnapshot != nil {
+			snapshot, count = chunkList.Snapshot()
+		}
+		chunkList.Clear()
+		itemIndex = 0
+		header = make([]string, 0, opts.HeaderLines)
+		go reader.restart(command)
 	}
 	for {
 		delay := true
@@ -267,7 +278,13 @@ func Run(opts *Options, version string, revision string) {
 					} else {
 						reading = reading && evt == EvtReadNew
 					}
-					snapshot, count := chunkList.Snapshot()
+					if useSnapshot && evt == EvtReadFin {
+						useSnapshot = false
+						prevSnapshot = nil
+					}
+					if !useSnapshot {
+						snapshot, count = chunkList.Snapshot()
+					}
 					total = count
 					terminal.UpdateCount(total, !reading, value.(*string))
 					if opts.Sync {
@@ -277,15 +294,20 @@ func Run(opts *Options, version string, revision string) {
 					if heightUnknown && !deferred {
 						determine(!reading)
 					}
-					reset := clearCache()
+					reset := !useSnapshot && clearCache()
 					matcher.Reset(snapshot, input(reset), false, !reading, sort, reset)
 
 				case EvtSearchNew:
 					var command *string
+					var changed bool
 					switch val := value.(type) {
 					case searchRequest:
 						sort = val.sort
 						command = val.command
+						changed = val.changed
+						if command != nil {
+							useSnapshot = val.sync
+						}
 					}
 					if command != nil {
 						if reading {
@@ -294,10 +316,20 @@ func Run(opts *Options, version string, revision string) {
 						} else {
 							restart(*command)
 						}
+					}
+					if !changed {
 						break
 					}
-					snapshot, _ := chunkList.Snapshot()
-					reset := clearCache()
+					reset := false
+					if !useSnapshot {
+						newSnapshot, _ := chunkList.Snapshot()
+						// We want to avoid showing empty list when reload is triggered
+						// and the query string is changed at the same time i.e. command != nil && changed
+						if command == nil || len(newSnapshot) > 0 {
+							snapshot = newSnapshot
+							reset = clearCache()
+						}
+					}
 					matcher.Reset(snapshot, input(reset), true, !reading, sort, reset)
 					delay = false
 

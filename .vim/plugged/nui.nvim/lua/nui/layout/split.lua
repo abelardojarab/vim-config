@@ -68,6 +68,7 @@ function mod.process(box, meta)
   for i, child in ipairs(box.box) do
     if meta.process_growable_child or not child.grow then
       local position = get_child_position(box.dir)
+      local relative = { type = "win" }
       local size = get_child_size(position, child, container_size, meta.growable_dimension_per_factor)
 
       consumed_size.width = consumed_size.width + (size.width or 0)
@@ -75,21 +76,29 @@ function mod.process(box, meta)
 
       if i == 1 then
         position = meta.position
+        if meta.relative then
+          relative = meta.relative
+        end
         if position == "left" or position == "right" then
-          size = { width = container_size.width }
+          size.width = container_size.width
         else
-          size = { height = container_size.height }
+          size.height = container_size.height
         end
       end
 
       if child.component then
         child.component:update_layout({
           position = position,
-          relative = {
-            type = "win",
-          },
+          relative = relative,
           size = size,
         })
+        if i == 1 and child.component.winid then
+          if position == "left" or position == "right" then
+            vim.api.nvim_win_set_height(child.component.winid, size.height)
+          else
+            vim.api.nvim_win_set_width(child.component.winid, size.width)
+          end
+        end
       else
         mod.process(child, {
           container_size = size,
@@ -139,8 +148,12 @@ end
 local function unset_win_options_fixsize(box)
   for _, child in ipairs(box.box) do
     if child.component then
-      child.component._.win_options.winfixwidth = false
-      child.component._.win_options.winfixheight = false
+      local winfix = child.component._._layout_orig_winfixsize
+      if winfix then
+        child.component._.win_options.winfixwidth = winfix.winfixwidth
+        child.component._.win_options.winfixheight = winfix.winfixheight
+        child.component._._layout_orig_winfixsize = nil
+      end
       u.set_win_options(child.component.winid, {
         winfixwidth = child.component._.win_options.winfixwidth,
         winfixheight = child.component._.win_options.winfixheight,
@@ -160,6 +173,11 @@ local function do_action(box, action, meta)
   for i, child in ipairs(box.box) do
     if not meta.initial_pass or i == 1 then
       if child.component then
+        child.component._._layout_orig_winfixsize = {
+          winfixwidth = child.component._.win_options.winfixwidth,
+          winfixheight = child.component._.win_options.winfixheight,
+        }
+
         child.component._.win_options.winfixwidth = i ~= 1
         child.component._.win_options.winfixheight = i == 1
         if box.dir == "col" then
@@ -173,6 +191,10 @@ local function do_action(box, action, meta)
         end
 
         child.component[action](child.component)
+
+        if action == "show" and not child.component._.mounted then
+          child.component:mount()
+        end
       else
         do_action(child, action, {
           initial_pass = true,

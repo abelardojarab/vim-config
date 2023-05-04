@@ -90,6 +90,7 @@ function Split:init(options)
   options = u.split.normalize_options(options)
 
   self._ = {
+    id = id,
     enter = options.enter,
     buf_options = options.buf_options,
     loading = false,
@@ -147,9 +148,10 @@ function Split:_open_window()
     vim.api.nvim_set_current_win(self.winid)
   end
 
-  utils._.set_win_options(self.winid, self._.win_options)
+  self._.win_config.pending_changes = { size = true }
+  set_win_config(self.winid, self._.win_config)
 
-  self._.win_config.pending_changes = {}
+  utils._.set_win_options(self.winid, self._.win_options)
 end
 
 function Split:_close_window()
@@ -185,8 +187,10 @@ function Split:mount()
     buffer = self.bufnr,
     callback = function()
       self._.pending_quit = true
-      self:unmount()
-      self._.pending_quit = nil
+      vim.schedule(function()
+        self:unmount()
+        self._.pending_quit = nil
+      end)
     end,
   }, self.bufnr)
   autocmd.create("BufWinEnter", {

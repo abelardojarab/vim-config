@@ -1,22 +1,31 @@
 local editor = require('distant.editor')
 local log = require('distant.log')
 local fn = require('distant.fn')
-local u = require('distant.utils')
-local v = require('distant.vars')
+local utils = require('distant.utils')
+local vars = require('distant.vars')
 
 local actions = {}
 
+--- Returns the separator used by the remote system
+--- @return string
+local function remote_sep()
+    return assert(fn.cached_system_info().main_separator, 'missing remote sep')
+end
+
 --- Returns the path under the cursor without joining it to the base path
+--- @return string
 local function path_under_cursor()
     local linenr = vim.fn.line('.') - 1
     return vim.api.nvim_buf_get_lines(0, linenr, linenr + 1, true)[1]
 end
 
 --- Returns the full path under cursor by joining it with the base path
+--- @return string|nil
 local function full_path_under_cursor()
-    local base_path = v.buf.remote_path()
+    --- @type string|nil
+    local base_path = vars.buf().remote_path.get()
     if base_path ~= nil then
-        return u.join_path(base_path, path_under_cursor())
+        return utils.join_path(remote_sep(), { base_path, path_under_cursor() })
     end
 end
 
@@ -31,7 +40,7 @@ actions.edit = function(opts)
 
     local path = full_path_under_cursor()
     if path ~= nil then
-        editor.open(vim.tbl_deep_extend('keep', {path = path}, opts))
+        editor.open(vim.tbl_deep_extend('keep', { path = path }, opts))
     end
 end
 
@@ -45,16 +54,17 @@ end
 actions.up = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    --- @type string|nil
+    local base_path = vars.buf().remote_path.get()
     local reload = true
     if opts.reload ~= nil then
         reload = opts.reload
     end
 
     if base_path ~= nil then
-        local parent = u.parent_path(base_path)
+        local parent = utils.parent_path(base_path)
         if parent ~= nil then
-            editor.open({path = parent, reload = reload})
+            editor.open({ path = parent, reload = reload })
         end
     end
 end
@@ -69,14 +79,15 @@ end
 actions.newfile = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    --- @type string|nil
+    local base_path = vars.buf().remote_path.get()
     if base_path ~= nil then
         local name = opts.path or vim.fn.input('Name: ')
         if name == '' then
             return
         end
 
-        local path = u.join_path(base_path, name)
+        local path = utils.join_path(remote_sep(), { base_path, name })
         editor.open(path)
     end
 end
@@ -91,18 +102,19 @@ end
 actions.mkdir = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    --- @type string|nil
+    local base_path = vars.buf().remote_path.get()
     if base_path ~= nil then
         local name = opts.path or vim.fn.input('Directory name: ')
         if name == '' then
             return
         end
 
-        local path = u.join_path(base_path, name)
-        local err = fn.create_dir({path = path, all = true})
+        local path = utils.join_path(remote_sep(), { base_path, name })
+        local err = fn.create_dir({ path = path, all = true })
 
         if not err then
-            editor.open({path = base_path, reload = true})
+            editor.open({ path = base_path, reload = true })
         else
             log.error(string.format('Failed to create %s: %s', path, err))
         end
@@ -119,7 +131,8 @@ end
 actions.rename = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    --- @type string|nil
+    local base_path = vars.buf().remote_path.get()
     if base_path ~= nil then
         local old_path = full_path_under_cursor()
         if old_path ~= nil then
@@ -128,10 +141,10 @@ actions.rename = function(opts)
                 return
             end
 
-            local err = fn.rename({src = old_path, dst = new_path})
+            local err = fn.rename({ src = old_path, dst = new_path })
 
             if not err then
-                editor.open({path = base_path, reload = true})
+                editor.open({ path = base_path, reload = true })
             else
                 log.error(string.format('Failed to rename %s to %s: %s', old_path, new_path, err))
             end
@@ -150,7 +163,8 @@ end
 actions.remove = function(opts)
     opts = opts or {}
 
-    local base_path = v.buf.remote_path()
+    --- @type string|nil
+    local base_path = vars.buf().remote_path.get()
     if base_path ~= nil then
         local path = full_path_under_cursor()
         if path ~= nil then
@@ -161,10 +175,10 @@ actions.remove = function(opts)
                 end
             end
 
-            local err = fn.remove(vim.tbl_extend('keep', {path = path}, opts))
+            local err = fn.remove(vim.tbl_extend('keep', { path = path }, opts))
 
             if not err then
-                editor.open({path = base_path, reload = true})
+                editor.open({ path = base_path, reload = true })
             else
                 log.error(string.format('Failed to remove %s: %s', path, err))
             end

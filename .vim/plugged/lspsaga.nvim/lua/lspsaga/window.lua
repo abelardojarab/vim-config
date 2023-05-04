@@ -1,37 +1,100 @@
-local vim, api = vim, vim.api
+local vim, api, lsp = vim, vim.api, vim.lsp
 local M = {}
-local config = require('lspsaga').config_values
 
-local function get_border_style(style, highlight)
-  highlight = highlight or 'FloatBorder'
-  local border_style = {
-    ['none'] = 'none',
-    ['single'] = 'single',
-    ['double'] = 'double',
-    ['rounded'] = 'rounded',
-    ['bold'] = {
-      { '┏', highlight },
-      { '─', highlight },
-      { '┓', highlight },
-      { '│', highlight },
-      { '┛', highlight },
-      { '─', highlight },
-      { '┗', highlight },
-      { '│', highlight },
+function M.border_chars()
+  return {
+    lefttop = {
+      ['single'] = '┌',
+      ['double'] = '╔',
+      ['rounded'] = '╭',
+      ['solid'] = ' ',
+      ['shadow'] = '',
     },
-    ['plus'] = {
-      { '+', highlight },
-      { '─', highlight },
-      { '+', highlight },
-      { '│', highlight },
-      { '+', highlight },
-      { '─', highlight },
-      { '+', highlight },
-      { '│', highlight },
+
+    top = {
+      ['single'] = '─',
+      ['double'] = '═',
+      ['rounded'] = '─',
+      ['solid'] = ' ',
+      ['shadow'] = '',
+    },
+    righttop = {
+      ['single'] = '┐',
+      ['double'] = '╗',
+      ['rounded'] = '╮',
+      ['solid'] = ' ',
+      ['shadow'] = ' ',
+    },
+    right = {
+      ['single'] = '│',
+      ['double'] = '║',
+      ['rounded'] = '│',
+      ['solid'] = ' ',
+      ['shadow'] = ' ',
+    },
+    rightbottom = {
+      ['single'] = '┘',
+      ['double'] = '╝',
+      ['rounded'] = '╯',
+      ['solid'] = ' ',
+      ['shadow'] = ' ',
+    },
+    bottom = {
+      ['single'] = '─',
+      ['double'] = '═',
+      ['rounded'] = '─',
+      ['solid'] = ' ',
+      ['shadow'] = ' ',
+    },
+    leftbottom = {
+      ['single'] = '└',
+      ['double'] = '╚',
+      ['rounded'] = '╰',
+      ['solid'] = ' ',
+      ['shadow'] = ' ',
+    },
+    left = {
+      ['single'] = '│',
+      ['double'] = '║',
+      ['rounded'] = '│',
+      ['solid'] = ' ',
+      ['shadow'] = '',
     },
   }
+end
 
-  return border_style[style]
+function M.combine_char()
+  return {
+    ['top'] = {
+      ['single'] = '┬',
+      ['rounded'] = '┬',
+      ['double'] = '╦',
+      ['solid'] = ' ',
+    },
+    ['bottom'] = {
+      ['single'] = '┴',
+      ['rounded'] = '┴',
+      ['double'] = '╩',
+      ['solid'] = ' ',
+    },
+  }
+end
+
+function M.combine_border(style, side, hi)
+  local border_chars = M.border_chars()
+  local order =
+    { 'lefttop', 'top', 'righttop', 'right', 'rightbottom', 'bottom', 'leftbottom', 'left' }
+
+  local res = {}
+
+  for _, pos in ipairs(order) do
+    if not vim.tbl_isempty(side) and vim.tbl_contains(vim.tbl_keys(side), pos) then
+      res[#res + 1] = { side[pos], hi }
+    else
+      res[#res + 1] = { border_chars[pos][style], hi }
+    end
+  end
+  return res
 end
 
 local function make_floating_popup_options(width, height, opts)
@@ -45,29 +108,31 @@ local function make_floating_popup_options(width, height, opts)
   })
   local new_option = {}
 
-  new_option.style = 'minimal'
+  new_option.style = opts.style or 'minimal'
   new_option.width = width
   new_option.height = height
-  new_option.focusable = true
-  if opts.focusable then
+
+  if opts.focusable ~= nil then
     new_option.focusable = opts.focusable
   end
 
-  if opts.noautocmd then
-    new_option.noautocmd = opts.noautocmd
+  new_option.noautocmd = opts.noautocmd or true
+
+  new_option.relative = opts.relative and opts.relative or 'cursor'
+  new_option.anchor = opts.anchor or nil
+  if new_option.relative == 'win' then
+    new_option.bufpos = opts.bufpos or nil
+    new_option.win = opts.win or nil
   end
 
-  if opts.relative ~= nil then
-    new_option.relative = opts.relative
-  else
-    new_option.relative = 'cursor'
+  if opts.title then
+    new_option.title = opts.title
+    new_option.title_pos = opts.title_pos or 'center'
   end
 
-  if opts.anchor ~= nil then
-    new_option.anchor = opts.anchor
-  end
+  new_option.zindex = opts.zindex or nil
 
-  if opts.row == nil and opts.col == nil then
+  if not opts.row and not opts.col and not opts.bufpos then
     local lines_above = vim.fn.winline() - 1
     local lines_below = vim.fn.winheight(0) - lines_above
     new_option.anchor = ''
@@ -82,18 +147,12 @@ local function make_floating_popup_options(width, height, opts)
       new_option.row = 0
     end
 
-    if vim.fn.wincol() + width <= api.nvim_get_option('columns') then
+    if vim.fn.wincol() + width <= vim.o.columns then
       new_option.anchor = new_option.anchor .. 'W'
       new_option.col = 0
-      if opts.move_col then
-        new_option.col = new_option.col + opts.move_col
-      end
     else
       new_option.anchor = new_option.anchor .. 'E'
       new_option.col = 1
-      if opts.move_col then
-        new_option.col = new_option.col - opts.move_col + 1
-      end
     end
   else
     new_option.row = opts.row
@@ -106,15 +165,10 @@ end
 local function generate_win_opts(contents, opts)
   opts = opts or {}
   local win_width, win_height
-  -- _make_floating_popup_size doesn't allow the window size to be larger than
-  -- the current window. For the finder preview window, this means it won't let the
-  -- preview window be wider than the finder window. To work around this, the
-  -- no_size_override option can be set to indicate that the size shouldn't be changed
-  -- from what was given.
   if opts.no_size_override and opts.width and opts.height then
     win_width, win_height = opts.width, opts.height
   else
-    win_width, win_height = vim.lsp.util._make_floating_popup_size(contents, opts)
+    win_width, win_height = lsp.util._make_floating_popup_size(contents, opts)
   end
 
   opts = make_floating_popup_options(win_width, win_height, opts)
@@ -135,11 +189,12 @@ end
 
 local function open_shadow_win()
   local opts = get_shadow_config()
-  local shadow_winhl = 'Normal:SagaShadow,NormalNC:SagaShadow,EndOfBuffer:SagaShadow'
-  local shadow_bufnr = api.nvim_create_buf(false, true)
+  local shadow_winhl = 'Normal:SagaShadow'
+  local shadow_bufnr = api.nvim_create_buf(false, false)
   local shadow_winid = api.nvim_open_win(shadow_bufnr, true, opts)
-  api.nvim_win_set_option(shadow_winid, 'winhl', shadow_winhl)
-  api.nvim_win_set_option(shadow_winid, 'winblend', 70)
+  api.nvim_set_option_value('winhl', shadow_winhl, { scope = 'local', win = shadow_winid })
+  api.nvim_set_option_value('winblend', 70, { scope = 'local', win = shadow_winid })
+  api.nvim_set_option_value('bufhidden', 'wipe', { buf = shadow_bufnr })
   return shadow_bufnr, shadow_winid
 end
 
@@ -149,6 +204,7 @@ end
 -- enter boolean into window or not
 -- highlight border highlight string type
 function M.create_win_with_border(content_opts, opts)
+  local config = require('lspsaga').config
   vim.validate({
     content_opts = { content_opts, 't' },
     contents = { content_opts.content, 't', true },
@@ -157,16 +213,28 @@ function M.create_win_with_border(content_opts, opts)
 
   local contents, filetype = content_opts.contents, content_opts.filetype
   local enter = content_opts.enter or false
-  local highlight = content_opts.highlight or 'LspFloatWinBorder'
   opts = opts or {}
   opts = generate_win_opts(contents, opts)
-  opts.border = content_opts.border or get_border_style(config.border_style, highlight)
+
+  local highlight = content_opts.highlight or {}
+
+  local normal = highlight.normal or 'LspNormal'
+  local border_hl = highlight.border or 'LspBorder'
+
+  if content_opts.noborder then
+    opts.border = 'none'
+  else
+    opts.border = content_opts.border_side
+        and M.combine_border(config.ui.border, content_opts.border_side, border_hl)
+      or config.ui.border
+  end
 
   -- create contents buffer
-  local bufnr = content_opts.bufnr or api.nvim_create_buf(false, true)
+  local bufnr = content_opts.bufnr or api.nvim_create_buf(false, false)
   -- buffer settings for contents buffer
   -- Clean up input: trim empty lines from the end, pad
-  local content = vim.lsp.util._trim(contents)
+  ---@diagnostic disable-next-line: missing-parameter
+  local content = lsp.util._trim(contents)
 
   if filetype then
     api.nvim_buf_set_option(bufnr, 'filetype', filetype)
@@ -183,20 +251,27 @@ function M.create_win_with_border(content_opts, opts)
     api.nvim_buf_set_lines(bufnr, 0, -1, true, content)
   end
 
-  if api.nvim_buf_is_valid(bufnr) then
-    api.nvim_buf_set_option(bufnr, 'modifiable', false)
-    api.nvim_buf_set_option(bufnr, 'bufhidden', 'wipe')
+  if not content_opts.bufnr then
+    api.nvim_set_option_value('modifiable', false, { buf = bufnr })
+    api.nvim_set_option_value('bufhidden', content_opts.bufhidden or 'wipe', { buf = bufnr })
+    api.nvim_set_option_value('buftype', content_opts.buftype or 'nofile', { buf = bufnr })
   end
 
   local winid = api.nvim_open_win(bufnr, enter, opts)
-  api.nvim_win_set_option(winid, 'winhl', 'Normal:LspFloatWinNormal,FloatBorder:' .. highlight)
-  api.nvim_win_set_option(winid, 'winblend', content_opts.winblend or config.saga_winblend)
+  api.nvim_set_option_value(
+    'winblend',
+    content_opts.winblend or config.ui.winblend,
+    { scope = 'local', win = winid }
+  )
+  api.nvim_set_option_value('wrap', content_opts.wrap or false, { scope = 'local', win = winid })
 
-  -- disable winbar in some saga's floatwindow
-  if config.symbol_in_winbar.enable or config.symbol_in_winbar.in_custom then
-    api.nvim_win_set_option(winid, 'winbar', '')
-  end
+  api.nvim_set_option_value(
+    'winhl',
+    'Normal:' .. normal .. ',FloatBorder:' .. border_hl,
+    { scope = 'local', win = winid }
+  )
 
+  api.nvim_set_option_value('winbar', '', { scope = 'local', win = winid })
   return bufnr, winid
 end
 
@@ -206,33 +281,28 @@ function M.open_shadow_float_win(content_opts, opts)
   return contents_bufnr, contents_winid, shadow_bufnr, shadow_winid
 end
 
-function M.get_max_float_width()
-  -- current window width
-  local WIN_WIDTH = vim.fn.winwidth(0)
-  local max_width = math.floor(WIN_WIDTH * 0.7)
-  return max_width
+function M.get_max_float_width(percent)
+  percent = percent or 0.6
+  return math.floor(vim.o.columns * percent)
 end
 
 function M.get_max_content_length(contents)
   vim.validate({
     contents = { contents, 't' },
   })
-
-  local max = 0
-
-  if next(contents) == nil then
-    return max
-  end
-  if #contents == 1 then
-    return #contents[1]
-  end
-
+  local cells = {}
   for _, v in pairs(contents) do
-    if #v > max then
-      max = #v
+    if v:find('\n.') then
+      local tbl = vim.split(v, '\n')
+      vim.tbl_map(function(s)
+        table.insert(cells, #s)
+      end, tbl)
+    else
+      table.insert(cells, #v)
     end
   end
-  return max
+  table.sort(cells)
+  return cells[#cells]
 end
 
 function M.nvim_close_valid_window(winid)
@@ -276,6 +346,58 @@ function M.nvim_win_try_close()
   if has_var and line_diag_winids ~= nil then
     M.nvim_close_valid_window(line_diag_winids)
   end
+end
+
+function M.win_height_increase(content, percent)
+  local increase = 0
+  local max_width = M.get_max_float_width(percent)
+  local max_len = M.get_max_content_length(content)
+  local new = {}
+  for _, v in pairs(content) do
+    if v:find('\n.') then
+      vim.list_extend(new, vim.split(v, '\n'))
+    else
+      new[#new + 1] = v
+    end
+  end
+  if max_len > max_width then
+    vim.tbl_map(function(s)
+      local cols = vim.fn.strdisplaywidth(s)
+      if cols > max_width then
+        increase = increase + math.floor(cols / max_width)
+      end
+    end, new)
+  end
+  return increase
+end
+
+function M.restore_option()
+  local minimal_opts = {
+    ['number'] = vim.opt.number,
+    ['relativenumber'] = vim.opt.relativenumber,
+    ['cursorline'] = vim.opt.cursorline,
+    ['cursorcolumn'] = vim.opt.cursorcolumn,
+    ['foldcolumn'] = vim.opt.foldcolumn,
+    ['spell'] = vim.opt.spell,
+    ['list'] = vim.opt.list,
+    ['signcolumn'] = vim.opt.signcolumn,
+    ['colorcolumn'] = vim.opt.colorcolumn,
+    ['fillchars'] = vim.opt.fillchars,
+  }
+
+  if vim.fn.has('nvim-0.9') == 1 then
+    minimal_opts['statuscolumn'] = vim.opt.statuscolumn
+  end
+
+  function minimal_opts.restore()
+    for opt, val in pairs(minimal_opts) do
+      if type(val) ~= 'function' then
+        vim.opt[opt] = val
+      end
+    end
+  end
+
+  return minimal_opts
 end
 
 return M

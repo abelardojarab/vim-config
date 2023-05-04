@@ -92,9 +92,18 @@ local record M
   nvim_create_augroup: function(string, AugroupOpts): integer
 
   record AutoCmdOpts
-    callback: function()
+    record CallbackData
+      id: integer
+      group: integer
+      event: string
+      match: string
+      buf: integer
+      file: string
+      data: any
+    end
+    callback: function(CallbackData)
     command: string
-    group: string
+    group: integer|string
     pattern: string|{string}
     once: boolean
     nested: boolean
@@ -134,7 +143,15 @@ local record M
   nvim_get_current_tabpage: function(): any
   nvim_get_current_win: function(): integer
   nvim_get_hl_by_id: function(number, boolean): {string:any}
-  nvim_get_hl_by_name: function(string, boolean): {string:any}
+
+  record HlAttrs
+    foreground: integer
+    background: integer
+    reverse: boolean
+  end
+
+  nvim_get_hl_by_name: function(string, boolean): HlAttrs
+
   nvim_get_hl_id_by_name: function(string): number
   nvim_get_keymap: function(string): {{string:any}}
   nvim_get_mode: function(): {string:any}
@@ -205,7 +222,27 @@ local record M
   nvim_win_get_width: function(integer): integer
   nvim_win_is_valid: function(number): boolean
   nvim_win_set_buf: function(number, number)
-  nvim_win_set_config: function(number, {string:any})
+
+  record WinConfig
+    bufpos: {integer, integer}
+    virt_lines_above: boolean
+    width: integer
+    height: integer
+    relative: string
+    row: integer
+    col: integer
+    win: integer
+    enum Anchor
+      'NW'
+      'NE'
+      'SW'
+      'SE'
+    end
+    anchor: Anchor
+  end
+
+  nvim_win_set_config: function(number, WinConfig)
+
   nvim_win_set_cursor: function(number, {number})
   nvim_win_set_height: function(number, number)
   nvim_win_set_option: function(number, string, any)

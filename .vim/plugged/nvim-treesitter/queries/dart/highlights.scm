@@ -11,7 +11,7 @@
 
 ; NOTE: This query is a bit of a work around for the fact that the dart grammar doesn't
 ; specifically identify a node as a function call
-(((identifier) @function (#match? @function "^_?[a-z]"))
+(((identifier) @function (#lua-match? @function "^_?[%l]"))
   . (selector . (argument_part))) @function
 
 ; Annotations
@@ -100,7 +100,7 @@
 ((scoped_identifier
   scope: (identifier) @type
   name: (identifier) @type)
- (#match? @type "^[a-zA-Z]"))
+ (#lua-match? @type "^[%u%l]"))
 
 (type_identifier) @type
 
@@ -113,7 +113,7 @@
 (inferred_type) @keyword
 
 ((identifier) @type
- (#match? @type "^_?[A-Z].*[a-z]")) ; catch Classes or IClasses not CLASSES
+ (#lua-match? @type "^_?[%u].*[%l]")) ; catch Classes or IClasses not CLASSES
 
 ("Function" @type)
 
@@ -144,7 +144,7 @@
     (hex_integer_literal)
     (decimal_integer_literal)
     (decimal_floating_point_literal)
-    ; TODO: inaccessbile nodes
+    ; TODO: inaccessible nodes
     ; (octal_integer_literal)
     ; (hex_floating_point_literal)
 ] @number
@@ -155,8 +155,8 @@
 (false) @boolean
 (null_literal) @constant.builtin
 
-(documentation_comment) @comment
-(comment) @comment
+(comment) @comment @spell
+(documentation_comment) @comment.documentation @spell
 
 ; Keywords
 ; --------------------
@@ -195,14 +195,12 @@
 
 [
   "return"
-  "yield"
 ] @keyword.return
 
 
 ; Built in identifiers:
 ; alone these are marked as keywords
 [
-    "await"
     "deferred"
     "factory"
     "get"
@@ -217,16 +215,21 @@
 ] @keyword
 
 [
+  "async"
+  "async*"
+  "sync*"
+  "await"
+  "yield"
+] @keyword.coroutine
+
+[
     (const_builtin)
     (final_builtin)
     "abstract"
-    "async"
-    "async*"
     "covariant"
     "dynamic"
     "external"
     "static"
-    "sync*"
 ] @type.qualifier
 
 ; when used as an identifier:

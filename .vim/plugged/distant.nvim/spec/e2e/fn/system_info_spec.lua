@@ -5,7 +5,7 @@ describe('fn', function()
     local driver
 
     before_each(function()
-        driver = Driver:setup()
+        driver = Driver:setup({ label = 'fn.system_info' })
     end)
 
     after_each(function()

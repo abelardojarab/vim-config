@@ -66,7 +66,7 @@ Add the following to your `~/.tmux.conf` file:
 # Smart pane switching with awareness of Vim splits.
 # See: https://github.com/christoomey/vim-tmux-navigator
 is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
-    | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
+    | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?)(diff)?$'"
 bind-key -n 'C-h' if-shell "$is_vim" 'send-keys C-h'  'select-pane -L'
 bind-key -n 'C-j' if-shell "$is_vim" 'send-keys C-j'  'select-pane -D'
 bind-key -n 'C-k' if-shell "$is_vim" 'send-keys C-k'  'select-pane -U'
@@ -226,11 +226,12 @@ For vim, you only need to enable this option:
 let  g:tmux_navigator_no_wrap = 1
 ```
 
-Tmux doesn't haave an option, so whatever key bindings you have need to be set
+Tmux doesn't have an option, so whatever key bindings you have need to be set
 to conditionally wrap based on position on screen:
+
 ```tmux
 is_vim="ps -o state= -o comm= -t '#{pane_tty}' \
-    | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'"
+    | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?)(diff)?$'"
 bind-key -n 'C-h' if-shell "$is_vim" { send-keys C-h } { if-shell -F '#{pane_at_left}'   {} { select-pane -L } }
 bind-key -n 'C-j' if-shell "$is_vim" { send-keys C-j } { if-shell -F '#{pane_at_bottom}' {} { select-pane -D } }
 bind-key -n 'C-k' if-shell "$is_vim" { send-keys C-k } { if-shell -F '#{pane_at_top}'    {} { select-pane -U } }
@@ -271,6 +272,56 @@ bind -r C-k run "tmux select-pane -U"
 bind -r C-l run "tmux select-pane -R"
 bind -r C-\ run "tmux select-pane -l"
 ```
+
+Another workaround is to configure tmux on the outer machine to send keys to
+the inner tmux session:
+
+```
+bind-key -n 'M-h' 'send-keys c-h'
+bind-key -n 'M-j' 'send-keys c-j'
+bind-key -n 'M-k' 'send-keys c-k'
+bind-key -n 'M-l' 'send-keys c-l'
+```
+
+Here we bind "meta" key (aka "alt" or "option" key) combinations for each of
+the four directions and send those along to the innermost session via
+`send-keys`. You use the normal `C-h,j,k,l` while in the outermost session and
+the alternative bindings to navigate the innermost session. Note that if you
+use the example above on a Mac, you may need to configure your terminal app to
+get the option key to work like a normal meta key. Consult your terminal app's
+manual for details.
+
+A third possible solution is to manually prevent the outermost tmux session
+from intercepting the navigation keystrokes by disabling the prefix table:
+
+```
+set -g pane-active-border-style 'fg=#000000,bg=#ffff00'
+bind -T root F12  \
+  set prefix None \;\
+  set key-table off \;\
+  if -F '#{pane_in_mode}' 'send-keys -X cancel' \;\
+  set -g pane-active-border-style 'fg=#000000,bg=#00ff00'
+  refresh-client -S \;\
+
+bind -T off F12 \
+  set -u prefix \;\
+  set -u key-table \;\
+  set -g pane-active-border-style 'fg=#000000,bg=#ffff00'
+  refresh-client -S
+```
+
+This code, added to the machine running the outermost tmux session, toggles the
+outermost prefix table on and off with the `F12` key. When off, the active
+pane's border changes to green to indicate that the inner session receives
+navigation keystrokes. When toggled back on, the border returns to yellow and
+normal operation resumes and the outermost responds to the nav keystrokes.
+
+The code example above also toggles the prefix key (ctrl-b by default) for the
+outer session so that same prefix can be temporarily used on the inner session
+instead of having to use a different prefix (ctrl-a by default) which you may
+find convenient. If not, simply remove the lines that set/unset the prefix key
+from the code example above.
+
 
 Troubleshooting
 ---------------
@@ -334,16 +385,23 @@ detail.
 
 ### Switching between host panes doesn't work when docker is running
 
+Images built from minimalist OSes may not have the `ps` command or have a
+simpler version of the command that is not compatible with this plugin.
+Try installing the `procps` package using the appropriate package manager
+command. For Alpine, you would do `apk add procps`.
+
+If this doesn't solve your problem, you can also try the following:
+
 Replace the `is_vim` variable in your `~/.tmux.conf` file with:
 ```tmux
 if-shell '[ -f /.dockerenv ]' \
   "is_vim=\"ps -o state=,comm= -t '#{pane_tty}' \
-      | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)?$'\""
+      | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?)(diff)?$'\""
   # Filter out docker instances of nvim from the host system to prevent
   # host from thinking nvim is running in a pseudoterminal when its not.
   "is_vim=\"ps -o state=,comm=,cgroup= -t '#{pane_tty}' \
       | grep -ivE '^.+ +.+ +.+\\/docker\\/.+$' \
-      | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|n?vim?x?)(diff)? +'\""
+      | grep -iqE '^[^TXZ ]+ +(\\S+\\/)?g?(view|l?n?vim?x?)(diff)? +'\""
 ```
 
 Details: The output of the ps command on the host system includes processes

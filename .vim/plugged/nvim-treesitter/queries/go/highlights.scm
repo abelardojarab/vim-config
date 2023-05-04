@@ -13,8 +13,7 @@
 (parameter_declaration (identifier) @parameter)
 (variadic_parameter_declaration (identifier) @parameter)
 
-((identifier) @constant
- (#eq? @constant "_"))
+(label_name) @label
 
 (const_spec
   name: (identifier) @constant)
@@ -38,6 +37,14 @@
 
 (method_spec 
   name: (field_identifier) @method) 
+
+; Constructors
+
+((call_expression (identifier) @constructor)
+  (#lua-match? @constructor "^[nN]ew.+$"))
+
+((call_expression (identifier) @constructor)
+  (#lua-match? @constructor "^[mM]ake.+$"))
 
 ; Operators
 
@@ -194,20 +201,46 @@
 (float_literal) @float
 (imaginary_literal) @number
 
-(true) @boolean
-(false) @boolean
+[
+ (true)
+ (false)
+] @boolean
+
 (nil) @constant.builtin
 
 (keyed_element
   . (literal_element (identifier) @field))
 (field_declaration name: (field_identifier) @field)
 
+; Comments
+
 (comment) @comment @spell
+
+;; Doc Comments
+
+(source_file . (comment)+ @comment.documentation)
+
+(source_file
+  (comment)+ @comment.documentation
+  . (const_declaration))
+
+(source_file
+  (comment)+ @comment.documentation
+  . (function_declaration))
+
+(source_file
+  (comment)+ @comment.documentation
+  . (type_declaration))
+
+(source_file
+  (comment)+ @comment.documentation
+  . (var_declaration))
+
+; Errors
 
 (ERROR) @error
 
+; Spell
+
 ((interpreted_string_literal) @spell
-	(#not-has-parent? @spell
-		import_spec
-	)
-)
+  (#not-has-parent? @spell import_spec))

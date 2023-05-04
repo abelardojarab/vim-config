@@ -1,8 +1,8 @@
 require "nvim-treesitter.highlight" -- yes, this is necessary to set the hlmap
 local highlighter = require "vim.treesitter.highlighter"
 local configs = require "nvim-treesitter.configs"
-local ts_utils = require "nvim-treesitter.ts_utils"
 local parsers = require "nvim-treesitter.parsers"
+local ts = vim.treesitter
 
 local function check_assertions(file)
   local buf = vim.fn.bufadd(file)
@@ -28,33 +28,51 @@ local function check_assertions(file)
     local row = assertion.position.row
     local col = assertion.position.column
 
+    local neg_assert = assertion.expected_capture_name:match "^!"
+    assertion.expected_capture_name = neg_assert and assertion.expected_capture_name:sub(2)
+      or assertion.expected_capture_name
     local found = false
     self.tree:for_each_tree(function(tstree, tree)
       if not tstree then
         return
       end
-
       local root = tstree:root()
-      if
-        ts_utils.is_in_node_range(root, row, col)
-        and assertion.expected_capture_name == tree:lang()
-        and root ~= top_level_root
-      then
+      --- If there are multiple tree with the smallest range possible
+      --- Check all of them to see if they fit or not
+      if not ts.is_in_node_range(root, row, col) or root == top_level_root then
+        return
+      end
+      if assertion.expected_capture_name == tree:lang() then
         found = true
       end
     end, true)
-    assert.True(
-      found,
-      "Error in at "
-        .. file
-        .. ":"
-        .. (row + 1)
-        .. ":"
-        .. (col + 1)
-        .. ': expected "'
-        .. assertion.expected_capture_name
-        .. '" to be injected here!'
-    )
+    if neg_assert then
+      assert.False(
+        found,
+        "Error in at "
+          .. file
+          .. ":"
+          .. (row + 1)
+          .. ":"
+          .. (col + 1)
+          .. ': expected "'
+          .. assertion.expected_capture_name
+          .. '" not to be injected here!'
+      )
+    else
+      assert.True(
+        found,
+        "Error in at "
+          .. file
+          .. ":"
+          .. (row + 1)
+          .. ":"
+          .. (col + 1)
+          .. ': expected "'
+          .. assertion.expected_capture_name
+          .. '" to be injected here!'
+      )
+    end
   end
 end
 

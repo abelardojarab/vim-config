@@ -248,7 +248,36 @@
 
 ; -- Comments
 
-(comment)         @comment
+(comment) @comment @spell
+
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^///[^/]"))
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^///$"))
+
+((comment) @comment.documentation
+  . [(unit) (declProc)])
+
+(declTypes
+  (comment) @comment.documentation
+  . (declType))
+
+(declSection
+  (comment) @comment.documentation
+  . [(declField) (declProc)])
+
+(declEnum
+  (comment) @comment.documentation
+  . (declEnumValue))
+
+(declConsts
+  (comment) @comment.documentation
+  . (declConst))
+
+(declVars
+  (comment) @comment.documentation
+  . (declVar))
+
 (pp)              @preproc
 
 ; -- Type declaration
@@ -370,7 +399,7 @@
 (statement ((identifier) @repeat
  (#lua-match? @repeat "^[cC][oO][nN][tT][iI][nN][uU][eE]$")))
 
-; -- Identifier type inferrence
+; -- Identifier type inference
 
 ; VERY QUESTIONABLE: Highlighting of identifiers based on spelling
 (exprBinary ((identifier) @constant

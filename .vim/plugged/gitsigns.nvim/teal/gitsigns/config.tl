@@ -7,6 +7,86 @@ do
   end
 end
 
+--- @class Gitsigns.SchemaElem
+--- @field type string|string[]
+--- @field deep_extend boolean
+--- @field default any
+--- @field deprecated boolean|{new_field:string,message:string,hard:boolean}
+--- @field default_help string
+--- @field description string
+
+--- @class Gitsigns.DiffOpts
+--- @field algorithm string
+--- @field internal boolean
+--- @field indent_heuristic boolean
+--- @field vertical boolean
+--- @field linematch integer
+
+--- @class Gitsign.SignConfig
+--- @field show_count boolean
+--- @field hl string
+--- @field text string
+--- @field numhl string
+--- @field linehl string
+--- @field keymaps table<string,string>
+
+--- @alias Gitsigns.SignType
+--- | 'add'
+--- | 'change'
+--- | 'delete'
+--- | 'topdelete'
+--- | 'changedelete'
+--- | 'untracked'
+
+--- @alias Gitsigns.CurrentLineBlameFmtOpts { relative_time: boolean }
+--- @alias Gitsigns.CurrentLineBlameFmtFun fun(_: string, _: table<string,any>, _: Gitsigns.CurrentLineBlameFmtOpts): {[1]:string,[2]:string}[]
+
+--- @class Gitsigns.CurrentLineBlameOpts
+--- @field virt_text boolean
+--- @field virt_text_pos 'eol'|'overlay'|'right_align'
+--- @field delay integer
+--- @field ignore_whitespace boolean
+--- @field virt_text_priority integer
+
+--- @class Gitsigns.Config
+--- @field debug_mode boolean
+--- @field diff_opts Gitsigns.DiffOpts
+--- @field base string
+--- @field signs table<Gitsigns.SignType,Gitsign.SignConfig>
+--- @field _signs_staged table<Gitsigns.SignType,Gitsign.SignConfig>
+--- @field _signs_staged_enable boolean
+--- @field count_chars table<string|integer,string>
+--- @field signcolumn boolean
+--- @field numhl boolean
+--- @field linehl boolean
+--- @field show_deleted boolean
+--- @field sign_priority integer
+--- @field _on_attach_pre fun(bufnr: integer, callback: fun(_: table))
+--- @field on_attach fun(bufnr: integer)
+--- @field watch_gitdir { enable: boolean, interval: integer, follow_files: boolean }
+--- @field max_file_length integer
+--- @field update_debounce integer
+--- @field status_formatter fun(_: table<string,any>): string
+--- @field current_line_blame boolean
+--- @field current_line_blame_formatter_opts { relative_time: boolean }
+--- @field current_line_blame_formatter string|Gitsigns.CurrentLineBlameFmtFun
+--- @field current_line_blame_formatter_nc string|Gitsigns.CurrentLineBlameFmtFun
+--- @field current_line_blame_opts Gitsigns.CurrentLineBlameOpts
+--- @field preview_config table<string,any>
+--- @field attach_to_untracked boolean
+--- @field yadm { enable: boolean }
+--- @field worktrees {toplevel: string, gitdir: string}[]
+--- @field word_diff boolean
+--- -- Undocumented
+--- @field _refresh_staged_on_update boolean
+--- @field _blame_cache boolean
+--- @field _threaded_diff boolean
+--- @field _inline2 boolean
+--- @field _extmark_signs boolean
+--- @field _git_version string
+--- @field _verbose boolean
+--- @field _test_mode boolean
+
 local record SchemaElem
   type: string|{string}
   deep_extend: boolean
@@ -60,6 +140,8 @@ local record M
     type SignsConfig = {SignType: SignConfig}
 
     signs: SignsConfig
+    _signs_staged: SignsConfig
+    _signs_staged_enable: boolean
 
     count_chars: {string|integer:string}
     signcolumn: boolean
@@ -123,51 +205,89 @@ local record M
     _refresh_staged_on_update: boolean
     _blame_cache: boolean
     _threaded_diff: boolean
+    _inline2: boolean
     _extmark_signs: boolean
 
     _git_version: string
     _verbose: boolean
+    _test_mode: boolean
   end
 
   schema: {string:SchemaElem}
   config: Config
 end
 
+--- @type Gitsigns.Config
 M.config = {}
 
+--- @type table<string,Gitsigns.SchemaElem>
 M.schema = {
   signs = {
     type = 'table',
     deep_extend = true,
     default = {
-      add          = {hl = 'GitSignsAdd'   , text = '┃', numhl='GitSignsAddNr'   , linehl='GitSignsAddLn'    },
-      change       = {hl = 'GitSignsChange', text = '┃', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn' },
-      delete       = {hl = 'GitSignsDelete', text = '▁', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
-      topdelete    = {hl = 'GitSignsDelete', text = '▔', numhl='GitSignsDeleteNr', linehl='GitSignsDeleteLn' },
-      changedelete = {hl = 'GitSignsChange', text = '~', numhl='GitSignsChangeNr', linehl='GitSignsChangeLn' },
-      untracked    = {hl = 'GitSignsAdd'   , text = '┆', numhl='GitSignsAddNr'   , linehl='GitSignsAddLn'    },
+      add          = {hl = 'GitSignsAdd',          text = '┃', numhl = 'GitSignsAddNr',          linehl = 'GitSignsAddLn'          },
+      change       = {hl = 'GitSignsChange',       text = '┃', numhl = 'GitSignsChangeNr',       linehl = 'GitSignsChangeLn'       },
+      delete       = {hl = 'GitSignsDelete',       text = '▁', numhl = 'GitSignsDeleteNr',       linehl = 'GitSignsDeleteLn'       },
+      topdelete    = {hl = 'GitSignsTopdelete',    text = '▔', numhl = 'GitSignsTopdeleteNr',    linehl = 'GitSignsTopdeleteLn'    },
+      changedelete = {hl = 'GitSignsChangedelete', text = '~', numhl = 'GitSignsChangedeleteNr', linehl = 'GitSignsChangedeleteLn' },
+      untracked    = {hl = 'GitSignsUntracked',    text = '┆', numhl = 'GitSignsUntrackedNr',    linehl = 'GitSignsUntrackedLn'    },
     },
+    default_help = [[{
+      add          = { text = '┃' },
+      change       = { text = '┃' },
+      delete       = { text = '▁' },
+      topdelete    = { text = '▔' },
+      changedelete = { text = '~' },
+      untracked    = { text = '┆' },
+    }]],
     description = [[
       Configuration for signs:
-        • `hl` specifies the highlight group to use for the sign.
         • `text` specifies the character to use for the sign.
-        • `numhl` specifies the highlight group to use for the number column
-          (see |gitsigns-config.numhl|).
-        • `linehl` specifies the highlight group to use for the line
-          (see |gitsigns-config.linehl|).
         • `show_count` to enable showing count of hunk, e.g. number of deleted
           lines.
 
-      Note if a highlight is not defined, it will be automatically derived by
-      searching for other defined highlights in the following order:
-        • `GitGutter*`
-        • `Signify*`
-        • `Diff*Gutter`
-        • `diff*`
-        • `Diff*`
+      The highlights `GitSigns[kind][type]` is used for each kind of sign. E.g.
+      'add' signs uses the highlights:
+        • `GitSignsAdd`   (for normal text signs)
+        • `GitSignsAddNr` (for signs when `config.numhl == true`)
+        • `GitSignsAddLn `(for signs when `config.linehl == true`)
 
-      For example if `GitSignsAdd` is not defined but `GitGutterAdd` is defined,
-      then `GitSignsAdd` will be linked to `GitGutterAdd`.
+      See |gitsigns-highlight-groups|.
+    ]]
+  },
+
+  _signs_staged = {
+    type = 'table',
+    deep_extend = true,
+    default = {
+      add          = {hl = 'GitSignsStagedAdd'         , text = '┃', numhl='GitSignsStagedAddNr'         , linehl='GitSignsStagedAddLn'          },
+      change       = {hl = 'GitSignsStagedChange'      , text = '┃', numhl='GitSignsStagedChangeNr'      , linehl='GitSignsStagedChangeLn'       },
+      delete       = {hl = 'GitSignsStagedDelete'      , text = '▁', numhl='GitSignsStagedDeleteNr'      , linehl='GitSignsStagedDeleteLn'       },
+      topdelete    = {hl = 'GitSignsStagedTopdelete'   , text = '▔', numhl='GitSignsStagedTopdeleteNr'   , linehl='GitSignsStagedTopdeleteLn'    },
+      changedelete = {hl = 'GitSignsStagedChangedelete', text = '~', numhl='GitSignsStagedChangedeleteNr', linehl='GitSignsStagedChangedeleteLn' },
+    },
+    default_help = [[{
+      add          = { text = '┃' },
+      change       = { text = '┃' },
+      delete       = { text = '▁' },
+      topdelete    = { text = '▔' },
+      changedelete = { text = '~' },
+    }]],
+    description = [[
+      Configuration for signs of staged hunks.
+
+      See |gitsigns-config-signs|.
+    ]]
+  },
+
+  _signs_staged_enable = {
+    type = 'boolean',
+    default = false,
+    description = [[
+      Show signs for staged hunks.
+
+      When enabled the signs defined in |git-config-signs_staged|` are used.
     ]]
   },
 
@@ -357,9 +477,6 @@ M.schema = {
         elseif o == 'internal' then
           if vim.diff then
             r.internal = true
-          elseif jit and jit.os ~= "Windows" then
-            -- Use FFI
-            r.internal = true
           end
         elseif o == 'horizontal' then
           r.vertical = false
@@ -385,9 +502,6 @@ M.schema = {
             • "histogram"  histogram diff algorithm
         • internal: boolean
             Use Neovim's built in xdiff library for running diffs.
-
-            Note Neovim v0.5 uses LuaJIT's FFI interface, whereas v0.5+ uses
-            `vim.diff`.
         • indent_heuristic: boolean
             Use the indent heuristic for the internal
             diff library.
@@ -556,7 +670,7 @@ M.schema = {
 
   current_line_blame_formatter = {
     type = {'string', 'function'},
-    default = ' <author>, <author_time> - <summary>',
+    default = ' <author>, <author_time> - <summary> ',
     description = [[
       String or function used to format the virtual text of
       |gitsigns-config-current_line_blame|.
@@ -682,6 +796,11 @@ M.schema = {
     ]]
   },
 
+  _test_mode = {
+    type = 'boolean',
+    default = false,
+  },
+
   word_diff = {
     type = 'boolean',
     default = false,
@@ -731,6 +850,14 @@ M.schema = {
     ]]
   },
 
+  _inline2 = {
+    type = 'boolean',
+    default = false,
+    description = [[
+      Enable enhanced version of preview_hunk_inline()
+    ]]
+  },
+
   _extmark_signs = {
     type = 'boolean',
     default = false,
@@ -754,6 +881,7 @@ warn = function(s: string, ...: any)
   vim.notify(s:format(...), vim.log.levels.WARN, {title = 'gitsigns'})
 end
 
+--- @param config Gitsigns.Config
 local function validate_config(config: {string:any})
   for k, v in pairs(config) do
     local kschema = M.schema[k]
@@ -809,6 +937,7 @@ local function handle_deprecated(cfg: {string:any})
   end
 end
 
+--- @param user_config Gitsigns.Config
 function M.build(user_config: {string:any})
   user_config = user_config or {}
 

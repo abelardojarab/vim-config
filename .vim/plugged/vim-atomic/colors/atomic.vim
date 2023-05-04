@@ -6,11 +6,12 @@
 "  /_/  |_\__/\____/_/ /_/ /_/_/\___/
 "
 "----------------------------------------------------------------
-"  Theme   : Atomic
-"  Version : 4.2.1
+"  Theme   : Atomic Color Scheme
+"  Version : 6.1.1
 "  License : MIT
 "  Author  : Gerard Bajona
 "  URL     : https://github.com/gerardbm/vim-atomic
+"  Palette : https://github.com/gerardbm/atomic
 "----------------------------------------------------------------
 
 " Settings
@@ -41,160 +42,239 @@ if (has('termguicolors') && &termguicolors) || has('gui_running')
 	" Base colors 1 & 2
 	" -----------------------
 	if s:mode == 1
-		" Dark blue (soft)
+		" Space HC
 		" -----------------------
-		let s:base1 = '#141A1F' " Luma 10%
-		let s:base2 = '#1A2128' " Luma 13%
+		let s:base1 = '#080B0F' " L* 3%
+		let s:base2 = '#0F1419' " L* 6%
 	elseif s:mode == 2
-		" Dark blue (hard)
+		" Space MC
 		" -----------------------
-		let s:base1 = '#0A0D0F' " Luma 5%
-		let s:base2 = '#11151A' " Luma 8%
+		let s:base1 = '#0F1419' " L* 6%
+		let s:base2 = '#141A20' " L* 9%
 	elseif s:mode == 3
-		" Dark cyan (soft)
+		" Space LC
 		" -----------------------
-		let s:base1 = '#121C1C' " Luma 10%
-		let s:base2 = '#172424' " Luma 13%
+		let s:base1 = '#141A20' " L* 9%
+		let s:base2 = '#192027' " L* 12%
 	elseif s:mode == 4
-		" Dark cyan (hard)
+		" Onion HC
 		" -----------------------
-		let s:base1 = '#080D0D' " Luma 5%
-		let s:base2 = '#0E1616' " Luma 8%
+		let s:base1 = '#100911' " L* 3%
+		let s:base2 = '#1A0F1C' " L* 6%
 	elseif s:mode == 5
-		" Night orange (soft)
+		" Onion MC
 		" -----------------------
-		let s:base1 = '#1E1813' " Luma 10%
-		let s:base2 = '#251F18' " Luma 13%
+		let s:base1 = '#1A0F1C' " L* 6%
+		let s:base2 = '#221524' " L* 9%
 	elseif s:mode == 6
-		" Night orange (hard)
+		" Onion LC
 		" -----------------------
-		let s:base1 = '#0E0B09' " Luma 5%
-		let s:base2 = '#17130F' " Luma 8%
+		let s:base1 = '#221524' " L* 9%
+		let s:base2 = '#291A2C' " L* 12%
 	elseif s:mode == 7
-		" Night red (soft)
+		" Blood HC
 		" -----------------------
-		let s:base1 = '#211515' " Luma 10%
-		let s:base2 = '#2B1C1C' " Luma 13%
+		let s:base1 = '#14070A' " L* 3%
+		let s:base2 = '#200E12' " L* 6%
 	elseif s:mode == 8
-		" Night red (hard)
+		" Blood MC
 		" -----------------------
-		let s:base1 = '#100A0A' " Luma 5%
-		let s:base2 = '#1A1111' " Luma 8%
+		let s:base1 = '#200E12' " L* 6%
+		let s:base2 = '#291318' " L* 9%
 	elseif s:mode == 9
-		" Light mode (soft)
+		" Blood LC
 		" -----------------------
-		let s:base1 = '#EFE6C9' " Luma 90%
-		let s:base2 = '#EBDFBA' " Luma 87%
+		let s:base1 = '#291318' " L* 9%
+		let s:base2 = '#31181D' " L* 12%
 	elseif s:mode == 10
-		" Light mode (hard)
+		" Night HC
 		" -----------------------
-		let s:base1 = '#F7F2E4' " Luma 95%
-		let s:base2 = '#F2EBD4' " Luma 92%
+		let s:base1 = '#0D0B07' " L* 3%
+		let s:base2 = '#16130D' " L* 6%
+	elseif s:mode == 11
+		" Night MC
+		" -----------------------
+		let s:base1 = '#16130D' " L* 6%
+		let s:base2 = '#1D1912' " L* 9%
+	elseif s:mode == 12
+		" Night LC
+		" -----------------------
+		let s:base1 = '#1D1912' " L* 9%
+		let s:base2 = '#241F17' " L* 12%
+	elseif s:mode == 13
+		" Grass HC
+		" -----------------------
+		let s:base1 = '#080C07' " L* 3%
+		let s:base2 = '#0F150D' " L* 6%
+	elseif s:mode == 14
+		" Grass MC
+		" -----------------------
+		let s:base1 = '#0F150D' " L* 6%
+		let s:base2 = '#141B12' " L* 9%
+	elseif s:mode == 15
+		" Grass LC
+		" -----------------------
+		let s:base1 = '#141B12' " L* 9%
+		let s:base2 = '#1A2217' " L* 12%
+	elseif s:mode == 16
+		" Ocean HC
+		" -----------------------
+		let s:base1 = '#070C0B' " L* 3%
+		let s:base2 = '#0E1514' " L* 6%
+	elseif s:mode == 17
+		" Ocean MC
+		" -----------------------
+		let s:base1 = '#0E1514' " L* 6%
+		let s:base2 = '#131B1A' " L* 9%
+	elseif s:mode == 18
+		" Ocean LC
+		" -----------------------
+		let s:base1 = '#131B1A' " L* 9%
+		let s:base2 = '#182120' " L* 12%
+	elseif s:mode == 19
+		" Light HC
+		" -----------------------
+		let s:base1 = '#FCF5EC' " L* 97%
+		let s:base2 = '#FBEFDF' " L* 95%
+	elseif s:mode == 20
+		" Light MC
+		" -----------------------
+		let s:base1 = '#FAECD8' " L* 94%
+		let s:base2 = '#F9E6CA' " L* 92%
+	elseif s:mode == 21
+		" Light LC
+		" -----------------------
+		let s:base1 = '#F8E2C3' " L* 91%
+		let s:base2 = '#F7DCB3' " L* 89%
 	endif
 
 	" Base colors 3 & 4
 	" -----------------------
-	if s:mode == 1 || s:mode == 2
-		" Dark blue
+	if s:mode == 1 || s:mode == 2 || s:mode == 3
+		" Space
 		" -----------------------
-		let s:base3 = '#6B859E' " Luma 50%
-		let s:base4 = '#A6B5C5' " Luma 70%
-	elseif s:mode == 3 || s:mode == 4
-		" Dark cyan
+		let s:base3 = '#6C7885' " L* 50%
+		let s:base4 = '#A3ACB7' " L* 70%
+	elseif s:mode == 4 || s:mode == 5 || s:mode == 6
+		" Onion
 		" -----------------------
-		let s:base3 = '#5E8F8F' " Luma 50%
-		let s:base4 = '#99BDBD' " Luma 70%
-	elseif s:mode == 5 || s:mode == 6
-		" Night orange
+		let s:base3 = '#886E8E' " L* 50%
+		let s:base4 = '#B4A7B7' " L* 70%
+	elseif s:mode == 7 || s:mode == 8 || s:mode == 9
+		" Blood
 		" -----------------------
-		let s:base3 = '#957B62' " Luma 50%
-		let s:base4 = '#C0AF9F' " Luma 70%
-	elseif s:mode == 7 || s:mode == 8
-		" Night red
+		let s:base3 = '#996A73' " L* 50%
+		let s:base4 = '#B9A7AA' " L* 70%
+	elseif s:mode == 10 || s:mode == 11 || s:mode == 12
+		" Night
 		" -----------------------
-		let s:base3 = '#A27171' " Luma 50%
-		let s:base4 = '#C7A9A9' " Luma 70%
-	elseif s:mode == 9 || s:mode == 10
-		" Light mode
+		let s:base3 = '#7F7669' " L* 50%
+		let s:base4 = '#B2AA9F' " L* 70%
+	elseif s:mode == 13 || s:mode == 14 || s:mode == 15
+		" Grass
 		" -----------------------
-		let s:base3 = '#8D815C' " Luma 50%
-		let s:base4 = '#554D37' " Luma 30%
+		let s:base3 = '#6D7B68' " L* 50%
+		let s:base4 = '#A2AF9F' " L* 70%
+	elseif s:mode == 16 || s:mode == 17 || s:mode == 18
+		" Ocean
+		" -----------------------
+		let s:base3 = '#6A7A78' " L* 50%
+		let s:base4 = '#A1AEAC' " L* 70%
+	elseif s:mode == 19 || s:mode == 20 || s:mode == 21
+		" Light
+		" -----------------------
+		let s:base3 = '#4D463B' " L* 30%
+		let s:base4 = '#867558' " L* 50%
 	endif
 
 	" Accent colors
 	" -----------------------
-	if s:mode >= 1 && s:mode <= 8
+	if s:mode >= 1 && s:mode <= 18
 		" Dark background
 		" -----------------------
 		" Dark accent colors
-		let s:acb50 = '#3890E9' " |
-		let s:acv50 = '#A359ED' " |
-		let s:acr50 = '#EC5252' " | Luma 50%
-		let s:aco50 = '#C97016' " |
-		let s:acg50 = '#5DA713' " |
-		let s:acc50 = '#13AFAF' " |
+		let s:acb50 = '#27A7EC' " |
+		let s:acv50 = '#E66AFA' " |
+		let s:acr50 = '#FB6F92' " | L* 65%
+		let s:aco50 = '#C39720' " |
+		let s:acg50 = '#5AB220' " |
+		let s:acc50 = '#23B0A3' " |
 
 		" Light accent colors
-		let s:acb70 = '#7DBEFF' " |
-		let s:acv70 = '#CB96FF' " |
-		let s:acr70 = '#FF9191' " | Luma 70%
-		let s:aco70 = '#EDA55D' " |
-		let s:acg70 = '#9ACD68' " |
-		let s:acc70 = '#6ECFCF' " |
-
-		"  Extra for GUI
-		let s:diffr = '#4E0404'
-		let s:diffg = '#122202'
-		let s:diffb = '#031F3A'
-		let s:diffv = '#2D0556'
-		let s:difgg = s:acg70
+		let s:acb70 = '#6FB1E7' " |
+		let s:acv70 = '#D991E6' " |
+		let s:acr70 = '#EA92A4' " | L* 70%
+		let s:aco70 = '#CBA65D' " |
+		let s:acg70 = '#78BC5C' " |
+		let s:acc70 = '#62BAB0' " |
 	else
 		" Light background
 		" -----------------------
 		" Dark accent colors
-		let s:acb50 = '#095CAE' " |
-		let s:acv50 = '#7C19DF' " |
-		let s:acr50 = '#C11C1C' " | Luma 30%
-		let s:aco50 = '#824100' " | (instead of 50%)
-		let s:acg50 = '#346900' " |
-		let s:acc50 = '#006E6E' " |
+		let s:acb50 = '#006492' " |
+		let s:acv50 = '#A400B6' " |
+		let s:acr50 = '#BC004F' " | L* 40%
+		let s:aco50 = '#775A00' " | (instead of 65%)
+		let s:acg50 = '#306B00' " |
+		let s:acc50 = '#006A62' " |
 
 		" Light accent colors
-		let s:acb70 = '#3890E9' " |
-		let s:acv70 = '#A359ED' " |
-		let s:acr70 = '#EC5252' " | Luma 50%
-		let s:aco70 = '#C97016' " | (instead of 70%)
-		let s:acg70 = '#5DA713' " |
-		let s:acc70 = '#13AFAF' " |
-
-		"  Extra for GUI
-		let s:diffr = '#FFDBDB'
-		let s:diffg = '#D6F7B6'
-		let s:diffb = '#D5EAFF'
-		let s:diffv = '#EEDDFF'
-		let s:difgg = s:acg50
+		let s:acb70 = '#007EB7' " |
+		let s:acv70 = '#CD00E2' " |
+		let s:acr70 = '#EA0064' " | L* 50%
+		let s:aco70 = '#957200' " | (instead of 70%)
+		let s:acg70 = '#3F8700' " |
+		let s:acc70 = '#00867C' " |
 	endif
 
 	" Commands
-	command! AtomicDarkBlueSoft        let g:atomic_mode = 1 | set background=dark
+	command! AtomicSpaceHC        let g:atomic_mode = 1 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicDarkBlueHard        let g:atomic_mode = 2 | set background=dark
+	command! AtomicSpaceMC        let g:atomic_mode = 2 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicDarkCyanSoft        let g:atomic_mode = 3 | set background=dark
+	command! AtomicSpaceLC        let g:atomic_mode = 3 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicDarkCyanHard        let g:atomic_mode = 4 | set background=dark
+
+	command! AtomicOnionHC        let g:atomic_mode = 4 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicNightOrangeSoft     let g:atomic_mode = 5 | set background=dark
+	command! AtomicOnionMC        let g:atomic_mode = 5 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicNightOrangeHard     let g:atomic_mode = 6 | set background=dark
+	command! AtomicOnionLC        let g:atomic_mode = 6 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicNightRedSoft        let g:atomic_mode = 7 | set background=dark
+
+	command! AtomicBloodHC        let g:atomic_mode = 7 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicNightRedHard        let g:atomic_mode = 8 | set background=dark
+	command! AtomicBloodMC        let g:atomic_mode = 8 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicLightSoft           let g:atomic_mode = 9 | set background=light
+	command! AtomicBloodLC        let g:atomic_mode = 9 | set background=dark
 				\ | colorscheme atomic
-	command! AtomicLightHard           let g:atomic_mode = 10 | set background=light
+
+	command! AtomicNightHC        let g:atomic_mode = 10 | set background=dark
+				\ | colorscheme atomic
+	command! AtomicNightMC        let g:atomic_mode = 11 | set background=dark
+				\ | colorscheme atomic
+	command! AtomicNightLC        let g:atomic_mode = 12 | set background=dark
+				\ | colorscheme atomic
+
+	command! AtomicGrassHC        let g:atomic_mode = 13 | set background=dark
+				\ | colorscheme atomic
+	command! AtomicGrassMC        let g:atomic_mode = 14 | set background=dark
+				\ | colorscheme atomic
+	command! AtomicGrassLC        let g:atomic_mode = 15 | set background=dark
+				\ | colorscheme atomic
+
+	command! AtomicOceanHC        let g:atomic_mode = 16 | set background=dark
+				\ | colorscheme atomic
+	command! AtomicOceanMC        let g:atomic_mode = 17 | set background=dark
+				\ | colorscheme atomic
+	command! AtomicOceanLC        let g:atomic_mode = 18 | set background=dark
+				\ | colorscheme atomic
+
+	command! AtomicLightHC        let g:atomic_mode = 19 | set background=light
+				\ | colorscheme atomic
+	command! AtomicLightMC        let g:atomic_mode = 20 | set background=light
+				\ | colorscheme atomic
+	command! AtomicLightLC        let g:atomic_mode = 21 | set background=light
 				\ | colorscheme atomic
 
 	function! CycleModes()
@@ -219,6 +299,28 @@ if (has('termguicolors') && &termguicolors) || has('gui_running')
 		elseif s:cycle == 9
 			let g:atomic_mode = 10
 		elseif s:cycle == 10
+			let g:atomic_mode = 11
+		elseif s:cycle == 11
+			let g:atomic_mode = 12
+		elseif s:cycle == 12
+			let g:atomic_mode = 13
+		elseif s:cycle == 13
+			let g:atomic_mode = 14
+		elseif s:cycle == 14
+			let g:atomic_mode = 15
+		elseif s:cycle == 15
+			let g:atomic_mode = 16
+		elseif s:cycle == 16
+			let g:atomic_mode = 17
+		elseif s:cycle == 17
+			let g:atomic_mode = 18
+		elseif s:cycle == 18
+			let g:atomic_mode = 19
+		elseif s:cycle == 19
+			let g:atomic_mode = 20
+		elseif s:cycle == 20
+			let g:atomic_mode = 21
+		elseif s:cycle == 21
 			let g:atomic_mode = 1
 		endif
 	endfunction
@@ -374,21 +476,12 @@ execute 'hi SpellRare    ' . s:envir . 'fg=' . s:aco50 . ' ' . s:envir . 'bg=' .
 " }}}
 " Diff: {{{
 
-if (has('termguicolors') && &termguicolors) || has('gui_running')
-	execute 'hi DiffAdd '      . s:envir . 'bg=' . s:diffg . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffAdded '    . s:envir . 'bg=' . s:diffg . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffChange '   . s:envir . 'bg=' . s:diffb . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffDelete '   . s:envir . 'bg=' . s:diffr . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffRemoved '  . s:envir . 'bg=' . s:diffr . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffText '     . s:envir . 'fg=' . s:difgg . ' ' . s:envir . 'bg=' . s:diffg . ' gui=' . s:bld . ' cterm=' . s:bld
-else
-	execute 'hi DiffAdd '      . s:envir . 'fg=' . s:acg50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffAdded '    . s:envir . 'fg=' . s:acg50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffChange '   . s:envir . 'fg=' . s:acb50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffDelete '   . s:envir . 'fg=' . s:acr50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffRemoved '  . s:envir . 'fg=' . s:acr50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
-	execute 'hi DiffText '     . s:envir . 'fg=' . s:acg50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:bld . ' cterm=' . s:bld
-endif
+execute 'hi DiffAdd '      . s:envir . 'fg=' . s:acg50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
+execute 'hi DiffAdded '    . s:envir . 'fg=' . s:acg50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
+execute 'hi DiffChange '   . s:envir . 'fg=' . s:acb50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
+execute 'hi DiffDelete '   . s:envir . 'fg=' . s:acr50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
+execute 'hi DiffRemoved '  . s:envir . 'fg=' . s:acr50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
+execute 'hi DiffText '     . s:envir . 'fg=' . s:acg50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:bld . ' cterm=' . s:bld
 
 " }}}
 " PMenu: {{{
@@ -1104,7 +1197,7 @@ execute 'hi yamlInteger '             . s:envir . 'fg=' . s:acr50 . ' ' . s:envi
 execute 'hi yamlBool '                . s:envir . 'fg=' . s:acv50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
 execute 'hi yamlFlowStringDelimiter ' . s:envir . 'fg=' . s:acc50 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
 execute 'hi yamlFlowString '          . s:envir . 'fg=' . s:acc70 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
-execute 'hi liquidYamlHead '          . s:envir . 'fg=' . s:base4 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
+execute 'hi liquidYamlHead '          . s:envir . 'fg=' . s:acg70 . ' ' . s:envir . 'bg=' . s:non . ' gui=' . s:non . ' cterm=' . s:non
 
 " }}}
 " Vimwiki: {{{

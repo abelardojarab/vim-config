@@ -1,8 +1,12 @@
 local log = require "nvim-tree.log"
 local utils = require "nvim-tree.utils"
+local notify = require "nvim-tree.notify"
 
 local Runner = {}
 Runner.__index = Runner
+
+local timeouts = 0
+local MAX_TIMEOUTS = 5
 
 function Runner:_parse_status_output(status, path)
   -- replacing slashes if on windows
@@ -45,7 +49,7 @@ function Runner:_handle_incoming_data(prev_output, incoming)
     self._parse_status_output(line)
   end
 
-  return nil
+  return ""
 end
 
 function Runner:_getopts(stdout_handle, stderr_handle)
@@ -59,13 +63,13 @@ function Runner:_getopts(stdout_handle, stderr_handle)
 end
 
 function Runner:_log_raw_output(output)
-  if output and type(output) == "string" then
+  if log.enabled "git" and output and type(output) == "string" then
     log.raw("git", "%s", output)
     log.line("git", "done")
   end
 end
 
-function Runner:_run_git_job()
+function Runner:_run_git_job(callback)
   local handle, pid
   local stdout = vim.loop.new_pipe(false)
   local stderr = vim.loop.new_pipe(false)
@@ -74,6 +78,9 @@ function Runner:_run_git_job()
   local function on_finish(rc)
     self.rc = rc or 0
     if timer:is_closing() or stdout:is_closing() or stderr:is_closing() or (handle and handle:is_closing()) then
+      if callback then
+        callback()
+      end
       return
     end
     timer:stop()
@@ -87,6 +94,10 @@ function Runner:_run_git_job()
     end
 
     pcall(vim.loop.kill, pid)
+
+    if callback then
+      callback()
+    end
   end
 
   local opts = self:_getopts(stdout, stderr)
@@ -138,10 +149,32 @@ function Runner:_wait()
   end
 end
 
--- This module runs a git process, which will be killed if it takes more than timeout which defaults to 400ms
-function Runner.run(opts)
-  local ps = log.profile_start("git job %s %s", opts.project_root, opts.path)
+function Runner:_finalise(opts)
+  if self.rc == -1 then
+    log.line("git", "job timed out  %s %s", opts.project_root, opts.path)
+    timeouts = timeouts + 1
+    if timeouts == MAX_TIMEOUTS then
+      notify.warn(
+        string.format(
+          "%d git jobs have timed out after %dms, disabling git integration. Try increasing git.timeout",
+          timeouts,
+          opts.timeout
+        )
+      )
+      require("nvim-tree.git").disable_git_integration()
+    end
+  elseif self.rc ~= 0 then
+    log.line("git", "job fail rc %d %s %s", self.rc, opts.project_root, opts.path)
+  else
+    log.line("git", "job success    %s %s", opts.project_root, opts.path)
+  end
+end
 
+--- Runs a git process, which will be killed if it takes more than timeout which defaults to 400ms
+--- @param opts table
+--- @param callback function|nil executed passing return when complete
+--- @return table|nil status by absolute path, nil if callback present
+function Runner.run(opts, callback)
   local self = setmetatable({
     project_root = opts.project_root,
     path = opts.path,
@@ -152,20 +185,38 @@ function Runner.run(opts)
     rc = nil, -- -1 indicates timeout
   }, Runner)
 
-  self:_run_git_job()
-  self:_wait()
+  local async = callback ~= nil and self.config.git_async
+  local profile = log.profile_start("git %s job %s %s", async and "async" or "sync", opts.project_root, opts.path)
 
-  log.profile_end(ps, "git job %s %s", opts.project_root, opts.path)
+  if async and callback then
+    -- async, always call back
+    self:_run_git_job(function()
+      log.profile_end(profile)
 
-  if self.rc == -1 then
-    log.line("git", "job timed out  %s %s", opts.project_root, opts.path)
-  elseif self.rc ~= 0 then
-    log.line("git", "job fail rc %d %s %s", self.rc, opts.project_root, opts.path)
+      self:_finalise(opts)
+
+      callback(self.output)
+    end)
   else
-    log.line("git", "job success    %s %s", opts.project_root, opts.path)
-  end
+    -- sync, maybe call back
+    self:_run_git_job()
+    self:_wait()
 
-  return self.output
+    log.profile_end(profile)
+
+    self:_finalise(opts)
+
+    if callback then
+      callback(self.output)
+    else
+      return self.output
+    end
+  end
+end
+
+function Runner.setup(opts)
+  Runner.config = {}
+  Runner.config.git_async = opts.experimental.git.async
 end
 
 return Runner

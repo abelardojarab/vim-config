@@ -2,7 +2,7 @@ local ui = require("flutter-tools.ui")
 
 local success, dap = pcall(require, "dap")
 if not success then
-  ui.notify({ "nvim-dap is not installed!", dap }, { level = ui.ERROR })
+  ui.notify(string.format("nvim-dap is not installed!\n%s", dap), ui.ERROR)
   return
 end
 
@@ -13,11 +13,8 @@ function M.setup(config)
   require("flutter-tools.executable").get(function(paths)
     dap.adapters.dart = {
       type = "executable",
-      command = "flutter",
+      command = paths.flutter_bin,
       args = { "debug-adapter" },
-      options = { -- Dartls is slow to start so avoid warnings from nvim-dap
-        initialize_timeout_sec = 30,
-      },
     }
     opts.register_configurations(paths)
     if opts.exception_breakpoints and type(opts.exception_breakpoints) == "table" then

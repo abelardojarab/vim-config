@@ -1,5 +1,5 @@
 local util = require 'lspconfig.util'
-local api, validate, lsp = vim.api, vim.validate, vim.lsp
+local api, validate, lsp, uv, fn = vim.api, vim.validate, vim.lsp, vim.loop, vim.fn
 local tbl_deep_extend = vim.tbl_deep_extend
 
 local configs = {}
@@ -12,6 +12,17 @@ function configs.__newindex(t, config_name, config_def)
     on_attach = { config_def.on_attach, 'f', true },
     commands = { config_def.commands, 't', true },
   }
+
+  if config_def.default_config.deprecate then
+    vim.deprecate(
+      config_name,
+      config_def.default_config.deprecate.to,
+      config_def.default_config.deprecate.version,
+      'lspconfig',
+      false
+    )
+  end
+
   if config_def.commands then
     for k, v in pairs(config_def.commands) do
       validate {
@@ -72,8 +83,8 @@ function configs.__newindex(t, config_name, config_def)
       end
       api.nvim_create_autocmd(event, {
         pattern = pattern,
-        callback = function()
-          M.manager.try_add()
+        callback = function(opt)
+          M.manager.try_add(opt.buf)
         end,
         group = lsp_group,
         desc = string.format(
@@ -90,15 +101,19 @@ function configs.__newindex(t, config_name, config_def)
       if get_root_dir then
         local bufnr = api.nvim_get_current_buf()
         local bufname = api.nvim_buf_get_name(bufnr)
-        if not util.bufname_valid(bufname) then
+        if #bufname == 0 and not config.single_file_support then
           return
+        elseif #bufname ~= 0 then
+          if not util.bufname_valid(bufname) then
+            return
+          end
+          root_dir = get_root_dir(util.path.sanitize(bufname), bufnr)
         end
-        root_dir = get_root_dir(util.path.sanitize(bufname), bufnr)
       end
 
       if root_dir then
         api.nvim_create_autocmd('BufReadPost', {
-          pattern = vim.fn.fnameescape(root_dir) .. '/*',
+          pattern = fn.fnameescape(root_dir) .. '/*',
           callback = function()
             M.manager.try_add_wrapper()
           end,
@@ -124,12 +139,11 @@ function configs.__newindex(t, config_name, config_def)
         -- this to attach additional files in the same parent folder to the same server.
         -- We just no longer send rootDirectory or workspaceFolders during initialization.
         local bufname = api.nvim_buf_get_name(0)
-        if not util.bufname_valid(bufname) then
+        if #bufname ~= 0 and not util.bufname_valid(bufname) then
           return
         end
-        local pseudo_root = util.path.dirname(util.path.sanitize(bufname))
-        local client_id = M.manager.add(pseudo_root, true)
-        lsp.buf_attach_client(api.nvim_get_current_buf(), client_id)
+        local pseudo_root = #bufname == 0 and uv.cwd() or util.path.dirname(util.path.sanitize(bufname))
+        M.manager.add(pseudo_root, true, api.nvim_get_current_buf())
       end
     end
 
@@ -190,7 +204,7 @@ function configs.__newindex(t, config_name, config_def)
 
       -- Save the old _on_attach so that we can reference it via the BufEnter.
       new_config._on_attach = new_config.on_attach
-      new_config.on_attach = vim.schedule_wrap(function(client, bufnr)
+      new_config.on_attach = function(client, bufnr)
         if bufnr == api.nvim_get_current_buf() then
           M._setup_buffer(client.id, bufnr)
         else
@@ -206,7 +220,7 @@ function configs.__newindex(t, config_name, config_def)
             })
           end
         end
-      end)
+      end
 
       new_config.root_dir = root_dir
       new_config.workspace_folders = {
@@ -231,12 +245,15 @@ function configs.__newindex(t, config_name, config_def)
         return
       end
 
-      local id
       local root_dir
 
       local bufname = api.nvim_buf_get_name(bufnr)
-      if not util.bufname_valid(bufname) then
+      if #bufname == 0 and not config.single_file_support then
         return
+      elseif #bufname ~= 0 then
+        if not util.bufname_valid(bufname) then
+          return
+        end
       end
       local buf_path = util.path.sanitize(bufname)
 
@@ -245,14 +262,10 @@ function configs.__newindex(t, config_name, config_def)
       end
 
       if root_dir then
-        id = manager.add(root_dir, false)
+        manager.add(root_dir, false, bufnr)
       elseif config.single_file_support then
-        local pseudo_root = util.path.dirname(buf_path)
-        id = manager.add(pseudo_root, true)
-      end
-
-      if id then
-        lsp.buf_attach_client(bufnr, id)
+        local pseudo_root = #bufname == 0 and uv.cwd() or util.path.dirname(buf_path)
+        manager.add(pseudo_root, true, bufnr)
       end
     end
 

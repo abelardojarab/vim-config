@@ -1,5 +1,6 @@
 *distant.txt*   Plugin that supports working with remote machines
-
+                                                                          0.2
+>
        _______  ______  ______  ________  ______  __    __ ________ 
       |       \|      \/      \|        \/      \|  \  |  \        \
       | ▓▓▓▓▓▓▓\\▓▓▓▓▓▓  ▓▓▓▓▓▓\\▓▓▓▓▓▓▓▓  ▓▓▓▓▓▓\ ▓▓\ | ▓▓\▓▓▓▓▓▓▓▓
@@ -9,7 +10,7 @@
       | ▓▓__/ ▓▓_| ▓▓_|  \__| ▓▓  | ▓▓  | ▓▓  | ▓▓ ▓▓ \▓▓▓▓  | ▓▓   
       | ▓▓    ▓▓   ▓▓ \\▓▓    ▓▓  | ▓▓  | ▓▓  | ▓▓ ▓▓  \▓▓▓  | ▓▓   
        \▓▓▓▓▓▓▓ \▓▓▓▓▓▓ \▓▓▓▓▓▓    \▓▓   \▓▓   \▓▓\▓▓   \▓▓   \▓▓   
-                                                              
+<
 
 ==============================================================================
                                                                 *distant.nvim*
@@ -29,10 +30,11 @@ TABLE OF CONTENTS                                                *distant-toc*
 5.  Settings ...............................................|distant-settings|
 6.  Navigation ...........................................|distant-navigation|
 7.  Lua API .................................................|distant-lua-api|
-8.  FAQ .........................................................|distant-faq|
-9.  Changelog .............................................|distant-changelog|
-10. Credits .................................................|distant-credits|
-11. License .................................................|distant-license|
+8.  Extensions ...........................................|distant-extensions|
+9.  FAQ .........................................................|distant-faq|
+10. Changelog .............................................|distant-changelog|
+11. Credits .................................................|distant-credits|
+12. License .................................................|distant-license|
 
 ==============================================================================
 INTRODUCTION                                            *distant-introduction*
@@ -41,9 +43,9 @@ Welcome to the neovim plugin built around the Lua bindings for distant, a set
 of tooling and libraries dedicated to interaction with remote machines.
 
 In order to operate against a remote machine, you first need to establish a
-connection to it. To do this, you run `:DistantLaunch {host}` where the host
-points to the remote machine and can be an IP address like `127.0.0.1` or a
-domain like `example.com`.
+connection to it. To do this, you run `:DistantLaunch {destination}` where the
+destination points to the remote machine and can be an IP address like
+`127.0.0.1` or a domain like `example.com`.
 
 The launch command will attempt to SSH into the remote machine using port 22
 by default and start an instance of the distant server.
@@ -154,11 +156,11 @@ used to start a remote session.
 Commands support {positional} and {key=value} pairs. Positional arguments are
 relative to each other and are not influenced by key=value pairs inbetween.
 >
-  :DistantLaunch example.com mode=ssh ssh.user=name ssh.port=2222
+  :DistantLaunch ssh://name@example.com:2222
 <
 Commands also support quoted strings as values such as
 >
-  :DistantLaunch example.com distant.args="--log-file distant.log --log-level trace"
+  :DistantLaunch ssh://example.com distant.args="--log-file distant.log --log-level trace"
 <
 
 Specialized commands~
@@ -193,27 +195,15 @@ DistantOpen {path} {opts}                                        *DistantOpen*
         :DistantOpen /path/to/file reload=true
 <
 
-DistantLaunch {host} {opts}                                    *DistantLaunch*
+DistantLaunch {destination} {opts}                             *DistantLaunch*
 
     Opens a dialog to launch distant on a remote machine.
 
-    The launch command accepts a host as its first argument and then an
+    The launch command accepts a destination as its first argument and then an
     optional series of named parameters in the form of `name=value`.
+    Destination is in the form of scheme://[user@]host[:port]
 
     Options: ~
-        {mode}           (string)  execution mode to use as a client, being
-                                   either "distant" or "ssh". When distant,
-                                   this command will ssh into the host,
-                                   spawn `distant listen`, and connect to
-                                   the server over TCP to communicate requests
-                                   like reading and writing. When ssh, this
-                                   command will ssh into the host and maintain
-                                   the ssh connection, using an sftp channel
-                                   alongside exec channels to read and write
-                                   (default: "distant")
-        {ssh.user}       (string)  alternative user for connecting to the ssh
-                                   server (default: "<neovim user>")
-        {ssh.port}       (number)  port of the ssh server (default: 22)
         {distant.bin}    (string)  path to binary of `distant` on the remote
                                    machine (default: "distant")
         {distant.args}   (string)  additional arguments to provide to the
@@ -221,7 +211,12 @@ DistantLaunch {host} {opts}                                    *DistantLaunch*
                                    (default: "")
         {distant.use_login_shell}
                         (boolean)  if true, will spawn the distant server
-                                   using a login shell (default: false)
+                                   using a login shell (default: true)
+        {options}  (string|table)  additional options to provide to the
+                                   handler of the destination in the form of
+                                   `key="value",key2="value2"`. Can also use
+                                   table notation in the form of
+                                   `options.key="value"` (default: "")
         {timeout}        (number)  maximum time in milliseconds before failing
                                    (default: settings.max_timeout)
         {interval}       (number)  approximate time in milliseconds between
@@ -231,18 +226,23 @@ DistantLaunch {host} {opts}                                    *DistantLaunch*
     Examples: ~
 >
         :DistantLaunch example.com
-        :DistantLaunch example.com mode=ssh
-        :DistantLaunch example.com ssh.port=2222 distant.bin=/path/to/distant
+        :DistantLaunch ssh://example.com
+        :DistantLaunch ssh://example.com:2222 distant.bin=/path/to/distant
 <
 
-DistantConnect {host} {port} {opts}                           *DistantConnect*
+DistantConnect {destination} {opts}                           *DistantConnect*
 
     Attempts to connect to a running distant server at the specified
-    host and port.
+    destination.
 
     Will prompt for the secret key used to communicate with the server.
 
     Options: ~
+        {options}  (string|table)  additional options to provide to the
+                                   handler of the destination in the form of
+                                   `key="value",key2="value2"`. Can also use
+                                   table notation in the form of
+                                   `options.key="value"` (default: "")
         {timeout}        (number)  maximum time in milliseconds before failing
                                    (default: settings.max_timeout)
         {interval}       (number)  approximate time in milliseconds between
@@ -251,21 +251,22 @@ DistantConnect {host} {port} {opts}                           *DistantConnect*
 
     Examples: ~
 >
-        :DistantConnect example.com 2222
-        :DistantConnect example.com 2222 timeout=5000
+        :DistantConnect example.com:2222
+        :DistantConnect ssh://example.com:2222
+        :DistantConnect distant://example.com:2222 timeout=5000
 <
 
-DistantInstall [reload]                                       *DistantInstall*
+DistantInstall [reinstall]                                    *DistantInstall*
 
     Triggers installation process for the C library.
 
-    If the word "reload" appears after `:DistantInstall`, then the
-    installation dialog will appear even if the library is already installed.
+    If the word "reinstall" appears after `:DistantInstall`, then the
+    installation dialog will appear even if the binary is already installed.
 
     Examples: ~
 >
         :DistantInstall
-        :DistantInstall reload
+        :DistantInstall reinstall
 <
 
 DistantMetadata {path} {opts}                                *DistantMetadata*
@@ -296,6 +297,18 @@ DistantMetadata {path} {opts}                                *DistantMetadata*
         :DistantMetadata /path/to/file resolve_file_type=true
 <
 
+DistantShell [{cmd} {arg1} {arg2} ...]                          *DistantShell*
+
+    Spawns a new terminal connected to the remote machine. Defaults to using
+    the shell of the user on the remote machine, but can use an alternative
+    command if provided.
+
+    Examples: ~
+>
+        :DistantShell
+        :DistantShell /bin/bash -l
+<
+
 DistantSessionInfo                                        *DistantSessionInfo*
 
     Presents information related to the remote connection.
@@ -303,6 +316,11 @@ DistantSessionInfo                                        *DistantSessionInfo*
 DistantSystemInfo                                          *DistantSystemInfo*
 
     Presents information about the remote machine.
+
+DistantClientVersion                                    *DistantClientVersion*
+
+    Prints the version of the `distant` client binary that would be used
+    for establishing connections to a remote machine.
 
 Function commands~
 
@@ -409,6 +427,51 @@ DistantRun {cmd} {arg1} {arg2} ...                                *DistantRun*
         :DistantRun ls -l
 <
 
+DistantSearch {pattern} [ {path} ... ] {opts}                  *DistantSearch*
+
+    Searches using the provided pattern (regular expression) for files within
+    the provided paths. If no path is provided, the current directory of the
+    server is used instead.
+
+    The search command accepts a pattern and optional series of paths as its
+    arguments followed by an optional series of named parameters in the form
+    of `name=value`.
+
+    Options: ~
+        {target}     (string) if 'contents', a file's contents are searched
+                              using the pattern. If 'path', the
+                              file/directory/symlink path is evaluated using
+                              the pattern instead. (default: 'contents')
+        {include}    (string) if provided, will only include matches whose
+                              paths match the given regex
+        {exclude}    (string) if provided, will only include matches whose
+                              paths do not match the given regex
+        {limit}      (number) if provided, will stop after finding N matches
+                              to receive results (default: nil)
+        {pagination} (number) if provided, N matches will be sent at a time,
+                              instead of waiting until the search completes
+                              to receive results (default: nil)
+        {min_depth}  (number) if provided, will start traversing in search of
+                              matches once reaching depth N where 0 is the
+                              provided path, 1 is its children, 2 is its
+                              grandchildren, etc. (default: nil)
+        {max_depth}  (number) if provided, will stop traversing in search of
+                              matches after reaching depth N where 0 is the
+                              provided path, 1 is its children, 2 is its
+                              grandchildren, etc. (default: nil)
+        {timeout}    (number) maximum time in milliseconds before failing
+                              (default: settings.max_timeout)
+        {interval}   (number) approximate time in milliseconds between each
+                              check to see if the operation completed
+                              (default: settings.timeout_interval)
+
+    Examples: ~
+>
+        :DistantSearch hello.*
+        :DistantSearch hello.* some/path
+        :DistantSearch hello.* some/path limit=5
+<
+
 ==============================================================================
 SETTINGS                                                    *distant-settings*
 
@@ -429,28 +492,19 @@ Defining settings is done by calling `require('distant').setup({opts})`:
 
 distant.setup({opts})                                        *distant.setup()*
 
-    Defines the global settings for use with this plugin.
+    Defines the global settings for use with this plugin. Each destination is
+    in the form of [scheme://][username@]host[:port] where the scheme will
+    default to distant if none is provided.
 
     Parameters: ~
         {opts}   (string) -> (table)  settings associated with this plugin,
-                                      keyed by host name whose value is
-                                      the associated options for that host
-                                      (default: {})
+                                      keyed by destination whose value is
+                                      the associated options for that
+                                      destination (default: {})
 
     Options: ~
         {ssh}              (SshOpts)  ssh settings (default: {})
         {distant}      (DistantOpts)  distant server settings (default: {})
-        {mode}              (string)  execution mode to use as a client, being
-                                      either "distant" or "ssh". When distant,
-                                      this command will ssh into the host,
-                                      spawn `distant listen`, and connect to
-                                      the server over TCP to communicate
-                                      requests like reading and writing.
-                                      When ssh, this command will ssh into
-                                      the host and maintain the ssh
-                                      connection, using an sftp channel
-                                      alongside exec channels to read and write
-                                      (default: "distant")
         {file}            (FileOpts)  settings that apply when editing remote
                                       files (default: {})
         {dir}              (DirOpts)  settings that apply when editing remote
@@ -514,7 +568,7 @@ distant.setup({opts})                                        *distant.setup()*
           -- Any settings defined here are applied to all hosts
           ['*'] = {
             distant = {
-              args = '--shutdown-after 60',
+              args = {'--shutdown', 'lonely=60'},
             },
             file = {
               mappings = {
@@ -1104,20 +1158,7 @@ distant.fn.spawn({opts}, {cb})                              *distant.fn.spawn*
                                    otherwise acts as a blocking function,
                                    returning (err, text) where err is
                                    string|nil and text is string|nil
-        {status}       (function)  checks if process has completed, taking
-                                   taking optional callback as second arg
-                                   to return asynchronously when finished,
-                                   otherwise acts as a blocking function
-                                   returning (err, status) where err is
-                                   string|nil and status is Status|nil 
         {wait}         (function)  consumes process reference to wait for
-                                   the process to complete and yield its
-                                   exit status, taking an optional callback
-                                   to return asynchronously when finished,
-                                   yielding (err, res) where err is
-                                   string|nil and res is a table with two
-                                   values (success, optional exit code)
-        {output}       (function)  consumes process reference to wait for
                                    the process to complete and yield its
                                    output, taking an optional callback
                                    to return asynchronously when finished,
@@ -1130,10 +1171,6 @@ distant.fn.spawn({opts}, {cb})                              *distant.fn.spawn*
                                    where err is string|nil
         {abort}        (function)  aborts the process locally, meaning that
                                    the connection to the process is severed
-
-    Status: ~
-        {success}       (boolean)  true if process exited successfully
-        {exit_code}  (number|nil)  exit code if available
 
     Output: ~
         {success}       (boolean)  true if process exited successfully
@@ -1247,6 +1284,32 @@ distant.fn.write_file_text({opts}, {cb})          *distant.fn.write_file_text*
         {err}  (string|nil)   an error if it occurs (synchronous only)
 
 ==============================================================================
+EXTENSIONS                                                *distant-extensions*
+
+Alongside core features available in the plugin, there are also integrations
+into other plugins. Today, distant.nvim supports:
+
+* `telescope.nvim` (https://github.com/nvim-telescope/telescope.nvim)
+
+telescope.nvim~
+
+Traditional searching features are available via `telescope.nvim`. There are
+two ways to trigger the prompt:
+
+Command: ~
+>
+        :Telescope distant search
+<
+
+Lua: ~
+>
+        lua require('telescope').extensions.distant.search({
+            paths = {'some/dir'},
+            pagination = 1,
+        })
+<
+
+==============================================================================
 FAQ                                                              *distant-faq*
 
 How does this plugin differ from using neovim with sshfs?  *distant-faq-sshfs*
@@ -1289,6 +1352,30 @@ How does this plugin differ from using neovim with sshfs?  *distant-faq-sshfs*
 CHANGELOG                                                  *distant-changelog*
 
 Latest ~
+
+v0.2.0 ~
+
+  * Change `plugin` to use `distant` binary instead of Lua library
+  * Add |DistantShell| command to launch a remote shell
+  * Add |DistantSearch| command to perform a remote search and populate a
+    quickfix list
+  * Add |DistantClientVersion| command to print the version of the client
+  * Change |DistantInstall| parameter from `reload` to `reinstall`
+  * Update minimum `distant` version to `0.19.0`
+  * Change |DistantLaunch| parameters
+    * `external_ssh` -> `ssh_external`
+    * `extra_server_args` -> `distant_args`
+    * `identity_file` -> `ssh_identity_file`
+    * `port` -> `ssh_port`
+    * `username` -> `ssh_username`
+    * `shutdown_after` has been renamed to `shutdown` and supports multiple rules
+  * Update launch and connection functionality to use a destination in the
+    form of `[scheme://][username@]host[:port]` instead of individually
+    providing a host, port, and mode for defining servers
+  * Remove `args` from |distant.fn.spawn_wait| in favor of `cmd` taking
+    all of the arguments as part of the string
+  * Add function `distant.state.client:shell():to_cmd()` that can be used to
+    generate the cli command used to spawn the shell
 
 v0.1.2 ~
 

@@ -1,6 +1,9 @@
 local a = require("plenary.async")
+local notification = require("neogit.lib.notification")
 
 local Buffer = require("neogit.lib.buffer")
+local config = require("neogit.config")
+local logger = require("neogit.logger")
 
 local function remove_escape_codes(s)
   -- from: https://stackoverflow.com/questions/48948630/lua-ansi-escapes-pattern
@@ -18,7 +21,7 @@ end
 ---@field stdin number|nil
 ---@field pty boolean
 ---@field on_partial_line fun(process: Process, data: string, raw: string) callback on complete lines
----@field external_errors boolean|nil Tells the process that any errors will be dealt with externally and wont open a console buffer
+---@field on_error fun(res: ProcessResult): boolean
 local Process = {}
 Process.__index = Process
 
@@ -28,6 +31,7 @@ local processes = {}
 ---@class ProcessResult
 ---@field stdout string[]
 ---@field stderr string[]
+---@field output string[]
 ---@field code number
 ---@field time number seconds
 local ProcessResult = {}
@@ -56,8 +60,14 @@ end
 local preview_buffer = nil
 
 local function create_preview_buffer()
+  local kind = config.values.preview_buffer.kind
+
   -- May be called multiple times due to scheduling
   if preview_buffer then
+    if preview_buffer.buffer then
+      logger.debug("Preview buffer already exists. Focusing the existing one")
+      preview_buffer.buffer:focus()
+    end
     return
   end
 
@@ -71,7 +81,7 @@ local function create_preview_buffer()
     name = name,
     bufhidden = "hide",
     filetype = "NeogitConsole",
-    kind = "split",
+    kind = kind,
     open = false,
     mappings = {
       n = {
@@ -96,15 +106,41 @@ local function create_preview_buffer()
   }
 end
 
-function Process.show_console()
-  if not preview_buffer then
-    create_preview_buffer()
+--from https://github.com/stevearc/overseer.nvim/blob/82ed207195b58a73b9f7d013d6eb3c7d78674ac9/lua/overseer/util.lua#L119
+---@param win number
+local function scroll_to_end(win)
+  local bufnr = vim.api.nvim_win_get_buf(win)
+  local lnum = vim.api.nvim_buf_line_count(bufnr)
+  local last_line = vim.api.nvim_buf_get_lines(bufnr, -2, -1, true)[1]
+  -- Hack: terminal buffers add a bunch of empty lines at the end. We need to ignore them so that
+  -- we don't end up scrolling off the end of the useful output.
+  -- This has the unfortunate effect that we may not end up tailing the output as more arrives
+  if vim.bo[bufnr].buftype == "terminal" then
+    local half_height = math.floor(vim.api.nvim_win_get_height(win) / 2)
+    for i = lnum, 1, -1 do
+      local prev_line = vim.api.nvim_buf_get_lines(bufnr, i - 1, i, true)[1]
+      if prev_line ~= "" then
+        -- Only scroll back if we detect a lot of padding lines, and the total real output is
+        -- small. Otherwise the padding may be legit
+        if lnum - i >= half_height and i < half_height then
+          lnum = i
+          last_line = prev_line
+        end
+        break
+      end
+    end
   end
+  vim.api.nvim_win_set_cursor(win, { lnum, vim.api.nvim_strwidth(last_line) })
+end
+
+function Process.show_console()
+  create_preview_buffer()
 
   local win = preview_buffer.buffer:show()
-  vim.api.nvim_win_call(win, function()
-    vim.cmd.normal("G")
-  end)
+  scroll_to_end(win)
+  -- vim.api.nvim_win_call(win, function()
+  --   vim.cmd.normal("G")
+  -- end)
 end
 
 local nvim_chan_send = vim.api.nvim_chan_send
@@ -113,22 +149,22 @@ local nvim_chan_send = vim.api.nvim_chan_send
 ---@param data string
 local function append_log(process, data)
   local function append()
+    if data == "" then
+      return
+    end
+
     if preview_buffer.current_span ~= process.job then
-      nvim_chan_send(preview_buffer.chan, string.format("\r\n> %s\r\n", table.concat(process.cmd, " ")))
+      nvim_chan_send(preview_buffer.chan, string.format("> %s\r\n", table.concat(process.cmd, " ")))
       preview_buffer.current_span = process.job
     end
 
-    nvim_chan_send(preview_buffer.chan, data)
+    nvim_chan_send(preview_buffer.chan, data .. "\r\n")
   end
 
-  if not preview_buffer then
-    vim.schedule(function()
-      create_preview_buffer()
-      append()
-    end)
-  else
+  vim.schedule(function()
+    create_preview_buffer()
     append()
-  end
+  end)
 end
 
 local hide_console = false
@@ -144,7 +180,6 @@ function Process.hide_preview_buffers()
   end
 end
 
-local config = require("neogit.config")
 function Process:start_timer()
   if self.timer == nil then
     local timer = vim.loop.new_timer()
@@ -158,12 +193,19 @@ function Process:start_timer()
         self.timer = nil
         timer:stop()
         timer:close()
-        if not self.result or (self.result.code ~= 0 and not self.external_errors) then
-          append_log(
-            self,
-            string.format("Command running for: %.2f ms", (vim.loop.hrtime() - self.start) / 1e6)
+        if not self.result or (self.result.code ~= 0) then
+          local message = string.format(
+            "Command %q running for more than: %.1f seconds",
+            table.concat(self.cmd, " "),
+            math.ceil((vim.loop.now() - self.start) / 100) / 10
           )
-          Process.show_console()
+
+          append_log(self, message)
+          if config.values.auto_show_console then
+            Process.show_console()
+          else
+            notification.create(message .. "\n\nOpen the console for details", vim.log.levels.WARN)
+          end
         end
       end)
     )
@@ -241,8 +283,9 @@ end
 function Process:spawn(cb)
   ---@type ProcessResult
   local res = setmetatable({
-    stdout = { "" },
-    stderr = { "" },
+    stdout = {},
+    stderr = {},
+    output = {},
   }, ProcessResult)
 
   assert(self.job == nil, "Process started twice")
@@ -253,75 +296,77 @@ function Process:spawn(cb)
     self.cwd = nil
   end
 
-  local start = vim.loop.hrtime()
+  local start = vim.loop.now()
   self.start = start
 
-  local function handle_output(_, result, on_partial, on_lb)
-    return function(_, data) -- Complete the previous line
-      local d = remove_escape_codes(data[1])
+  local function handle_output(on_partial, on_line)
+    local prev_line = ""
 
-      result[#result] = remove_escape_codes(result[#result] .. data[1])
+    return function(_, lines)
+      -- Complete previous line
+      prev_line = prev_line .. lines[1]
 
-      on_partial(d, data[1])
-      -- If there is only one item of the incomplete lines, the line will be
-      -- completed in later invocations
+      on_partial(remove_escape_codes(lines[1]), lines[1])
 
-      for i = 2, #data do
-        local d = data[i]
-        if i ~= data then
-          d = remove_escape_codes(d)
-        end
-
-        if i < #data then
-          on_lb()
-        else
-          on_partial(d, data[i])
-        end
-
-        table.insert(result, d)
+      for i = 2, #lines do
+        on_line(remove_escape_codes(prev_line), prev_line)
+        prev_line = ""
+        -- Before pushing a new line, invoke the stdout for components
+        prev_line = lines[i]
+        on_partial(remove_escape_codes(lines[i]), lines[i])
       end
+    end, function()
+      on_line(remove_escape_codes(prev_line), prev_line)
     end
   end
 
-  local on_stdout = handle_output("stdout", res.stdout, function(line, raw)
-    if self.verbose then
-      append_log(self, raw)
-    end
+  local on_stdout, stdout_cleanup = handle_output(function(line, raw)
     if self.on_partial_line then
       self.on_partial_line(self, line, raw)
     end
-  end, function()
+  end, function(line, raw)
+    table.insert(res.stdout, line)
     if self.verbose then
-      append_log(self, "\r\n")
+      table.insert(res.output, line)
+      append_log(self, raw)
     end
   end)
 
-  -- Prevent blank lines
-  local has_line = false
-  local on_stderr = handle_output("stderr", res.stderr, function(_, _)
-    if has_line then
-      has_line = false
-      append_log(self, "\r\n")
-    end
-  end, function(_, raw)
-    if raw ~= "" then
-      has_line = true
-      append_log(self, raw)
-    end
+  local on_stderr, stderr_cleanup = handle_output(function() end, function(line, raw)
+    table.insert(res.stderr, line)
+    table.insert(res.output, line)
+    append_log(self, raw)
   end)
 
   local function on_exit(_, code)
     res.code = code
-    res.time = (vim.loop.hrtime() - start) / 1e6
+    res.time = (vim.loop.now() - start)
 
     -- Remove self
     processes[self.job] = nil
     self.result = res
     self:stop_timer()
 
-    if code ~= 0 and not hide_console and not self.external_errors then
-      append_log(self, string.format("Process exited with code: %d\r\n", code))
-      vim.schedule(Process.show_console)
+    stdout_cleanup()
+    stderr_cleanup()
+
+    if code ~= 0 and not hide_console then
+      append_log(self, string.format("Process exited with code: %d", code))
+
+      local output = {}
+      local start = math.max(#res.output - 16, 1)
+      for i = start, math.min(#res.output, start + 16) do
+        table.insert(output, "    " .. res.output[i])
+      end
+
+      local message = string.format(
+        "%s:\n\n%s\n\nOpen the console for details",
+        table.concat(self.cmd, " "),
+        table.concat(output, "\n")
+      )
+
+      notification.create(message, vim.log.levels.ERROR)
+      -- vim.schedule(Process.show_console)
     end
 
     self.stdin = nil
@@ -332,7 +377,6 @@ function Process:spawn(cb)
     end
   end
 
-  local logger = require("neogit.logger")
   logger.debug("Spawning: " .. vim.inspect(self.cmd))
   local job = vim.fn.jobstart(self.cmd, {
     cwd = self.cwd,

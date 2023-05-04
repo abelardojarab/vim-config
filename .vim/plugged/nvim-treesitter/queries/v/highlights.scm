@@ -8,7 +8,7 @@
 (interpreted_string_literal) @string
 (string_interpolation) @none
 
-; TODO: Have differnt highlight to make then standout + highlight }{$ as special
+; TODO: Have different highlight to make then standout + highlight }{$ as special
 ; ((string_interpolation
 ;   (identifier) @constant
 ;   "$" @punctuation.special
@@ -31,7 +31,7 @@
   (#not-has-parent? @_parent call_expression special_call_expression)))
 
 ((identifier) @variable.builtin
- (#match? @variable.builtin "^(err|macos|linux|windows)$"))
+  (#any-of? @variable.builtin "err" "macos" "linux" "windows"))
 
 (attribute_declaration) @attribute
 ;; C: TODO: fixme make `C`.exten highlighted as variable.builtin
@@ -396,6 +396,8 @@
 
 (rune_literal) @string
 
+(raw_string_literal) @string
+
 (escape_sequence) @string.escape
 
 (float_literal) @float
@@ -404,5 +406,8 @@
 
 (ERROR) @error
 
-(comment) @comment
+(comment) @comment @spell
 
+(_
+  (comment)+ @comment.documentation
+  [(function_declaration) (type_declaration) (const_spec) (enum_declaration)])

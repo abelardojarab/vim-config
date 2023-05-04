@@ -8,18 +8,24 @@ local u = {
 
 local mod = {}
 
-local function get_child_position(canvas_position, current_position, box_dir)
-  if box_dir == "row" then
-    return {
-      row = canvas_position.row,
-      col = current_position.col,
-    }
-  elseif box_dir == "col" then
-    return {
-      col = canvas_position.col,
-      row = current_position.row,
-    }
+local function get_child_position(box, child, current_position, canvas_position)
+  local position = box.dir == "row" and {
+    row = canvas_position.row,
+    col = current_position.col,
+  } or {
+    col = canvas_position.col,
+    row = current_position.row,
+  }
+
+  if child.component then
+    local border = child.component.border
+    if border and border._.type == "complex" then
+      position.col = position.col + math.floor(border._.size_delta.width / 2 + 0.5)
+      position.row = position.row + math.floor(border._.size_delta.height / 2 + 0.5)
+    end
   end
+
+  return position
 end
 
 ---@param parent table Layout.Box
@@ -76,7 +82,7 @@ function mod.process(box, meta)
 
   for _, child in ipairs(box.box) do
     if meta.process_growable_child or not child.grow then
-      local position = get_child_position(meta.position, current_position, box.dir)
+      local position = get_child_position(box, child, current_position, meta.position)
       local outer_size, inner_size = get_child_size(box, child, container_size, meta.growable_dimension_per_factor)
 
       if child.component then
@@ -161,6 +167,57 @@ function mod.hide_box(box)
       child.component:hide()
     else
       mod.hide_box(child)
+    end
+  end
+end
+
+---@param box table Layout.Box
+---@return table<string, table>
+local function collect_box_components(box, components)
+  if not components then
+    components = {}
+  end
+
+  for _, child in ipairs(box.box) do
+    if child.component then
+      components[child.component._.id] = child.component
+    else
+      collect_box_components(child, components)
+    end
+  end
+
+  return components
+end
+
+---@param curr_box table Layout.Box
+---@param prev_box table Layout.Box
+function mod.process_box_change(curr_box, prev_box)
+  if curr_box == prev_box then
+    return
+  end
+
+  local curr_components = collect_box_components(curr_box)
+  local prev_components = collect_box_components(prev_box)
+
+  for id, component in pairs(curr_components) do
+    if not prev_components[id] then
+      if not component.winid then
+        if component._.mounted then
+          component:show()
+        else
+          component:mount()
+        end
+      end
+    end
+  end
+
+  for id, component in pairs(prev_components) do
+    if not curr_components[id] then
+      if component._.mounted then
+        if component.winid then
+          component:hide()
+        end
+      end
     end
   end
 end

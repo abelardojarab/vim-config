@@ -1,19 +1,21 @@
 ; highlights.scm
 
-; higlight comments and symbols
-(comment) @comment
+; highlight comments and symbols
+(comment) @comment @spell
+((comment) @comment.documentation
+  (#lua-match? @comment.documentation "^/[*][*][^*].*[*]/$"))
 (symbol) @symbol
 (member_access_expression (_) (identifier) @symbol)
 
 ; highlight constants
 (
   (member_access_expression (identifier) @constant)
-  (#match? @constant "^[A-Z][A-Z_0-9]*$")
+  (#lua-match? @constant "^[%u][%u%d_]*$")
 )
 
 (
   (member_access_expression (member_access_expression) @include (identifier) @constant)
-  (#match? @constant "^[A-Z][A-Z_0-9]*$")
+  (#lua-match? @constant "^[%u][%u%d_]*$")
 )
 
 ; highlight types and probable types
@@ -26,7 +28,7 @@
 ; highlight creation methods in object creation expressions
 (
   (object_creation_expression (type (symbol (symbol (symbol)? @include (identifier) @type) (identifier) @constructor)))
-  (#match? @constructor "^[a-z][a-z_0-9]*$")
+  (#lua-match? @constructor "^[%l][%l%d_]*$")
 )
 
 (unqualified_type (symbol . (identifier) @type))
@@ -90,7 +92,6 @@
 
 [
  "abstract"
- "async"
  "class"
  "construct"
  "continue"
@@ -113,6 +114,11 @@
  "virtual"
  "with"
 ] @keyword
+
+[
+  "async"
+  "yield"
+] @keyword.coroutine
 
 [
  "const"
@@ -183,7 +189,6 @@
 
 [
   "return"
-  "yield"
 ] @keyword.return
 
 [

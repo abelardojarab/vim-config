@@ -36,6 +36,7 @@ Notes:
   * `write-good`
 * ASM
   * `gcc`
+  * `llvm-mc`
 * AVRA
   * `avra`
 * Awk
@@ -235,6 +236,7 @@ Notes:
   * `cabal-ghc`
   * `cspell`
   * `floskell`
+  * `fourmolu`
   * `ghc`
   * `ghc-mod`
   * `hdevtools`
@@ -255,11 +257,13 @@ Notes:
   * `alex`
   * `angular`
   * `cspell`
+  * `eslint`
   * `fecs`
   * `html-beautify`
   * `htmlhint`
   * `prettier`
   * `proselint`
+  * `rustywind`
   * `tidy`
   * `write-good`
 * Idris
@@ -340,6 +344,7 @@ Notes:
 * Lua
   * `cspell`
   * `lua-format`
+  * `lua-language-server`
   * `luac`
   * `luacheck`
   * `luafmt`
@@ -377,6 +382,7 @@ Notes:
   * `nimlsp`
   * `nimpretty`
 * nix
+  * `alejandra`
   * `nix-instantiate`
   * `nixfmt`
   * `nixpkgs-fmt`
@@ -481,6 +487,7 @@ Notes:
   * `isort`
   * `mypy`
   * `prospector`!!
+  * `pycln`
   * `pycodestyle`
   * `pydocstyle`
   * `pyflakes`
@@ -490,6 +497,7 @@ Notes:
   * `pylsp`
   * `pyre`
   * `pyright`
+  * `refurb`
   * `reorder-python-imports`
   * ruff
   * `unimport`

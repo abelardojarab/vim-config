@@ -121,6 +121,7 @@ ale-asciidoc-options	ale-asciidoc.txt	/*ale-asciidoc-options*
 ale-asciidoc-textlint	ale-asciidoc.txt	/*ale-asciidoc-textlint*
 ale-asciidoc-write-good	ale-asciidoc.txt	/*ale-asciidoc-write-good*
 ale-asm-gcc	ale-asm.txt	/*ale-asm-gcc*
+ale-asm-llvm_mc	ale-asm.txt	/*ale-asm-llvm_mc*
 ale-asm-options	ale-asm.txt	/*ale-asm-options*
 ale-asyncomplete-integration	ale.txt	/*ale-asyncomplete-integration*
 ale-avra-avra	ale-avra.txt	/*ale-avra-avra*
@@ -133,6 +134,7 @@ ale-bazel-buildifier	ale-bazel.txt	/*ale-bazel-buildifier*
 ale-bazel-options	ale-bazel.txt	/*ale-bazel-options*
 ale-bib-bibclean	ale-bib.txt	/*ale-bib-bibclean*
 ale-bib-options	ale-bib.txt	/*ale-bib-options*
+ale-bicep-az_bicep	ale-bicep.txt	/*ale-bicep-az_bicep*
 ale-bicep-bicep	ale-bicep.txt	/*ale-bicep-bicep*
 ale-bicep-options	ale-bicep.txt	/*ale-bicep-options*
 ale-bitbake-oelint_adv	ale-bitbake.txt	/*ale-bitbake-oelint_adv*
@@ -234,6 +236,7 @@ ale-development-contributing	ale-development.txt	/*ale-development-contributing*
 ale-development-fixer-tests	ale-development.txt	/*ale-development-fixer-tests*
 ale-development-introduction	ale-development.txt	/*ale-development-introduction*
 ale-development-linter-tests	ale-development.txt	/*ale-development-linter-tests*
+ale-development-release	ale-development.txt	/*ale-development-release*
 ale-development-tests	ale-development.txt	/*ale-development-tests*
 ale-development-windows-tests	ale-development.txt	/*ale-development-windows-tests*
 ale-development.txt	ale-development.txt	/*ale-development.txt*
@@ -317,6 +320,7 @@ ale-haskell-brittany	ale-haskell.txt	/*ale-haskell-brittany*
 ale-haskell-cabal-ghc	ale-haskell.txt	/*ale-haskell-cabal-ghc*
 ale-haskell-cspell	ale-haskell.txt	/*ale-haskell-cspell*
 ale-haskell-floskell	ale-haskell.txt	/*ale-haskell-floskell*
+ale-haskell-fourmolu	ale-haskell.txt	/*ale-haskell-fourmolu*
 ale-haskell-ghc	ale-haskell.txt	/*ale-haskell-ghc*
 ale-haskell-ghc-mod	ale-haskell.txt	/*ale-haskell-ghc-mod*
 ale-haskell-hdevtools	ale-haskell.txt	/*ale-haskell-hdevtools*
@@ -344,6 +348,7 @@ ale-html-fecs	ale-html.txt	/*ale-html-fecs*
 ale-html-htmlhint	ale-html.txt	/*ale-html-htmlhint*
 ale-html-options	ale-html.txt	/*ale-html-options*
 ale-html-prettier	ale-html.txt	/*ale-html-prettier*
+ale-html-rustywind	ale-html.txt	/*ale-html-rustywind*
 ale-html-stylelint	ale-html.txt	/*ale-html-stylelint*
 ale-html-tidy	ale-html.txt	/*ale-html-tidy*
 ale-html-vscode	ale-html.txt	/*ale-html-vscode*
@@ -441,7 +446,9 @@ ale-loclist-format	ale.txt	/*ale-loclist-format*
 ale-lsp	ale.txt	/*ale-lsp*
 ale-lsp-linters	ale.txt	/*ale-lsp-linters*
 ale-lua-cspell	ale-lua.txt	/*ale-lua-cspell*
+ale-lua-language-server	ale-lua.txt	/*ale-lua-language-server*
 ale-lua-lua-format	ale-lua.txt	/*ale-lua-lua-format*
+ale-lua-lua-language-server	ale-lua.txt	/*ale-lua-lua-language-server*
 ale-lua-luac	ale-lua.txt	/*ale-lua-luac*
 ale-lua-luacheck	ale-lua.txt	/*ale-lua-luacheck*
 ale-lua-luafmt	ale-lua.txt	/*ale-lua-luafmt*
@@ -469,6 +476,8 @@ ale-nim-nimcheck	ale-nim.txt	/*ale-nim-nimcheck*
 ale-nim-nimlsp	ale-nim.txt	/*ale-nim-nimlsp*
 ale-nim-nimpretty	ale-nim.txt	/*ale-nim-nimpretty*
 ale-nim-options	ale-nim.txt	/*ale-nim-options*
+ale-nix-alejandra	ale-nix.txt	/*ale-nix-alejandra*
+ale-nix-deadnix	ale-nix.txt	/*ale-nix-deadnix*
 ale-nix-nixfmt	ale-nix.txt	/*ale-nix-nixfmt*
 ale-nix-nixpkgs-fmt	ale-nix.txt	/*ale-nix-nixpkgs-fmt*
 ale-nix-options	ale-nix.txt	/*ale-nix-options*
@@ -568,6 +577,7 @@ ale-python-isort	ale-python.txt	/*ale-python-isort*
 ale-python-mypy	ale-python.txt	/*ale-python-mypy*
 ale-python-options	ale-python.txt	/*ale-python-options*
 ale-python-prospector	ale-python.txt	/*ale-python-prospector*
+ale-python-pycln	ale-python.txt	/*ale-python-pycln*
 ale-python-pycodestyle	ale-python.txt	/*ale-python-pycodestyle*
 ale-python-pydocstyle	ale-python.txt	/*ale-python-pydocstyle*
 ale-python-pyflakes	ale-python.txt	/*ale-python-pyflakes*
@@ -577,6 +587,7 @@ ale-python-pylint	ale-python.txt	/*ale-python-pylint*
 ale-python-pylsp	ale-python.txt	/*ale-python-pylsp*
 ale-python-pyre	ale-python.txt	/*ale-python-pyre*
 ale-python-pyright	ale-python.txt	/*ale-python-pyright*
+ale-python-refurb	ale-python.txt	/*ale-python-refurb*
 ale-python-reorder_python_imports	ale-python.txt	/*ale-python-reorder_python_imports*
 ale-python-root	ale-python.txt	/*ale-python-root*
 ale-python-ruff	ale-python.txt	/*ale-python-ruff*
@@ -589,6 +600,9 @@ ale-r-languageserver	ale-r.txt	/*ale-r-languageserver*
 ale-r-lintr	ale-r.txt	/*ale-r-lintr*
 ale-r-options	ale-r.txt	/*ale-r-options*
 ale-r-styler	ale-r.txt	/*ale-r-styler*
+ale-racket-langserver	ale-racket.txt	/*ale-racket-langserver*
+ale-racket-options	ale-racket.txt	/*ale-racket-options*
+ale-racket-raco-fmt	ale-racket.txt	/*ale-racket-raco-fmt*
 ale-reasonml-language-server	ale-reasonml.txt	/*ale-reasonml-language-server*
 ale-reasonml-merlin	ale-reasonml.txt	/*ale-reasonml-merlin*
 ale-reasonml-ols	ale-reasonml.txt	/*ale-reasonml-ols*
@@ -790,6 +804,8 @@ b:ale_apkbuild_apkbuild_lint_executable	ale-apkbuild.txt	/*b:ale_apkbuild_apkbui
 b:ale_apkbuild_secfixes_check_executable	ale-apkbuild.txt	/*b:ale_apkbuild_secfixes_check_executable*
 b:ale_asm_gcc_executable	ale-asm.txt	/*b:ale_asm_gcc_executable*
 b:ale_asm_gcc_options	ale-asm.txt	/*b:ale_asm_gcc_options*
+b:ale_asm_llvm_mc_executable	ale-asm.txt	/*b:ale_asm_llvm_mc_executable*
+b:ale_asm_llvm_mc_options	ale-asm.txt	/*b:ale_asm_llvm_mc_options*
 b:ale_avra_avra_executable	ale-avra.txt	/*b:ale_avra_avra_executable*
 b:ale_avra_avra_options	ale-avra.txt	/*b:ale_avra_avra_options*
 b:ale_awk_gawk_executable	ale-awk.txt	/*b:ale_awk_gawk_executable*
@@ -797,6 +813,8 @@ b:ale_awk_gawk_options	ale-awk.txt	/*b:ale_awk_gawk_options*
 b:ale_bazel_buildifier_executable	ale-bazel.txt	/*b:ale_bazel_buildifier_executable*
 b:ale_bazel_buildifier_options	ale-bazel.txt	/*b:ale_bazel_buildifier_options*
 b:ale_bazel_buildifier_use_global	ale-bazel.txt	/*b:ale_bazel_buildifier_use_global*
+b:ale_bicep_az_bicep_executable	ale-bicep.txt	/*b:ale_bicep_az_bicep_executable*
+b:ale_bicep_az_bicep_options	ale-bicep.txt	/*b:ale_bicep_az_bicep_options*
 b:ale_bicep_bicep_executable	ale-bicep.txt	/*b:ale_bicep_bicep_executable*
 b:ale_bicep_bicep_options	ale-bicep.txt	/*b:ale_bicep_bicep_options*
 b:ale_c_always_make	ale-c.txt	/*b:ale_c_always_make*
@@ -1002,6 +1020,8 @@ b:ale_go_gometalinter_executable	ale-go.txt	/*b:ale_go_gometalinter_executable*
 b:ale_go_gometalinter_lint_package	ale-go.txt	/*b:ale_go_gometalinter_lint_package*
 b:ale_go_gometalinter_options	ale-go.txt	/*b:ale_go_gometalinter_options*
 b:ale_go_gopls_executable	ale-go.txt	/*b:ale_go_gopls_executable*
+b:ale_go_gopls_fix_executable	ale-go.txt	/*b:ale_go_gopls_fix_executable*
+b:ale_go_gopls_fix_options	ale-go.txt	/*b:ale_go_gopls_fix_options*
 b:ale_go_gopls_init_options	ale-go.txt	/*b:ale_go_gopls_init_options*
 b:ale_go_gopls_options	ale-go.txt	/*b:ale_go_gopls_options*
 b:ale_go_gopls_use_global	ale-go.txt	/*b:ale_go_gopls_use_global*
@@ -1023,6 +1043,8 @@ b:ale_handlebars_embertemplatelint_use_global	ale-handlebars.txt	/*b:ale_handleb
 b:ale_haskell_brittany_executable	ale-haskell.txt	/*b:ale_haskell_brittany_executable*
 b:ale_haskell_cabal_ghc_options	ale-haskell.txt	/*b:ale_haskell_cabal_ghc_options*
 b:ale_haskell_floskell_executable	ale-haskell.txt	/*b:ale_haskell_floskell_executable*
+b:ale_haskell_fourmolu_executable	ale-haskell.txt	/*b:ale_haskell_fourmolu_executable*
+b:ale_haskell_fourmolu_options	ale-haskell.txt	/*b:ale_haskell_fourmolu_options*
 b:ale_haskell_ghc_mod_executable	ale-haskell.txt	/*b:ale_haskell_ghc_mod_executable*
 b:ale_haskell_ghc_options	ale-haskell.txt	/*b:ale_haskell_ghc_options*
 b:ale_haskell_hdevtools_executable	ale-haskell.txt	/*b:ale_haskell_hdevtools_executable*
@@ -1051,6 +1073,8 @@ b:ale_html_beautify_use_global	ale-html.txt	/*b:ale_html_beautify_use_global*
 b:ale_html_htmlhint_executable	ale-html.txt	/*b:ale_html_htmlhint_executable*
 b:ale_html_htmlhint_options	ale-html.txt	/*b:ale_html_htmlhint_options*
 b:ale_html_htmlhint_use_global	ale-html.txt	/*b:ale_html_htmlhint_use_global*
+b:ale_html_rustywind_executable	ale-html.txt	/*b:ale_html_rustywind_executable*
+b:ale_html_rustywind_options	ale-html.txt	/*b:ale_html_rustywind_options*
 b:ale_html_stylelint_executable	ale-html.txt	/*b:ale_html_stylelint_executable*
 b:ale_html_stylelint_options	ale-html.txt	/*b:ale_html_stylelint_options*
 b:ale_html_stylelint_use_global	ale-html.txt	/*b:ale_html_stylelint_use_global*
@@ -1144,8 +1168,10 @@ b:ale_list_vertical	ale.txt	/*b:ale_list_vertical*
 b:ale_list_window_size	ale.txt	/*b:ale_list_window_size*
 b:ale_llvm_llc_executable	ale-llvm.txt	/*b:ale_llvm_llc_executable*
 b:ale_loclist_msg_format	ale.txt	/*b:ale_loclist_msg_format*
+b:ale_lua_language_server_executable	ale-lua.txt	/*b:ale_lua_language_server_executable*
 b:ale_lua_lua_format_executable	ale-lua.txt	/*b:ale_lua_lua_format_executable*
 b:ale_lua_lua_format_options	ale-lua.txt	/*b:ale_lua_lua_format_options*
+b:ale_lua_lua_language_server_config	ale-lua.txt	/*b:ale_lua_lua_language_server_config*
 b:ale_lua_luac_executable	ale-lua.txt	/*b:ale_lua_luac_executable*
 b:ale_lua_luacheck_executable	ale-lua.txt	/*b:ale_lua_luacheck_executable*
 b:ale_lua_luacheck_options	ale-lua.txt	/*b:ale_lua_luacheck_options*
@@ -1173,6 +1199,10 @@ b:ale_nasm_nasm_executable	ale-nasm.txt	/*b:ale_nasm_nasm_executable*
 b:ale_nasm_nasm_options	ale-nasm.txt	/*b:ale_nasm_nasm_options*
 b:ale_nim_nimpretty_executable	ale-nim.txt	/*b:ale_nim_nimpretty_executable*
 b:ale_nim_nimpretty_options	ale-nim.txt	/*b:ale_nim_nimpretty_options*
+b:ale_nix_alejandra_executable	ale-nix.txt	/*b:ale_nix_alejandra_executable*
+b:ale_nix_alejandra_options	ale-nix.txt	/*b:ale_nix_alejandra_options*
+b:ale_nix_deadnix_executable	ale-nix.txt	/*b:ale_nix_deadnix_executable*
+b:ale_nix_deadnix_options	ale-nix.txt	/*b:ale_nix_deadnix_options*
 b:ale_nix_fix_check_executable	ale-nix.txt	/*b:ale_nix_fix_check_executable*
 b:ale_nix_nixfmt_executable	ale-nix.txt	/*b:ale_nix_nixfmt_executable*
 b:ale_nix_nixfmt_options	ale-nix.txt	/*b:ale_nix_nixfmt_options*
@@ -1281,6 +1311,7 @@ b:ale_pyrex_cython_executable	ale-pyrex.txt	/*b:ale_pyrex_cython_executable*
 b:ale_pyrex_cython_options	ale-pyrex.txt	/*b:ale_pyrex_cython_options*
 b:ale_python_auto_pipenv	ale-python.txt	/*b:ale_python_auto_pipenv*
 b:ale_python_auto_poetry	ale-python.txt	/*b:ale_python_auto_poetry*
+b:ale_python_auto_virtualenv	ale-python.txt	/*b:ale_python_auto_virtualenv*
 b:ale_python_autoflake_executable	ale-python.txt	/*b:ale_python_autoflake_executable*
 b:ale_python_autoflake_options	ale-python.txt	/*b:ale_python_autoflake_options*
 b:ale_python_autoflake_use_global	ale-python.txt	/*b:ale_python_autoflake_use_global*
@@ -1331,6 +1362,13 @@ b:ale_python_prospector_auto_poetry	ale-python.txt	/*b:ale_python_prospector_aut
 b:ale_python_prospector_executable	ale-python.txt	/*b:ale_python_prospector_executable*
 b:ale_python_prospector_options	ale-python.txt	/*b:ale_python_prospector_options*
 b:ale_python_prospector_use_global	ale-python.txt	/*b:ale_python_prospector_use_global*
+b:ale_python_pycln_auto_pipenv	ale-python.txt	/*b:ale_python_pycln_auto_pipenv*
+b:ale_python_pycln_auto_poetry	ale-python.txt	/*b:ale_python_pycln_auto_poetry*
+b:ale_python_pycln_change_directory	ale-python.txt	/*b:ale_python_pycln_change_directory*
+b:ale_python_pycln_config_file	ale-python.txt	/*b:ale_python_pycln_config_file*
+b:ale_python_pycln_executable	ale-python.txt	/*b:ale_python_pycln_executable*
+b:ale_python_pycln_options	ale-python.txt	/*b:ale_python_pycln_options*
+b:ale_python_pycln_use_global	ale-python.txt	/*b:ale_python_pycln_use_global*
 b:ale_python_pycodestyle_auto_pipenv	ale-python.txt	/*b:ale_python_pycodestyle_auto_pipenv*
 b:ale_python_pycodestyle_auto_poetry	ale-python.txt	/*b:ale_python_pycodestyle_auto_poetry*
 b:ale_python_pycodestyle_executable	ale-python.txt	/*b:ale_python_pycodestyle_executable*
@@ -1374,6 +1412,12 @@ b:ale_python_pyre_executable	ale-python.txt	/*b:ale_python_pyre_executable*
 b:ale_python_pyre_use_global	ale-python.txt	/*b:ale_python_pyre_use_global*
 b:ale_python_pyright_config	ale-python.txt	/*b:ale_python_pyright_config*
 b:ale_python_pyright_executable	ale-python.txt	/*b:ale_python_pyright_executable*
+b:ale_python_refurb_auto_pipenv	ale-python.txt	/*b:ale_python_refurb_auto_pipenv*
+b:ale_python_refurb_auto_poetry	ale-python.txt	/*b:ale_python_refurb_auto_poetry*
+b:ale_python_refurb_change_directory	ale-python.txt	/*b:ale_python_refurb_change_directory*
+b:ale_python_refurb_executable	ale-python.txt	/*b:ale_python_refurb_executable*
+b:ale_python_refurb_options	ale-python.txt	/*b:ale_python_refurb_options*
+b:ale_python_refurb_use_global	ale-python.txt	/*b:ale_python_refurb_use_global*
 b:ale_python_reorder_python_imports_executable	ale-python.txt	/*b:ale_python_reorder_python_imports_executable*
 b:ale_python_reorder_python_imports_options	ale-python.txt	/*b:ale_python_reorder_python_imports_options*
 b:ale_python_reorder_python_imports_use_global	ale-python.txt	/*b:ale_python_reorder_python_imports_use_global*
@@ -1400,6 +1444,8 @@ b:ale_r_languageserver_config	ale-r.txt	/*b:ale_r_languageserver_config*
 b:ale_r_lintr_lint_package	ale-r.txt	/*b:ale_r_lintr_lint_package*
 b:ale_r_lintr_options	ale-r.txt	/*b:ale_r_lintr_options*
 b:ale_r_styler_options	ale-r.txt	/*b:ale_r_styler_options*
+b:ale_racket_raco_fmt_executable	ale-racket.txt	/*b:ale_racket_raco_fmt_executable*
+b:ale_racket_raco_fmt_options	ale-racket.txt	/*b:ale_racket_raco_fmt_options*
 b:ale_reason_ls_executable	ale-reasonml.txt	/*b:ale_reason_ls_executable*
 b:ale_reason_ols_executable	ale-reasonml.txt	/*b:ale_reason_ols_executable*
 b:ale_reason_ols_use_global	ale-reasonml.txt	/*b:ale_reason_ols_use_global*
@@ -1575,7 +1621,11 @@ b:ale_vim_vimls_use_global	ale-vim.txt	/*b:ale_vim_vimls_use_global*
 b:ale_vim_vint_executable	ale-vim.txt	/*b:ale_vim_vint_executable*
 b:ale_vim_vint_show_style_issues	ale-vim.txt	/*b:ale_vim_vint_show_style_issues*
 b:ale_virtualenv_dir_names	ale.txt	/*b:ale_virtualenv_dir_names*
+b:ale_virtualtext_column	ale.txt	/*b:ale_virtualtext_column*
 b:ale_virtualtext_delay	ale.txt	/*b:ale_virtualtext_delay*
+b:ale_virtualtext_maxcolumn	ale.txt	/*b:ale_virtualtext_maxcolumn*
+b:ale_virtualtext_prefix	ale.txt	/*b:ale_virtualtext_prefix*
+b:ale_virtualtext_single	ale.txt	/*b:ale_virtualtext_single*
 b:ale_vue_vls_executable	ale-vue.txt	/*b:ale_vue_vls_executable*
 b:ale_vue_vls_use_global	ale-vue.txt	/*b:ale_vue_vls_use_global*
 b:ale_vue_volar_executable	ale-vue.txt	/*b:ale_vue_volar_executable*
@@ -1634,6 +1684,8 @@ g:ale_apkbuild_apkbuild_lint_executable	ale-apkbuild.txt	/*g:ale_apkbuild_apkbui
 g:ale_apkbuild_secfixes_check_executable	ale-apkbuild.txt	/*g:ale_apkbuild_secfixes_check_executable*
 g:ale_asm_gcc_executable	ale-asm.txt	/*g:ale_asm_gcc_executable*
 g:ale_asm_gcc_options	ale-asm.txt	/*g:ale_asm_gcc_options*
+g:ale_asm_llvm_mc_executable	ale-asm.txt	/*g:ale_asm_llvm_mc_executable*
+g:ale_asm_llvm_mc_options	ale-asm.txt	/*g:ale_asm_llvm_mc_options*
 g:ale_avra_avra_executable	ale-avra.txt	/*g:ale_avra_avra_executable*
 g:ale_avra_avra_options	ale-avra.txt	/*g:ale_avra_avra_options*
 g:ale_awk_gawk_executable	ale-awk.txt	/*g:ale_awk_gawk_executable*
@@ -1643,6 +1695,8 @@ g:ale_bazel_buildifier_options	ale-bazel.txt	/*g:ale_bazel_buildifier_options*
 g:ale_bazel_buildifier_use_global	ale-bazel.txt	/*g:ale_bazel_buildifier_use_global*
 g:ale_bib_bibclean_executable	ale-bib.txt	/*g:ale_bib_bibclean_executable*
 g:ale_bib_bibclean_options	ale-bib.txt	/*g:ale_bib_bibclean_options*
+g:ale_bicep_az_bicep_executable	ale-bicep.txt	/*g:ale_bicep_az_bicep_executable*
+g:ale_bicep_az_bicep_options	ale-bicep.txt	/*g:ale_bicep_az_bicep_options*
 g:ale_bicep_bicep_executable	ale-bicep.txt	/*g:ale_bicep_bicep_executable*
 g:ale_bicep_bicep_options	ale-bicep.txt	/*g:ale_bicep_bicep_options*
 g:ale_bitbake_oelint_adv_config	ale-bitbake.txt	/*g:ale_bitbake_oelint_adv_config*
@@ -1870,6 +1924,8 @@ g:ale_go_gometalinter_executable	ale-go.txt	/*g:ale_go_gometalinter_executable*
 g:ale_go_gometalinter_lint_package	ale-go.txt	/*g:ale_go_gometalinter_lint_package*
 g:ale_go_gometalinter_options	ale-go.txt	/*g:ale_go_gometalinter_options*
 g:ale_go_gopls_executable	ale-go.txt	/*g:ale_go_gopls_executable*
+g:ale_go_gopls_fix_executable	ale-go.txt	/*g:ale_go_gopls_fix_executable*
+g:ale_go_gopls_fix_options	ale-go.txt	/*g:ale_go_gopls_fix_options*
 g:ale_go_gopls_init_options	ale-go.txt	/*g:ale_go_gopls_init_options*
 g:ale_go_gopls_options	ale-go.txt	/*g:ale_go_gopls_options*
 g:ale_go_gopls_use_global	ale-go.txt	/*g:ale_go_gopls_use_global*
@@ -1891,6 +1947,8 @@ g:ale_handlebars_embertemplatelint_use_global	ale-handlebars.txt	/*g:ale_handleb
 g:ale_haskell_brittany_executable	ale-haskell.txt	/*g:ale_haskell_brittany_executable*
 g:ale_haskell_cabal_ghc_options	ale-haskell.txt	/*g:ale_haskell_cabal_ghc_options*
 g:ale_haskell_floskell_executable	ale-haskell.txt	/*g:ale_haskell_floskell_executable*
+g:ale_haskell_fourmolu_executable	ale-haskell.txt	/*g:ale_haskell_fourmolu_executable*
+g:ale_haskell_fourmolu_options	ale-haskell.txt	/*g:ale_haskell_fourmolu_options*
 g:ale_haskell_ghc_mod_executable	ale-haskell.txt	/*g:ale_haskell_ghc_mod_executable*
 g:ale_haskell_ghc_options	ale-haskell.txt	/*g:ale_haskell_ghc_options*
 g:ale_haskell_hdevtools_executable	ale-haskell.txt	/*g:ale_haskell_hdevtools_executable*
@@ -1922,6 +1980,8 @@ g:ale_html_beautify_use_global	ale-html.txt	/*g:ale_html_beautify_use_global*
 g:ale_html_htmlhint_executable	ale-html.txt	/*g:ale_html_htmlhint_executable*
 g:ale_html_htmlhint_options	ale-html.txt	/*g:ale_html_htmlhint_options*
 g:ale_html_htmlhint_use_global	ale-html.txt	/*g:ale_html_htmlhint_use_global*
+g:ale_html_rustywind_executable	ale-html.txt	/*g:ale_html_rustywind_executable*
+g:ale_html_rustywind_options	ale-html.txt	/*g:ale_html_rustywind_options*
 g:ale_html_stylelint_executable	ale-html.txt	/*g:ale_html_stylelint_executable*
 g:ale_html_stylelint_options	ale-html.txt	/*g:ale_html_stylelint_options*
 g:ale_html_stylelint_use_global	ale-html.txt	/*g:ale_html_stylelint_use_global*
@@ -2033,8 +2093,10 @@ g:ale_loclist_msg_format	ale.txt	/*g:ale_loclist_msg_format*
 g:ale_lsp_show_message_format	ale.txt	/*g:ale_lsp_show_message_format*
 g:ale_lsp_show_message_severity	ale.txt	/*g:ale_lsp_show_message_severity*
 g:ale_lsp_suggestions	ale.txt	/*g:ale_lsp_suggestions*
+g:ale_lua_language_server_executable	ale-lua.txt	/*g:ale_lua_language_server_executable*
 g:ale_lua_lua_format_executable	ale-lua.txt	/*g:ale_lua_lua_format_executable*
 g:ale_lua_lua_format_options	ale-lua.txt	/*g:ale_lua_lua_format_options*
+g:ale_lua_lua_language_server_config	ale-lua.txt	/*g:ale_lua_lua_language_server_config*
 g:ale_lua_luac_executable	ale-lua.txt	/*g:ale_lua_luac_executable*
 g:ale_lua_luacheck_executable	ale-lua.txt	/*g:ale_lua_luacheck_executable*
 g:ale_lua_luacheck_options	ale-lua.txt	/*g:ale_lua_luacheck_options*
@@ -2063,6 +2125,10 @@ g:ale_nasm_nasm_executable	ale-nasm.txt	/*g:ale_nasm_nasm_executable*
 g:ale_nasm_nasm_options	ale-nasm.txt	/*g:ale_nasm_nasm_options*
 g:ale_nim_nimpretty_executable	ale-nim.txt	/*g:ale_nim_nimpretty_executable*
 g:ale_nim_nimpretty_options	ale-nim.txt	/*g:ale_nim_nimpretty_options*
+g:ale_nix_alejandra_executable	ale-nix.txt	/*g:ale_nix_alejandra_executable*
+g:ale_nix_alejandra_options	ale-nix.txt	/*g:ale_nix_alejandra_options*
+g:ale_nix_deadnix_executable	ale-nix.txt	/*g:ale_nix_deadnix_executable*
+g:ale_nix_deadnix_options	ale-nix.txt	/*g:ale_nix_deadnix_options*
 g:ale_nix_fix_check_executable	ale-nix.txt	/*g:ale_nix_fix_check_executable*
 g:ale_nix_nixfmt_executable	ale-nix.txt	/*g:ale_nix_nixfmt_executable*
 g:ale_nix_nixfmt_options	ale-nix.txt	/*g:ale_nix_nixfmt_options*
@@ -2181,6 +2247,7 @@ g:ale_pyrex_cython_executable	ale-pyrex.txt	/*g:ale_pyrex_cython_executable*
 g:ale_pyrex_cython_options	ale-pyrex.txt	/*g:ale_pyrex_cython_options*
 g:ale_python_auto_pipenv	ale-python.txt	/*g:ale_python_auto_pipenv*
 g:ale_python_auto_poetry	ale-python.txt	/*g:ale_python_auto_poetry*
+g:ale_python_auto_virtualenv	ale-python.txt	/*g:ale_python_auto_virtualenv*
 g:ale_python_autoflake_executable	ale-python.txt	/*g:ale_python_autoflake_executable*
 g:ale_python_autoflake_options	ale-python.txt	/*g:ale_python_autoflake_options*
 g:ale_python_autoflake_use_global	ale-python.txt	/*g:ale_python_autoflake_use_global*
@@ -2230,6 +2297,13 @@ g:ale_python_prospector_auto_poetry	ale-python.txt	/*g:ale_python_prospector_aut
 g:ale_python_prospector_executable	ale-python.txt	/*g:ale_python_prospector_executable*
 g:ale_python_prospector_options	ale-python.txt	/*g:ale_python_prospector_options*
 g:ale_python_prospector_use_global	ale-python.txt	/*g:ale_python_prospector_use_global*
+g:ale_python_pycln_auto_pipenv	ale-python.txt	/*g:ale_python_pycln_auto_pipenv*
+g:ale_python_pycln_auto_poetry	ale-python.txt	/*g:ale_python_pycln_auto_poetry*
+g:ale_python_pycln_change_directory	ale-python.txt	/*g:ale_python_pycln_change_directory*
+g:ale_python_pycln_config_file	ale-python.txt	/*g:ale_python_pycln_config_file*
+g:ale_python_pycln_executable	ale-python.txt	/*g:ale_python_pycln_executable*
+g:ale_python_pycln_options	ale-python.txt	/*g:ale_python_pycln_options*
+g:ale_python_pycln_use_global	ale-python.txt	/*g:ale_python_pycln_use_global*
 g:ale_python_pycodestyle_auto_pipenv	ale-python.txt	/*g:ale_python_pycodestyle_auto_pipenv*
 g:ale_python_pycodestyle_auto_poetry	ale-python.txt	/*g:ale_python_pycodestyle_auto_poetry*
 g:ale_python_pycodestyle_executable	ale-python.txt	/*g:ale_python_pycodestyle_executable*
@@ -2273,6 +2347,12 @@ g:ale_python_pyre_executable	ale-python.txt	/*g:ale_python_pyre_executable*
 g:ale_python_pyre_use_global	ale-python.txt	/*g:ale_python_pyre_use_global*
 g:ale_python_pyright_config	ale-python.txt	/*g:ale_python_pyright_config*
 g:ale_python_pyright_executable	ale-python.txt	/*g:ale_python_pyright_executable*
+g:ale_python_refurb_auto_pipenv	ale-python.txt	/*g:ale_python_refurb_auto_pipenv*
+g:ale_python_refurb_auto_poetry	ale-python.txt	/*g:ale_python_refurb_auto_poetry*
+g:ale_python_refurb_change_directory	ale-python.txt	/*g:ale_python_refurb_change_directory*
+g:ale_python_refurb_executable	ale-python.txt	/*g:ale_python_refurb_executable*
+g:ale_python_refurb_options	ale-python.txt	/*g:ale_python_refurb_options*
+g:ale_python_refurb_use_global	ale-python.txt	/*g:ale_python_refurb_use_global*
 g:ale_python_reorder_python_imports_executable	ale-python.txt	/*g:ale_python_reorder_python_imports_executable*
 g:ale_python_reorder_python_imports_options	ale-python.txt	/*g:ale_python_reorder_python_imports_options*
 g:ale_python_reorder_python_imports_use_global	ale-python.txt	/*g:ale_python_reorder_python_imports_use_global*
@@ -2299,6 +2379,8 @@ g:ale_r_languageserver_config	ale-r.txt	/*g:ale_r_languageserver_config*
 g:ale_r_lintr_lint_package	ale-r.txt	/*g:ale_r_lintr_lint_package*
 g:ale_r_lintr_options	ale-r.txt	/*g:ale_r_lintr_options*
 g:ale_r_styler_options	ale-r.txt	/*g:ale_r_styler_options*
+g:ale_racket_raco_fmt_executable	ale-racket.txt	/*g:ale_racket_raco_fmt_executable*
+g:ale_racket_raco_fmt_options	ale-racket.txt	/*g:ale_racket_raco_fmt_options*
 g:ale_reason_ls_executable	ale-reasonml.txt	/*g:ale_reason_ls_executable*
 g:ale_reason_ols_executable	ale-reasonml.txt	/*g:ale_reason_ols_executable*
 g:ale_reason_ols_use_global	ale-reasonml.txt	/*g:ale_reason_ols_use_global*
@@ -2468,6 +2550,7 @@ g:ale_typescript_xo_options	ale-typescript.txt	/*g:ale_typescript_xo_options*
 g:ale_typescript_xo_use_global	ale-typescript.txt	/*g:ale_typescript_xo_use_global*
 g:ale_update_tagstack	ale.txt	/*g:ale_update_tagstack*
 g:ale_use_global_executables	ale.txt	/*g:ale_use_global_executables*
+g:ale_use_neovim_diagnostics_api	ale.txt	/*g:ale_use_neovim_diagnostics_api*
 g:ale_v_v_executable	ale-v.txt	/*g:ale_v_v_executable*
 g:ale_v_v_options	ale-v.txt	/*g:ale_v_v_options*
 g:ale_v_vfmt_options	ale-v.txt	/*g:ale_v_vfmt_options*
@@ -2490,9 +2573,12 @@ g:ale_vim_vimls_use_global	ale-vim.txt	/*g:ale_vim_vimls_use_global*
 g:ale_vim_vint_executable	ale-vim.txt	/*g:ale_vim_vint_executable*
 g:ale_vim_vint_show_style_issues	ale-vim.txt	/*g:ale_vim_vint_show_style_issues*
 g:ale_virtualenv_dir_names	ale.txt	/*g:ale_virtualenv_dir_names*
+g:ale_virtualtext_column	ale.txt	/*g:ale_virtualtext_column*
 g:ale_virtualtext_cursor	ale.txt	/*g:ale_virtualtext_cursor*
 g:ale_virtualtext_delay	ale.txt	/*g:ale_virtualtext_delay*
+g:ale_virtualtext_maxcolumn	ale.txt	/*g:ale_virtualtext_maxcolumn*
 g:ale_virtualtext_prefix	ale.txt	/*g:ale_virtualtext_prefix*
+g:ale_virtualtext_single	ale.txt	/*g:ale_virtualtext_single*
 g:ale_vue_vls_executable	ale-vue.txt	/*g:ale_vue_vls_executable*
 g:ale_vue_vls_use_global	ale-vue.txt	/*g:ale_vue_vls_use_global*
 g:ale_vue_volar_executable	ale-vue.txt	/*g:ale_vue_volar_executable*

@@ -41,36 +41,7 @@ some basic setup might look like.
 
 ## Prerequisites
 
-- neovim 0.7.0+
-
-## Notices
-
-- This plugin no longer relies on dart code's debugger as flutter and dart now ship with a native debugger.
-  Versions of flutter before version 2.10.0 will still require the old dart code debugger.
-  Setup instructions for this can be found [here](https://github.com/mfussenegger/nvim-dap/wiki/Debug-Adapter-installation#dart).
-
-  Migration for existing users of the Dart code debugger on older flutter versions:
-
-  ```lua
-    local debugger_dir = path.join(fn.stdpath("cache"), "dart-code")
-    local debugger_path = path.join(debugger_dir, "out", "dist", "debug.js")
-
-    -- In config section for the debugger
-    debugger = {
-      enabled = true,
-      register.configurations = function()
-        local dap = require("dap")
-        dap.adapters.dart = {
-          type = "executable",
-          command = "node",
-          args = { debugger_path, "flutter" },
-        }
-        -- Other configuration herek
-      end,
-    },
-  ```
-
-- The `:FlutterOutline` command has been renamed to `:FlutterOutlineOpen`, and a `:FlutterOutlineToggle` has been added.
+- neovim 0.8.0+
 
 ## Installation
 
@@ -78,16 +49,40 @@ using `vim-plug`
 
 ```vim
 Plug 'nvim-lua/plenary.nvim'
+Plug 'stevearc/dressing.nvim' " optional for vim.ui.select
 Plug 'akinsho/flutter-tools.nvim'
 ```
 
-or using `packer.nvim`
+using `packer.nvim`
 
 ```lua
-use {'akinsho/flutter-tools.nvim', requires = 'nvim-lua/plenary.nvim'}
+use {
+    'akinsho/flutter-tools.nvim',
+    requires = {
+        'nvim-lua/plenary.nvim',
+        'stevearc/dressing.nvim', -- optional for vim.ui.select
+    },
+}
+```
+
+using `lazy.nvim`
+
+```lua
+{
+    'akinsho/flutter-tools.nvim',
+    lazy = false,
+    dependencies = {
+        'nvim-lua/plenary.nvim',
+        'stevearc/dressing.nvim', -- optional for vim.ui.select
+    },
+}
 ```
 
 This plugin depends on [plenary.nvim](https://github.com/nvim-lua/plenary.nvim), please make sure it is installed.
+
+This plugin depends on `vim.ui.select` which allows users to control what UI is used for selecting
+from a list of options. If you don't have a UI configured for `vim.ui.select` then I highly recommend
+the excellent [dressing.nvim](https://github.com/stevearc/dressing.nvim).
 
 ## Warning
 
@@ -103,7 +98,7 @@ This plugin depends on [plenary.nvim](https://github.com/nvim-lua/plenary.nvim),
 
 ```vim
 lua << EOF
-  require("flutter-tools").setup{} -- use defaults
+  require("flutter-tools").setup {} -- use defaults
 EOF
 
 ```
@@ -111,7 +106,7 @@ EOF
 ### Lua
 
 ```lua
-require("flutter-tools").setup{} -- use defaults
+require("flutter-tools").setup {} -- use defaults
 ```
 
 ## Features
@@ -162,11 +157,13 @@ require("flutter-tools").setup{} -- use defaults
 - `FlutterOutlineToggle` - Toggle the outline window showing the widget tree for the given file.
 - `FlutterOutlineOpen` - Opens an outline window showing the widget tree for the given file.
 - `FlutterDevTools` - Starts a Dart Dev Tools server.
+- `FlutterDevToolsActivate` - Activates a Dart Dev Tools server.
 - `FlutterCopyProfilerUrl` - Copies the profiler url to your system clipboard (+ register). Note that commands `FlutterRun` and
   `FlutterDevTools` must be executed first.
 - `FlutterLspRestart` - This command restarts the dart language server, and is intended for situations where it begins to work incorrectly.
 - `FlutterSuper` - Go to super class, method using custom LSP method `dart/textDocument/super`.
 - `FlutterReanalyze` - Forces LSP server reanalyze using custom LSP method `dart/reanalyze`.
+- `FlutterRename` - Renames and updates imports if `lsp.settings.renameFilesWithClasses == "always"`
 
 <hr/>
 
@@ -216,6 +213,9 @@ require("flutter-tools").setup {
       -- this will show the currently running device if an application was started with a specific
       -- device
       device = false,
+      -- set to true to be able use the 'flutter_tools_decorations.project_config' in your statusline
+      -- this will show the currently selected project configuration
+      project_config = false,
     }
   },
   debugger = { -- integrate with nvim dap + install dart code debugger
@@ -243,6 +243,7 @@ require("flutter-tools").setup {
   },
   dev_log = {
     enabled = true,
+    notify_errors = false, -- if there is an error whilst running then notify the user
     open_cmd = "tabedit", -- command to use to open the log buffer
   },
   dev_tools = {
@@ -257,6 +258,7 @@ require("flutter-tools").setup {
     color = { -- show the derived colours for dart variables
       enabled = false, -- whether or not to highlight color variables at all, only supported on flutter >= 2.10
       background = false, -- highlight the background
+      background_color = nil, -- required, when background is transparent (i.e. background_color = { r = 19, g = 17, b = 24},)
       foreground = false, -- highlight the foreground
       virtual_text = true, -- show the highlight using virtual text
       virtual_text_str = "■", -- the virtual text character to highlight
@@ -276,6 +278,7 @@ require("flutter-tools").setup {
       analysisExcludedFolders = {"<path-to-flutter-sdk-packages>"},
       renameFilesWithClasses = "prompt", -- "always"
       enableSnippets = true,
+      updateImportsOnRename = true, -- Whether to update imports and other directives when files are renamed. Required for `FlutterRename` command.
     }
   }
 }
@@ -294,6 +297,45 @@ You cannot/should not edit the files in the sdk directly so diagnostic analysis 
 To ignore packages installed with pub, consider adding `vim.fn.expand("$HOME/AppData/Local/Pub/Cache")` to
 `analysisExcludedFolders` if you are using PowerShell.
 
+#### Project Configuration
+
+It is possible to configure how each project is run using neovim's `exrc` functionality (see `:help exrc`).
+This allows you to create an exrc file e.g. `.nvim.lua` and put the project configurations inside it.
+This is similar _conceptually_ to vscode's `launch.json` file.
+
+```lua
+-- .nvim.lua
+-- If you have more than one setup configured you will be prompted when you run
+-- your app to select which one you want to use
+require('flutter-tools').setup_project({
+  {
+    name = 'Development', -- an arbitrary name that you provide so you can recognise this config
+    flavor = 'DevFlavor', -- your flavour
+    device = 'pixel6pro', -- the device ID, which you can get by running `flutter devices`
+    dart_defines = {
+      API_URL = 'https://dev.example.com/api',
+      IS_DEV = true,
+    }
+  },
+  {
+    name = 'Web',
+    device = 'chrome',
+    flavor = 'WebApp'
+  }
+})
+```
+
+you can also specify the configuration as an object if there is only one
+
+```lua
+require('flutter-tools').setup_project({
+  name = 'Development',
+  flavor = 'DevFlavor',
+  device = 'pixel6pro',
+  dart_defines = { ... }
+})
+```
+
 #### Flutter binary
 
 In order to run flutter commands you _might_ need to pass either a _path_ or a _command_ to the plugin so it can find your
@@ -310,21 +352,15 @@ which is where this is usually installed by `snap`.
 
 ### Highlights
 
+Highlight groups that are user configurable to change the appearance of certain UI elements.
+
+- `FlutterToolsOutlineIndentGuides` - indent guides for the outline window
+
 #### Widget guides
 
 To configure the highlight colour you can override the `FlutterWidgetGuides` highlight group.
 
-#### Notifications
-
-The highlights for flutter-tools notifications and popups can be changed by overriding the default highlight groups
-
-- `FlutterNotificationNormal` - this changes the highlight of the notification content.
-- `FlutterNotificationBorder` - this changes the highlight of the notification border.
-- `FlutterPopupNormal` - this changes the highlight of the popup content.
-- `FlutterPopupBorder` - this changes the highlight of the popup border.
-- `FlutterPopupSelected` - this changes the highlight of the popup's selected line.
-
-### Statusline decorations (Unstable)
+### Statusline decorations
 
 You can add metadata about the flutter application to your statusline using the `g:flutter_tools_decorations`
 dictionary that is created if you have set any of the decorations to `true` in your configuration.

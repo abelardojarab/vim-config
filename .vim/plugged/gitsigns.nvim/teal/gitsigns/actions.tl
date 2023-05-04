@@ -222,7 +222,12 @@ end
 
 local function get_cursor_hunk(bufnr: integer, hunks: {Hunk}): Hunk, integer
   bufnr = bufnr or current_buf()
-  hunks = hunks or cache[bufnr].hunks
+
+  if not hunks then
+    hunks = {}
+    vim.list_extend(hunks, cache[bufnr].hunks or {})
+    vim.list_extend(hunks, cache[bufnr].hunks_staged or {})
+  end
 
   local lnum = api.nvim_win_get_cursor(0)[1]
   return gs_hunks.find_hunk(lnum, hunks)
@@ -244,19 +249,51 @@ local function get_range(params: api.UserCmdParams): {integer, integer}
   return range
 end
 
-local function get_hunks(bufnr: integer, bcache: CacheEntry, greedy: boolean): {Hunk}
+local function get_hunks(bufnr: integer, bcache: CacheEntry, greedy: boolean, staged: boolean): {Hunk}
   local hunks: {Hunk}
 
   if greedy then
     -- Re-run the diff without linematch
     local buftext = util.buf_lines(bufnr)
-    hunks = run_diff(bcache.compare_text, buftext, false)
+    local text: {string}
+    if staged then
+      text = bcache.compare_text_head
+    else
+      text = bcache.compare_text
+    end
+    if text then
+      hunks = run_diff(text, buftext, false)
+    end
     scheduler()
   else
-    hunks = bcache.hunks
+    if staged then
+      hunks = bcache.hunks_staged
+    else
+      hunks = bcache.hunks
+    end
   end
 
   return hunks
+end
+
+local function get_hunk(bufnr: integer, range: {integer, integer}, greedy: boolean, staged: boolean): Hunk
+  local bcache = cache[bufnr]
+  local hunks = get_hunks(bufnr, bcache, greedy, staged)
+  local hunk: Hunk
+  if range then
+    table.sort(range)
+    local top, bot = range[1], range[2]
+    hunk = gs_hunks.create_partial_hunk(hunks, top, bot)
+    hunk.added.lines = api.nvim_buf_get_lines(bufnr, top-1, bot, false)
+    hunk.removed.lines = vim.list_slice(
+      bcache.compare_text,
+      hunk.removed.start,
+      hunk.removed.start + hunk.removed.count - 1
+    )
+  else
+    hunk = get_cursor_hunk(bufnr, hunks)
+  end
+  return hunk
 end
 
 --- Stage the hunk at the cursor position, or all lines in the
@@ -291,28 +328,19 @@ M.stage_hunk = mk_repeatable(void(function(range: {integer, integer}, opts: Stag
     return
   end
 
-  local hunks = get_hunks(bufnr, bcache, opts.greedy ~= false)
-  local hunk: Hunk
+  local hunk = get_hunk(bufnr, range, opts.greedy ~= false, false)
 
-  if range then
-    table.sort(range)
-    local top, bot = range[1], range[2]
-    hunk = gs_hunks.create_partial_hunk(hunks, top, bot)
-    hunk.added.lines = api.nvim_buf_get_lines(bufnr, top-1, bot, false)
-    hunk.removed.lines = vim.list_slice(
-      bcache.compare_text,
-      hunk.removed.start,
-      hunk.removed.start + hunk.removed.count - 1
-    )
-  else
-    hunk = get_cursor_hunk(bufnr, hunks)
+  local invert = false
+  if not hunk then
+    invert = true
+    hunk = get_hunk(bufnr, range, opts.greedy ~= false, true)
   end
 
   if not hunk then
     return
   end
 
-  bcache.git_obj:stage_hunks({hunk})
+  bcache.git_obj:stage_hunks({hunk}, invert)
 
   table.insert(bcache.staged_diffs, hunk)
 
@@ -348,22 +376,7 @@ M.reset_hunk = mk_repeatable(void(function(range: {integer, integer}, opts: Rese
     return
   end
 
-  local hunks = get_hunks(bufnr, bcache, opts.greedy ~= false)
-  local hunk: Hunk
-
-  if range then
-    table.sort(range)
-    local top, bot = range[1], range[2]
-    hunk = gs_hunks.create_partial_hunk(hunks, top, bot)
-    hunk.added.lines = api.nvim_buf_get_lines(bufnr, top-1, bot, false)
-    hunk.removed.lines = vim.list_slice(
-      bcache.compare_text,
-      hunk.removed.start,
-      hunk.removed.start + hunk.removed.count - 1
-    )
-  else
-    hunk = get_cursor_hunk(bufnr, hunks)
-  end
+  local hunk = get_hunk(bufnr, range, opts.greedy ~= false, false)
 
   if not hunk then
     return
@@ -522,7 +535,10 @@ local nav_hunk = void(function(opts: NavHunkOpts)
     return
   end
 
-  local hunks = get_hunks(bufnr, bcache, opts.greedy)
+  local hunks: {Hunk} = {}
+  vim.list_extend(hunks, get_hunks(bufnr, bcache, opts.greedy, false) or {})
+  local hunks_head = get_hunks(bufnr, bcache, opts.greedy, true) or {}
+  vim.list_extend(hunks, gs_hunks.filter_common(hunks_head, bcache.hunks))
 
   if not hunks or vim.tbl_isempty(hunks) then
     if opts.navigation_message then
@@ -555,13 +571,18 @@ local nav_hunk = void(function(opts: NavHunkOpts)
     if opts.preview or popup.is_open('hunk') ~= nil then
       -- Use defer so the cursor change can settle, otherwise the popup might
       -- appear in the old position
-      defer(M.preview_hunk)
+      defer(function()
+        -- Close the popup in case one is open which will cause it to focus the
+        -- popup
+        popup.close('hunk')
+        M.preview_hunk()
+      end)
     elseif has_preview_inline(bufnr) then
       defer(M.preview_hunk_inline)
     end
 
     if index ~= nil and opts.navigation_message then
-        api.nvim_echo({{string.format('Hunk %d of %d', index, #hunks), 'None'}}, false, {})
+      api.nvim_echo({{string.format('Hunk %d of %d', index, #hunks), 'None'}}, false, {})
     end
 
   end
@@ -696,19 +717,19 @@ end
 --- window. If the preview is already open, calling this
 --- will cause the window to get focus.
 M.preview_hunk = noautocmd(function()
+  -- Wrap in noautocmd so vim-repeat continues to work
+
   if popup.focus_open('hunk') then
     return
   end
-  -- Wrap in noautocmd so vim-repeat continues to work
+
   local bufnr = current_buf()
-  local bcache = cache[bufnr]
-  if not bcache then
+
+  local hunk, index = get_cursor_hunk(bufnr)
+
+  if not hunk then
     return
   end
-
-  local hunk, index = get_cursor_hunk(bufnr, bcache.hunks)
-
-  if not hunk then return end
 
   local lines_fmt = {
     {{'Hunk <hunk_no> of <num_hunks>', 'Title'}},
@@ -719,12 +740,16 @@ M.preview_hunk = noautocmd(function()
 
   local lines_spec = lines_format(lines_fmt, {
     hunk_no = index,
-    num_hunks = #bcache.hunks,
+    num_hunks = #cache[bufnr].hunks,
     hunk = gs_hunks.patch_lines(hunk, vim.bo[bufnr].fileformat),
   })
 
   popup.create(lines_spec, config.preview_config, 'hunk')
 end)
+
+local function clear_preview_inline(bufnr: integer)
+  api.nvim_buf_clear_namespace(bufnr, ns_inline, 0, -1)
+end
 
 --- Preview the hunk at the cursor position inline in the buffer.
 M.preview_hunk_inline = function()
@@ -736,15 +761,37 @@ M.preview_hunk_inline = function()
     return
   end
 
+  clear_preview_inline(bufnr)
+
+  local winid: integer
   manager.show_added(bufnr, ns_inline, hunk)
-  manager.show_deleted(bufnr, ns_inline, hunk)
+  if config._inline2 then
+    if hunk.removed.count > 0 then
+      winid = manager.show_deleted_in_float(bufnr, ns_inline, hunk)
+    end
+  else
+    manager.show_deleted(bufnr, ns_inline, hunk)
+  end
 
   api.nvim_create_autocmd({ 'CursorMoved', 'InsertEnter' }, {
+    buffer = bufnr,
+    desc = 'Clear gitsigns inline preview',
     callback = function()
-      api.nvim_buf_clear_namespace(bufnr, ns_inline, 0, -1)
+      if winid then
+        pcall(api.nvim_win_close, winid, true)
+      end
+      clear_preview_inline(bufnr)
     end,
     once = true
   })
+
+  -- Virtual lines will be hidden if cursor is on the top row, so automatically
+  -- scroll the viewport.
+  if api.nvim_win_get_cursor(0)[1] == 1 then
+    local keys = hunk.removed.count..'<C-y>'
+    local cy = api.nvim_replace_termcodes(keys, true, false, true)
+    api.nvim_feedkeys(cy, 'n', false)
+  end
 
 end
 
@@ -1215,7 +1262,7 @@ M.get_actions = function(): {string:function}
   if not bcache then
     return
   end
-  local hunk = get_cursor_hunk(bufnr, bcache.hunks)
+  local hunk = get_cursor_hunk()
 
   local actions_l: {string} = {}
 

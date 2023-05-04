@@ -12,6 +12,7 @@ let s:hide_pum = has('nvim-0.6.1') || has('patch-8.2.3389')
 let s:virtual_text_support = has('nvim-0.5.0') || has('patch-9.0.0067')
 " bufnr, &indentkeys
 let s:saved_indenetkeys = []
+let s:saved_textwidth = []
 let s:prop_id = 0
 let s:reversed = 0
 let s:check_hl_group = 0
@@ -35,13 +36,10 @@ function! coc#pum#winid() abort
   return s:pum_winid
 endfunction
 
-function! coc#pum#close_detail(...) abort
+function! coc#pum#close_detail() abort
   let winid = coc#float#get_float_by_kind('pumdetail')
   if winid
     call coc#float#close(winid, 1)
-    if s:is_vim && get(a:, 1, 0)
-      call timer_start(0, { -> execute('redraw')})
-    endif
   endif
 endfunction
 
@@ -66,8 +64,7 @@ function! coc#pum#close(...) abort
     endif
     call s:close_pum()
     if !get(a:, 2, 0)
-      " vim possible have unexpected text inserted without timer.
-      call timer_start(1, { -> coc#rpc#notify('CompleteStop', [kind])})
+      call coc#rpc#notify('CompleteStop', [kind])
     endif
   endif
   return ''
@@ -81,14 +78,12 @@ function! coc#pum#select_confirm() abort
     endif
     call coc#pum#close('confirm')
   endif
+  return ''
 endfunction
 
 function! coc#pum#_close() abort
   if coc#pum#visible()
     call s:close_pum()
-    if s:is_vim
-      call timer_start(0, { -> execute('redraw')})
-    endif
   endif
 endfunction
 
@@ -311,6 +306,12 @@ endfunction
 
 function! s:insert_word(word, finish) abort
   if s:start_col != -1 && mode() ==# 'i'
+    " avoid auto wrap using 'textwidth'
+    if !a:finish && &textwidth > 0
+      let textwidth = &textwidth
+      noa setl textwidth=0
+      call timer_start(0, { -> execute('noa setl textwidth='.textwidth)})
+    endif
     " should not be used on finish to have correct line.
     if s:is_vim && !a:finish
       call coc#pum#repalce(s:start_col + 1, a:word, 1)

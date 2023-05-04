@@ -4,6 +4,7 @@ local git_utils = require "nvim-tree.git.utils"
 local Runner = require "nvim-tree.git.runner"
 local Watcher = require("nvim-tree.watcher").Watcher
 local Iterator = require "nvim-tree.iterators.node-iterator"
+local explorer_node = require "nvim-tree.explorer.node"
 
 local M = {
   config = {},
@@ -21,36 +22,7 @@ local WATCHED_FILES = {
   "index", -- staging area
 }
 
-function M.reload()
-  if not M.config.git.enable then
-    return {}
-  end
-
-  for project_root in pairs(M.projects) do
-    M.reload_project(project_root)
-  end
-
-  return M.projects
-end
-
-function M.reload_project(project_root, path)
-  local project = M.projects[project_root]
-  if not project or not M.config.git.enable then
-    return
-  end
-
-  if path and path:find(project_root, 1, true) ~= 1 then
-    return
-  end
-
-  local git_status = Runner.run {
-    project_root = project_root,
-    path = path,
-    list_untracked = git_utils.should_show_untracked(project_root),
-    list_ignored = true,
-    timeout = M.config.git.timeout,
-  }
-
+local function reload_git_status(project_root, path, project, git_status)
   if path then
     for p in pairs(project.files) do
       if p:find(path, 1, true) == 1 then
@@ -63,6 +35,54 @@ function M.reload_project(project_root, path)
   end
 
   project.dirs = git_utils.file_status_to_dir_status(project.files, project_root)
+end
+
+function M.reload()
+  if not M.config.git.enable then
+    return {}
+  end
+
+  for project_root in pairs(M.projects) do
+    M.reload_project(project_root)
+  end
+
+  return M.projects
+end
+
+function M.reload_project(project_root, path, callback)
+  local project = M.projects[project_root]
+  if not project or not M.config.git.enable then
+    if callback then
+      callback()
+    end
+    return
+  end
+
+  if path and path:find(project_root, 1, true) ~= 1 then
+    if callback then
+      callback()
+    end
+    return
+  end
+
+  local opts = {
+    project_root = project_root,
+    path = path,
+    list_untracked = git_utils.should_show_untracked(project_root),
+    list_ignored = true,
+    timeout = M.config.git.timeout,
+  }
+
+  if callback then
+    Runner.run(opts, function(git_status)
+      reload_git_status(project_root, path, project, git_status)
+      callback()
+    end)
+  else
+    -- TODO use callback once async/await is available
+    local git_status = Runner.run(opts)
+    reload_git_status(project_root, path, project, git_status)
+  end
 end
 
 function M.get_project(project_root)
@@ -102,27 +122,22 @@ local function reload_tree_at(project_root)
     return
   end
 
-  M.reload_project(project_root)
-  local project = M.get_project(project_root)
+  M.reload_project(project_root, nil, function()
+    local git_status = M.get_project(project_root)
 
-  local project_files = project.files and project.files or {}
-  local project_dirs = project.dirs and project.dirs or {}
+    Iterator.builder(root_node.nodes)
+      :hidden()
+      :applier(function(node)
+        local parent_ignored = explorer_node.is_git_ignored(node.parent)
+        explorer_node.update_git_status(node, parent_ignored, git_status)
+      end)
+      :recursor(function(node)
+        return node.nodes and #node.nodes > 0 and node.nodes
+      end)
+      :iterate()
 
-  Iterator.builder(root_node.nodes)
-    :hidden()
-    :applier(function(node)
-      local parent_ignored = node.parent.git_status == "!!"
-      node.git_status = project_dirs[node.absolute_path] or project_files[node.absolute_path]
-      if not node.git_status and parent_ignored then
-        node.git_status = "!!"
-      end
-    end)
-    :recursor(function(node)
-      return node.nodes and #node.nodes > 0 and node.nodes
-    end)
-    :iterate()
-
-  require("nvim-tree.renderer").draw()
+    require("nvim-tree.renderer").draw()
+  end)
 end
 
 function M.load_project_status(cwd)
@@ -155,6 +170,9 @@ function M.load_project_status(cwd)
     local callback = function(w)
       log.line("watcher", "git event scheduled '%s'", w.project_root)
       utils.debounce("git:watcher:" .. w.project_root, M.config.filesystem_watchers.debounce_delay, function()
+        if w.destroyed then
+          return
+        end
         reload_tree_at(w.project_root)
       end)
     end
@@ -173,8 +191,16 @@ function M.load_project_status(cwd)
 end
 
 function M.purge_state()
+  log.line("git", "purge_state")
   M.projects = {}
   M.cwd_to_project_root = {}
+end
+
+--- Disable git integration permanently
+function M.disable_git_integration()
+  log.line("git", "disabling git integration")
+  M.purge_state()
+  M.config.git.enable = false
 end
 
 function M.setup(opts)

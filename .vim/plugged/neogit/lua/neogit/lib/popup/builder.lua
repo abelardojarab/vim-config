@@ -1,4 +1,5 @@
 local a = require("plenary.async")
+local state = require("neogit.lib.state")
 
 local M = {}
 
@@ -10,6 +11,7 @@ function M.new(builder_fn)
       options = {},
       actions = { {} },
       env = {},
+      keys = {},
     },
     builder_fn = builder_fn,
   }
@@ -50,7 +52,7 @@ function M:switch(key, cli, description, enabled, parse)
     key = key,
     cli = cli,
     description = description,
-    enabled = enabled,
+    enabled = state.get({ self.state.name, cli }, enabled),
     parse = parse,
   })
 
@@ -62,7 +64,7 @@ function M:option(key, cli, value, description)
     id = "=" .. key,
     key = key,
     cli = cli,
-    value = value,
+    value = state.get({ self.state.name, cli }, value),
     description = description,
   })
 
@@ -70,22 +72,28 @@ function M:option(key, cli, value, description)
 end
 
 function M:action(key, description, callback)
-  table.insert(self.state.actions[#self.state.actions], {
-    key = key,
-    description = description,
-    callback = callback and a.void(callback) or nil,
-  })
-
-  return self
-end
-
-function M:action_if(cond, key, description, callback)
-  if cond then
+  if not self.state.keys[key] then
     table.insert(self.state.actions[#self.state.actions], {
       key = key,
       description = description,
       callback = callback and a.void(callback) or nil,
     })
+
+    self.state.keys[key] = true
+  end
+
+  return self
+end
+
+function M:action_if(cond, key, description, callback)
+  if cond and not self.state.keys[key] then
+    table.insert(self.state.actions[#self.state.actions], {
+      key = key,
+      description = description,
+      callback = callback and a.void(callback) or nil,
+    })
+
+    self.state.keys[key] = true
   end
 
   return self

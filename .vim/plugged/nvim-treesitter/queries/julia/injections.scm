@@ -1,5 +1,14 @@
+;; Inject markdown in docstrings 
 ((string_literal) @markdown
- (#match? @markdown "^\"\"\"")
+  . [
+    (module_definition)
+    (abstract_definition)
+    (struct_definition)
+    (function_definition)
+    (assignment)
+    (const_declaration)
+  ]
+ (#lua-match? @markdown "^\"\"\"")
  (#offset! @markdown 0 3 0 -3))
 
 [

@@ -6,10 +6,11 @@ After:
 
   call ale#linter#Reset()
 
-Execute(The cmake_lint handler should handle basic warnings):
+Execute(The bicep handler should handle basic warnings):
   AssertEqual
   \ [
   \   {
+  \     'filename': '/tmp/nvimhxqs5D/1/dns.bicep',
   \     'lnum': 7,
   \     'col': 10,
   \     'type': 'W',
@@ -17,6 +18,7 @@ Execute(The cmake_lint handler should handle basic warnings):
   \     'text': 'Existing resource "asdasd" is declared but never used. [https://aka.ms/bicep/linter/no-unused-existing-resources]',
   \   },
   \   {
+  \     'filename': '/tmp/nvimhxqs5D/1/dns.bicep',
   \     'lnum': 106,
   \     'col': 6,
   \     'type': 'E',

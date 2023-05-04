@@ -26,15 +26,13 @@
 (identifier) @variable
 
 ; Unused Identifiers
-((identifier) @comment (#match? @comment "^_"))
+((identifier) @comment (#lua-match? @comment "^_"))
 
 ; Comments
-(comment) @comment
-(comment) @spell
+(comment) @comment @spell
 
 ; Strings
-(string) @string
-(string) @spell
+(string) @string @spell
 
 ; Modules
 (alias) @type
@@ -111,9 +109,10 @@
   "defp"
   "defprotocol"
   "defstruct"
-)) (arguments [
-  (identifier) @function
-  (binary_operator left: (identifier) @function operator: "when")])?)
+  ))
+  (arguments [
+    (call (identifier) @function)
+    (binary_operator left: (call target: (identifier) @function) operator: "when")])?)
 
 ; Kernel Keywords & Special Forms
 (call target: ((identifier) @keyword (#any-of? @keyword
@@ -213,15 +212,15 @@
 (unary_operator
   operator: "@"
   operand: (call
-    target: ((identifier) @_identifier (#any-of? @_identifier "moduledoc" "typedoc" "shortdoc" "doc")) @comment
+    target: ((identifier) @_identifier (#any-of? @_identifier "moduledoc" "typedoc" "shortdoc" "doc")) @comment.documentation
     (arguments [
       (string)
       (boolean)
       (charlist)
       (sigil
-        "~" @comment
-        ((sigil_name) @comment)
-        quoted_start: _ @comment
-        (quoted_content) @comment
-        quoted_end: _ @comment)
-    ] @comment))) @comment
+        "~" @comment.documentation
+        ((sigil_name) @comment.documentation)
+        quoted_start: _ @comment.documentation
+        (quoted_content) @comment.documentation
+        quoted_end: _ @comment.documentation)
+    ] @comment.documentation))) @comment.documentation

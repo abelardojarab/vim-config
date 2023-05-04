@@ -1,64 +1,43 @@
-local lib = require('distant.lib')
 local log = require('distant.log')
 local state = require('distant.state')
 
+--- @class EditorConnectOpts
+--- @field destination string
+---
+--- @field auth AuthHandler|nil
+--- @field interval number|nil
+--- @field log_level DistantLogLevel|nil
+--- @field log_file string|nil
+--- @field options string|table<string, any>
+--- @field timeout number|nil
+
 --- Connects to a running distance binary on the remote machine
+--- @param opts EditorConnectOpts
+--- @param cb fun(err:string|nil, client:Client|nil)
 return function(opts, cb)
     opts = opts or {}
-    cb = cb or function() end
-    vim.validate({opts = {opts, 'table'}, cb = {cb, 'function'}})
+    cb = cb or function(err)
+        if err then
+            log.error(err)
+        end
+    end
+    vim.validate({ opts = { opts, 'table' }, cb = { cb, 'function' } })
     log.fmt_trace('editor.connect(%s)', opts)
 
-    -- Verify that we were provided a host
-    local host_type = type(opts.host)
-    if host_type ~= 'string' then
-        error('opts.host should be string, but got ' .. host_type)
-    end
-
-    -- Verify that we were provided a port
-    local port_type = type(opts.port)
-    if port_type ~= 'number' then
-        error('opts.port should be number, but got ' .. port_type)
-    end
-
-    local key = vim.fn.inputsecret('Enter distant key: ')
-    if #key == 0 then
-        error('key cannot be empty')
-    end
-    opts.key = key
-
     -- Load settings for the particular host
-    state.load_settings(opts.host)
+    state:load_settings(opts.destination)
     opts = vim.tbl_deep_extend('keep', opts, state.settings or {})
 
-    -- Clear any pre-existing session
-    state.session = nil
+    -- Connect and update our active client
+    return state:connect({
+        destination = opts.destination,
 
-    local first_time = not lib.is_loaded()
-    lib.load(function(success, res)
-        if not success then
-            local msg = tostring(res)
-            vim.api.nvim_err_writeln(msg)
-            cb(false, msg)
-            return
-        end
-
-        -- Initialize logging of rust module
-        if first_time then
-            log.init_lib(res)
-        end
-
-        local session
-        success, session = pcall(res.session.connect, opts)
-        if not success then
-            local msg = tostring(session)
-            vim.api.nvim_err_writeln(msg)
-            cb(false, msg)
-            return
-        end
-
-        state.session = session
-        state.sessions[opts.host] = session
-        cb(true)
-    end)
+        -- User-defined settings
+        auth = opts.auth,
+        log_file = opts.log_file,
+        log_level = opts.log_level,
+        timeout = opts.timeout,
+        interval = opts.interval,
+        options = opts.options,
+    }, cb)
 end

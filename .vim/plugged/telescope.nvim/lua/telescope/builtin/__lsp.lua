@@ -40,12 +40,14 @@ lsp.references = function(opts)
     end
 
     if #locations == 1 and opts.jump_type ~= "never" then
-      if opts.jump_type == "tab" then
-        vim.cmd "tabedit"
-      elseif opts.jump_type == "split" then
-        vim.cmd "new"
-      elseif opts.jump_type == "vsplit" then
-        vim.cmd "vnew"
+      if filepath ~= locations[1].filename then
+        if opts.jump_type == "tab" then
+          vim.cmd "tabedit"
+        elseif opts.jump_type == "split" then
+          vim.cmd "new"
+        elseif opts.jump_type == "vsplit" then
+          vim.cmd "vnew"
+        end
       end
       -- jump to location
       local location = locations[1]
@@ -184,12 +186,14 @@ local function list_or_jump(action, title, opts)
     if #flattened_results == 0 then
       return
     elseif #flattened_results == 1 and opts.jump_type ~= "never" then
-      if opts.jump_type == "tab" then
-        vim.cmd "tabedit"
-      elseif opts.jump_type == "split" then
-        vim.cmd "new"
-      elseif opts.jump_type == "vsplit" then
-        vim.cmd "vnew"
+      if params.textDocument.uri ~= flattened_results[1].uri then
+        if opts.jump_type == "tab" then
+          vim.cmd "tabedit"
+        elseif opts.jump_type == "split" then
+          vim.cmd "new"
+        elseif opts.jump_type == "vsplit" then
+          vim.cmd "vnew"
+        end
       end
       vim.lsp.util.jump_to_location(flattened_results[1], offset_encoding)
     else
@@ -223,6 +227,38 @@ lsp.implementations = function(opts)
   return list_or_jump("textDocument/implementation", "LSP Implementations", opts)
 end
 
+local symbols_sorter = function(symbols)
+  if vim.tbl_isempty(symbols) then
+    return symbols
+  end
+
+  local current_buf = vim.api.nvim_get_current_buf()
+
+  -- sort adequately for workspace symbols
+  local filename_to_bufnr = {}
+  for _, symbol in ipairs(symbols) do
+    if filename_to_bufnr[symbol.filename] == nil then
+      filename_to_bufnr[symbol.filename] = vim.uri_to_bufnr(vim.uri_from_fname(symbol.filename))
+    end
+    symbol.bufnr = filename_to_bufnr[symbol.filename]
+  end
+
+  table.sort(symbols, function(a, b)
+    if a.bufnr == b.bufnr then
+      return a.lnum < b.lnum
+    end
+    if a.bufnr == current_buf then
+      return true
+    end
+    if b.bufnr == current_buf then
+      return false
+    end
+    return a.bufnr < b.bufnr
+  end)
+
+  return symbols
+end
+
 lsp.document_symbols = function(opts)
   local params = vim.lsp.util.make_position_params(opts.winnr)
   vim.lsp.buf_request(opts.bufnr, "textDocument/documentSymbol", params, function(err, result, _, _)
@@ -240,7 +276,7 @@ lsp.document_symbols = function(opts)
     end
 
     local locations = vim.lsp.util.symbols_to_items(result or {}, opts.bufnr) or {}
-    locations = utils.filter_symbols(locations, opts)
+    locations = utils.filter_symbols(locations, opts, symbols_sorter)
     if locations == nil then
       -- error message already printed in `utils.filter_symbols`
       return
@@ -283,7 +319,7 @@ lsp.workspace_symbols = function(opts)
     end
 
     local locations = vim.lsp.util.symbols_to_items(server_result or {}, opts.bufnr) or {}
-    locations = utils.filter_symbols(locations, opts)
+    locations = utils.filter_symbols(locations, opts, symbols_sorter)
     if locations == nil then
       -- error message already printed in `utils.filter_symbols`
       return
@@ -331,7 +367,7 @@ local function get_workspace_symbols_requester(bufnr, opts)
 
     local locations = vim.lsp.util.symbols_to_items(res or {}, bufnr) or {}
     if not vim.tbl_isempty(locations) then
-      locations = utils.filter_symbols(locations, opts) or {}
+      locations = utils.filter_symbols(locations, opts, symbols_sorter) or {}
     end
     return locations
   end

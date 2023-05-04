@@ -15,11 +15,12 @@
 
 ;; match operators of test command
 (command
-  name: (word) @function.builtin (#match? @function.builtin "^test$")
+  name: (word) @function.builtin (#eq? @function.builtin "test")
   argument: (word) @operator (#match? @operator "^(!?\\=|-[a-zA-Z]+)$"))
 
 ;; match operators of [ command
-(test_command
+(command
+  name: (word) @punctuation.bracket (#eq? @punctuation.bracket "[")
   argument: (word) @operator (#match? @operator "^(!?\\=|-[a-zA-Z]+)$"))
 
 [
@@ -105,13 +106,13 @@
 
 (command
   argument: [
-             (word) @parameter (#match? @parameter "^-")
+             (word) @parameter (#lua-match? @parameter "^[-]")
             ]
 )
 
 (command_substitution "$" @punctuation.bracket)
 
-; non-bultin command names
+; non-builtin command names
 (command name: (word) @function.call)
 
 ; derived from builtin -n (fish 3.2.2)
@@ -121,8 +122,6 @@
         (#any-of? @function.builtin "." ":" "_" "alias" "argparse" "bg" "bind" "block" "breakpoint" "builtin" "cd" "command" "commandline" "complete" "contains" "count" "disown" "echo" "emit" "eval" "exec" "exit" "fg" "functions" "history" "isatty" "jobs" "math" "printf" "pwd" "random" "read" "realpath" "set" "set_color" "source" "status" "string" "test" "time" "type" "ulimit" "wait")
         ]
 )
-
-(test_command (word) @function.builtin)
 
 ;; Functions
 
@@ -138,7 +137,7 @@
   option: [
           (word)
           (concatenation (word))
-          ] @parameter (#match? @parameter "^-")
+          ] @parameter (#lua-match? @parameter "^[-]")
 )
 
 ;; Strings
@@ -161,7 +160,7 @@
 (#any-of? @boolean "true" "false"))
 
 ((program . (comment) @preproc)
-  (#match? @preproc "^#!/"))
+  (#lua-match? @preproc "^#!/"))
 
 ;; Error
 

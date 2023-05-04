@@ -82,6 +82,9 @@
 ((scoped_identifier
     name: (identifier) @type)
  (#lua-match? @type "^[A-Z]"))
+((scoped_identifier
+    name: (identifier) @constant)
+ (#lua-match? @constant "^[A-Z][A-Z%d_]*$"))
 
 [
   (crate)
@@ -148,6 +151,18 @@
   (block_comment)
 ] @comment @spell
 
+((line_comment) @comment.documentation
+  (#lua-match? @comment.documentation "^///[^/]"))
+((line_comment) @comment.documentation
+  (#lua-match? @comment.documentation "^///$"))
+((line_comment) @comment.documentation
+  (#lua-match? @comment.documentation "^//!"))
+
+((block_comment) @comment.documentation
+  (#lua-match? @comment.documentation "^/[*][*][^*].*[*]/$"))
+((block_comment) @comment.documentation
+  (#lua-match? @comment.documentation "^/[*][!]"))
+
 (boolean_literal) @boolean
 (integer_literal) @number
 (float_literal) @float
@@ -169,15 +184,10 @@
 (use_as_clause "as" @include)
 
 [
-  "async"
-  "await"
   "default"
-  "dyn"
   "enum"
-  "extern"
   "impl"
   "let"
-  "match"
   "move"
   "pub"
   "struct"
@@ -189,18 +199,26 @@
 ] @keyword
 
 [
- "ref"
+  "async"
+  "await"
+] @keyword.coroutine
+
+[
+  "ref"
  (mutable_specifier)
 ] @type.qualifier
 
 [
- "const"
- "static"
+  "const"
+  "static"
+  "dyn"
+  "extern"
 ] @storageclass
 
 (lifetime ["'" (identifier)] @storageclass.lifetime)
 
 "fn" @keyword.function
+
 [
   "return"
   "yield"
@@ -209,14 +227,15 @@
 (type_cast_expression "as" @keyword.operator)
 (qualified_type "as" @keyword.operator)
 
-(use_list (self) @keyword)
-(scoped_use_list (self) @keyword)
-(scoped_identifier [(crate) (super) (self)] @keyword)
-(visibility_modifier [(crate) (super) (self)] @keyword)
+(use_list (self) @namespace)
+(scoped_use_list (self) @namespace)
+(scoped_identifier [(crate) (super) (self)] @namespace)
+(visibility_modifier [(crate) (super) (self)] @namespace)
 
 [
-  "else"
   "if"
+  "else"
+  "match"
 ] @conditional
 
 [
@@ -228,8 +247,7 @@
 ] @repeat
 
 "for" @keyword
-(for_expression
-  "for" @repeat)
+(for_expression "for" @repeat)
 
 ;;; Operators & Punctuation
 
@@ -247,7 +265,6 @@
   "+="
   "-"
   "-="
-  "->"
   ".."
   "..="
   "/"
@@ -258,7 +275,6 @@
   "<="
   "="
   "=="
-  "=>"
   ">"
   ">="
   ">>"
@@ -279,7 +295,7 @@
 (bracketed_type ["<" ">"] @punctuation.bracket)
 (for_lifetimes ["<" ">"] @punctuation.bracket)
 
-["," "." ":" "::" ";"] @punctuation.delimiter
+["," "." ":" "::" ";" "->" "=>"] @punctuation.delimiter
 
 (attribute_item "#" @punctuation.special)
 (inner_attribute_item ["!" "#"] @punctuation.special)

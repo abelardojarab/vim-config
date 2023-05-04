@@ -1,31 +1,41 @@
 local api = vim.api
+local ts = require "nvim-treesitter.compat"
 local queries = require "nvim-treesitter.query"
 local parsers = require "nvim-treesitter.parsers"
-local ts_utils = require "nvim-treesitter.ts_utils"
 local utils = require "nvim-treesitter.utils"
 local configs = require "nvim-treesitter.configs"
+local ts_compat = require "nvim-treesitter.compat"
 
-local hl_namespace = api.nvim_create_namespace "nvim-playground-lints"
-local ERROR_HL = "TSQueryLinterError"
+local namespace = api.nvim_create_namespace "nvim-playground-lints"
 local MAGIC_NODE_NAMES = { "_", "ERROR" }
 local playground_module = require "nvim-treesitter-playground.internal"
 
 local M = {}
 
 M.lints = {}
-M.use_virtual_text = true
+M.use_diagnostics = true
 M.lint_events = { "BufWrite", "CursorHold" }
 
-local function lint_node(node, buf, error_type, complete_message)
-  if error_type ~= "Invalid Query" then
-    ts_utils.highlight_node(node, buf, hl_namespace, ERROR_HL)
+local function show_lints(buf, lints)
+  if M.use_diagnostics then
+    local diagnostics = vim.tbl_map(function(lint)
+      return {
+        lnum = lint.range[1],
+        end_lnum = lint.range[3],
+        col = lint.range[2],
+        end_col = lint.range[4],
+        severity = vim.diagnostic.ERROR,
+        message = lint.message,
+      }
+    end, lints)
+    vim.diagnostic.set(namespace, buf, diagnostics)
   end
-  local node_text = table.concat(ts_utils.get_node_text(node, buf), " ")
+end
+
+local function add_lint_for_node(node, buf, error_type, complete_message)
+  local node_text = ts_compat.get_node_text(node, buf):gsub("\n", " ")
   local error_text = complete_message or error_type .. ": " .. node_text
   local error_range = { node:range() }
-  if M.use_virtual_text then
-    api.nvim_buf_set_virtual_text(buf, hl_namespace, error_range[1], { { error_text, ERROR_HL } }, {})
-  end
   table.insert(M.lints[buf], { type = error_type, range = error_range, message = error_text, node_text = node_text })
 end
 
@@ -68,9 +78,11 @@ function M.lint(query_buf)
 
   local query_lang = M.guess_query_lang(query_buf)
 
-  local ok, parser_info = pcall(vim.treesitter.inspect_language, query_lang)
+  local ok, parser_info = pcall(vim.treesitter.language.inspect, query_lang)
 
-  parser_info = ok and parser_info
+  if not ok then
+    return
+  end
 
   local matches = queries.get_matches(query_buf, "query-linter-queries")
 
@@ -78,16 +90,16 @@ function M.lint(query_buf)
     local error_node = utils.get_at_path(m, "error.node")
 
     if error_node then
-      lint_node(error_node, query_buf, "Syntax Error")
+      add_lint_for_node(error_node, query_buf, "Syntax Error")
     end
 
     local toplevel_node = utils.get_at_path(m, "toplevel-query.node")
     if toplevel_node and query_lang then
-      local query_text = table.concat(ts_utils.get_node_text(toplevel_node), "\n")
+      local query_text = ts_compat.get_node_text(toplevel_node, query_buf)
       local err
-      ok, err = pcall(vim.treesitter.parse_query, query_lang, query_text)
+      ok, err = pcall(ts.parse_query, query_lang, query_text)
       if not ok then
-        lint_node(toplevel_node, query_buf, "Invalid Query", err)
+        add_lint_for_node(toplevel_node, query_buf, "Invalid Query", err)
       end
     end
 
@@ -96,7 +108,7 @@ function M.lint(query_buf)
       local anonymous_node = utils.get_at_path(m, "anonymous_node.node")
       local node = named_node or anonymous_node
       if node then
-        local node_type = ts_utils.get_node_text(node)[1]
+        local node_type = ts_compat.get_node_text(node, query_buf)
 
         if anonymous_node then
           node_type = node_type:gsub('"(.*)".*$', "%1"):gsub("\\(.)", "%1")
@@ -110,33 +122,35 @@ function M.lint(query_buf)
           end, parser_info.symbols)
 
         if not found then
-          lint_node(node, query_buf, "Invalid Node Type")
+          add_lint_for_node(node, query_buf, "Invalid Node Type")
         end
       end
 
       local field_node = utils.get_at_path(m, "field.node")
 
       if field_node then
-        local field_name = ts_utils.get_node_text(field_node)[1]
+        local field_name = ts_compat.get_node_text(field_node, query_buf)
         local found = vim.tbl_contains(parser_info.fields, field_name)
         if not found then
-          lint_node(field_node, query_buf, "Invalid Field")
+          add_lint_for_node(field_node, query_buf, "Invalid Field")
         end
       end
     end
   end
+
+  show_lints(query_buf, M.lints[query_buf])
   return M.lints[query_buf]
 end
 
 function M.clear_virtual_text(buf)
-  api.nvim_buf_clear_namespace(buf, hl_namespace, 0, -1)
+  vim.diagnostic.reset(namespace, buf)
 end
 
 function M.attach(buf, _)
   M.lints[buf] = {}
 
   local config = configs.get_module "query_linter"
-  M.use_virtual_text = config.use_virtual_text
+  M.use_diagnostics = config.use_diagnostics
   M.lint_events = config.lint_events
 
   vim.api.nvim_create_autocmd(M.lint_events, {
