@@ -1,5 +1,6 @@
 ![GitHub Workflow Status: CI](https://img.shields.io/github/actions/workflow/status/MunifTanjim/nui.nvim/ci.yml?branch=main&label=CI&style=for-the-badge)
 [![Coverage](https://img.shields.io/codecov/c/gh/MunifTanjim/nui.nvim/master?style=for-the-badge)](https://codecov.io/gh/MunifTanjim/nui.nvim)
+[![Version](https://img.shields.io/luarocks/v/MunifTanjim/nui.nvim?color=%232c3e67&style=for-the-badge)](https://luarocks.org/modules/MunifTanjim/nui.nvim)
 ![License](https://img.shields.io/github/license/MunifTanjim/nui.nvim?color=%23000080&style=for-the-badge)
 
 # nui.nvim
@@ -35,6 +36,14 @@ Quickly add line containing highlighted text chunks on the buffer.
 **[Check Detailed Documentation for `nui.line`](lua/nui/line)**
 
 **[Check Wiki Page for `nui.line`](https://github.com/MunifTanjim/nui.nvim/wiki/nui.line)**
+
+### [NuiTable](lua/nui/table)
+
+Quickly render table-like structured content on the buffer.
+
+**[Check Detailed Documentation for `nui.table`](lua/nui/table)**
+
+**[Check Wiki Page for `nui.table`](https://github.com/MunifTanjim/nui.nvim/wiki/nui.table)**
 
 ### [NuiTree](lua/nui/tree)
 

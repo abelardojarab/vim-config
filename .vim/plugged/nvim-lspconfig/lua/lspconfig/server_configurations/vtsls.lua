@@ -1,14 +1,8 @@
 local util = require 'lspconfig.util'
 
-local cmd = { 'vtsls', '--stdio' }
-
-if vim.fn.has 'win32' == 1 then
-  cmd = { 'cmd.exe', '/C', unpack(cmd) }
-end
-
 return {
   default_config = {
-    cmd = cmd,
+    cmd = { 'vtsls', '--stdio' },
     filetypes = {
       'javascript',
       'javascriptreact',
@@ -36,7 +30,6 @@ To configure a Typescript project, add a
 [`tsconfig.json`](https://www.typescriptlang.org/docs/handbook/tsconfig-json.html)
 or [`jsconfig.json`](https://code.visualstudio.com/docs/languages/jsconfig) to
 the root of your project.
-```
 ]],
     default_config = {
       root_dir = [[root_pattern("package.json", "tsconfig.json", "jsconfig.json", ".git")]],

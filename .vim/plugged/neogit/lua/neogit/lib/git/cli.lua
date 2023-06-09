@@ -31,6 +31,8 @@ local configurations = {
     },
   },
 
+  init = config {},
+
   status = config {
     flags = {
       short = "-s",
@@ -324,8 +326,15 @@ local git_dir_path_sync = function()
   return util.trim(vim.fn.system("git rev-parse --git-dir"))
 end
 
-local git_is_repository_sync = function()
-  local result = vim.fn.system("git rev-parse --is-inside-work-tree")
+local git_is_repository_sync = function(cwd)
+  local result
+
+  if not cwd then
+    result = vim.fn.system("git rev-parse --is-inside-work-tree")
+  else
+    result = vim.fn.system(string.format("git -C %s rev-parse --is-inside-work-tree", cwd))
+  end
+
   return vim.trim(result) == "true"
 end
 
@@ -567,7 +576,7 @@ local function new_builder(subcommand)
     env = {},
   }
 
-  local function to_process(verbose, external_errors)
+  local function to_process(verbose, suppress_error)
     -- Disable the pager so that the commands don't stop and wait for pagination
     local cmd = { "git", "--no-pager", "-c", "color.ui=always", "--no-optional-locks", subcommand }
     for _, o in ipairs(state.options) do
@@ -599,7 +608,7 @@ local function new_builder(subcommand)
       env = state.env,
       pty = state.in_pty,
       verbose = verbose,
-      external_errors = external_errors,
+      on_error = suppress_error,
     }
   end
 

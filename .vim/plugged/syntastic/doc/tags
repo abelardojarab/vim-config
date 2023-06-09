@@ -213,7 +213,6 @@
 'syntastic_style_error_symbol'	syntastic.txt	/*'syntastic_style_error_symbol'*
 'syntastic_style_warning_symbol'	syntastic.txt	/*'syntastic_style_warning_symbol'*
 'syntastic_warning_symbol'	syntastic.txt	/*'syntastic_warning_symbol'*
-/syntastic/	syntastic.txt	/*\/syntastic\/*
 :Errors	syntastic.txt	/*:Errors*
 :SyntasticCheck	syntastic.txt	/*:SyntasticCheck*
 :SyntasticInfo	syntastic.txt	/*:SyntasticInfo*

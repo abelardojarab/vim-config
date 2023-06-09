@@ -111,6 +111,7 @@ nvim-tree-introduction	nvim-tree-lua.txt	/*nvim-tree-introduction*
 nvim-tree-mappings	nvim-tree-lua.txt	/*nvim-tree-mappings*
 nvim-tree-mappings-default	nvim-tree-lua.txt	/*nvim-tree-mappings-default*
 nvim-tree-mappings-legacy	nvim-tree-lua.txt	/*nvim-tree-mappings-legacy*
+nvim-tree-netrw	nvim-tree-lua.txt	/*nvim-tree-netrw*
 nvim-tree-os-specific	nvim-tree-lua.txt	/*nvim-tree-os-specific*
 nvim-tree-quickstart	nvim-tree-lua.txt	/*nvim-tree-quickstart*
 nvim-tree-setup	nvim-tree-lua.txt	/*nvim-tree-setup*
@@ -147,7 +148,6 @@ nvim-tree.diagnostics.show_on_dirs	nvim-tree-lua.txt	/*nvim-tree.diagnostics.sho
 nvim-tree.diagnostics.show_on_open_dirs	nvim-tree-lua.txt	/*nvim-tree.diagnostics.show_on_open_dirs*
 nvim-tree.disable_netrw	nvim-tree-lua.txt	/*nvim-tree.disable_netrw*
 nvim-tree.experimental	nvim-tree-lua.txt	/*nvim-tree.experimental*
-nvim-tree.experimental.git.async	nvim-tree-lua.txt	/*nvim-tree.experimental.git.async*
 nvim-tree.filesystem_watchers	nvim-tree-lua.txt	/*nvim-tree.filesystem_watchers*
 nvim-tree.filesystem_watchers.debounce_delay	nvim-tree-lua.txt	/*nvim-tree.filesystem_watchers.debounce_delay*
 nvim-tree.filesystem_watchers.enable	nvim-tree-lua.txt	/*nvim-tree.filesystem_watchers.enable*
@@ -159,6 +159,7 @@ nvim-tree.filters.exclude	nvim-tree-lua.txt	/*nvim-tree.filters.exclude*
 nvim-tree.filters.git_clean	nvim-tree-lua.txt	/*nvim-tree.filters.git_clean*
 nvim-tree.filters.no_buffer	nvim-tree-lua.txt	/*nvim-tree.filters.no_buffer*
 nvim-tree.git	nvim-tree-lua.txt	/*nvim-tree.git*
+nvim-tree.git.disable_for_dirs	nvim-tree-lua.txt	/*nvim-tree.git.disable_for_dirs*
 nvim-tree.git.enable	nvim-tree-lua.txt	/*nvim-tree.git.enable*
 nvim-tree.git.ignore	nvim-tree-lua.txt	/*nvim-tree.git.ignore*
 nvim-tree.git.show_on_dirs	nvim-tree-lua.txt	/*nvim-tree.git.show_on_dirs*

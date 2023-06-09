@@ -11,6 +11,7 @@ require `nvim-lua/plenary.nvim` using your plugin manager of choice, before requ
 
 | Plugin Manager                                       | Command                                                                        |
 | ---------------------------------------------------- | ------------------------------------------------------------------------------ |
+| [Lazy](https://github.com/folke/lazy.nvim)           | `return { 'TimUntersberger/neogit', dependencies = 'nvim-lua/plenary.nvim' }`  |
 | [Packer](https://github.com/wbthomason/packer.nvim)  | `use { 'TimUntersberger/neogit', requires = 'nvim-lua/plenary.nvim' }`         |
 | [Vim-plug](https://github.com/junegunn/vim-plug)     | `Plug 'TimUntersberger/neogit'`                                                |
 | [NeoBundle](https://github.com/Shougo/neobundle.vim) | `NeoBundle 'TimUntersberger/neogit'`                                           |
@@ -215,6 +216,7 @@ Right now, only the status buffer supports custom mappings.
 List of status commands:
 
 - Close
+- InitRepo
 - Depth1 (Set foldlevel to 1)
 - Depth2 (Set foldlevel to 2)
 - Depth3 (Set foldlevel to 3)

@@ -163,6 +163,8 @@ telescope.changelog-1553	telescope_changelog.txt	/*telescope.changelog-1553*
 telescope.changelog-1851	telescope_changelog.txt	/*telescope.changelog-1851*
 telescope.changelog-1866	telescope_changelog.txt	/*telescope.changelog-1866*
 telescope.changelog-1945	telescope_changelog.txt	/*telescope.changelog-1945*
+telescope.changelog-2499	telescope_changelog.txt	/*telescope.changelog-2499*
+telescope.changelog-2529	telescope_changelog.txt	/*telescope.changelog-2529*
 telescope.changelog-473	telescope_changelog.txt	/*telescope.changelog-473*
 telescope.changelog-839	telescope_changelog.txt	/*telescope.changelog-839*
 telescope.changelog-922	telescope_changelog.txt	/*telescope.changelog-922*
@@ -252,5 +254,6 @@ telescope.themes.get_dropdown()	telescope.txt	/*telescope.themes.get_dropdown()*
 telescope.themes.get_ivy()	telescope.txt	/*telescope.themes.get_ivy()*
 telescope.theprimeagen	secret.txt	/*telescope.theprimeagen*
 telescope.utils	telescope.txt	/*telescope.utils*
+telescope.utils.has_ts_parser()	telescope.txt	/*telescope.utils.has_ts_parser()*
 telescope.utils.notify()	telescope.txt	/*telescope.utils.notify()*
 telescope.utils.transform_path()	telescope.txt	/*telescope.utils.transform_path()*

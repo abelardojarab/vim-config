@@ -3,6 +3,7 @@
 local log = require 'nvimgdb.log'
 
 -- @class App @debugger manager
+-- @field private destructors table<string, function> @custom destructors to be executed during cleanup
 -- @field private config Config @resolved configuration
 -- @field private backend Backend @selected backend-specific routines
 -- @field private client Client @spawned debugger manager
@@ -19,12 +20,15 @@ App.__index = App
 
 -- Create a new instance of the debugger in the current tabpage.
 -- @param backend_name string @backend name
--- @param proxy_cmd string @proxy application name
+-- @param launch_cmd string @proxy application name
 -- @param client_cmd string @debugger launching command
 -- @return App @new instance
-function App.new(backend_name, proxy_cmd, client_cmd)
-  log.debug({"function App.new(", backend_name, proxy_cmd, client_cmd, ")"})
+function App.new(backend_name, launch_cmd, client_cmd)
+  log.debug({"function App.new(", backend_name, launch_cmd, client_cmd, ")"})
   local self = setmetatable({}, App)
+
+  -- destructors to be executed during cleanup()
+  self.destructors = {}
 
   self.config = require'nvimgdb.config'.new()
 
@@ -51,7 +55,7 @@ function App.new(backend_name, proxy_cmd, client_cmd)
   self.backend = require "nvimgdb.backend".choose(backend_name)
 
   -- Spawn gdb client in a new terminal window
-  self.client = require'nvimgdb.client'.new(self.config, proxy_cmd, client_cmd)
+  self.client = require'nvimgdb.client'.new(self.config, launch_cmd, client_cmd)
   if start_win == self.client.win then
     -- Apparently, the configuration has been overridden to use current window
     -- for the debugging terminal. Thus, a new window will be assigned or created
@@ -104,6 +108,11 @@ end
 function App:cleanup(tab)
   log.debug({"function App:cleanup(", tab, ")"})
   NvimGdb.vim.cmd("doautocmd User NvimGdbCleanup")
+
+  -- Execute scheduled destructors
+  for _, destr in pairs(self.destructors) do
+    destr()
+  end
 
   -- Remove from 'errorformat' for the given backend.
   App.efmmgr.teardown(self.backend.get_error_formats())
@@ -179,20 +188,39 @@ function App:create_watch(cmd, mods)
 
   local cur_tabpage = vim.api.nvim_get_current_tabpage()
   local augroup_name = "NvimGdbTab" .. cur_tabpage .. "_" .. buf
+  local augid = vim.api.nvim_create_augroup(augroup_name, { clear = false})
 
-  NvimGdb.vim.cmd("augroup " .. augroup_name)
-  NvimGdb.vim.cmd("autocmd!")
-  NvimGdb.vim.cmd("autocmd User NvimGdbQuery" ..
-          " call nvim_buf_set_lines(" .. buf .. ", 0, -1, 0," ..
-          " split(GdbCustomCommand('" .. cmd .. "'), '\\r*\\n'))")
-  NvimGdb.vim.cmd("augroup END")
+  -- Cleanup anything that could be left over if the autocmds haven't been fired.
+  local function destr()
+    vim.api.nvim_del_augroup_by_id(augid)
+    -- Destroy the watch buffer.
+    vim.fn.timer_start(100, function()
+      if vim.api.nvim_buf_is_valid(buf) then
+        vim.api.nvim_buf_delete(buf, {force = true})
+      end
+    end)
+  end
+  self.destructors[augroup_name] = destr
+
+  vim.api.nvim_create_autocmd({"User"}, {
+    pattern = "NvimGdbQuery",
+    group = augid,
+    callback = function()
+      vim.api.nvim_buf_set_lines(buf, 0, -1, 0, vim.fn.split(NvimGdb.i():custom_command(cmd), '\r*\n'))
+    end
+  })
 
   -- Destroy the autowatch automatically when the window is gone.
-  NvimGdb.vim.cmd("autocmd BufWinLeave <buffer> call" ..
-          " nvimgdb#ClearAugroup('" .. augroup_name .. "')")
-  -- Destroy the watch buffer.
-  NvimGdb.vim.cmd("autocmd BufWinLeave <buffer> call timer_start(100," ..
-          " { -> execute('bwipeout! " .. buf .. "') })")
+  vim.api.nvim_create_autocmd({"BufWinLeave"}, {
+    group = augid,
+    buffer = buf,
+    callback = function()
+      destr()
+      self.destructors[augroup_name] = nil
+    end
+  })
+
+
   -- Return the cursor to the previous window
   NvimGdb.vim.cmd("wincmd l")
 end

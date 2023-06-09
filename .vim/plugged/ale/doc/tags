@@ -245,6 +245,7 @@ ale-dhall-freeze	ale-dhall.txt	/*ale-dhall-freeze*
 ale-dhall-lint	ale-dhall.txt	/*ale-dhall-lint*
 ale-dhall-options	ale-dhall.txt	/*ale-dhall-options*
 ale-dockerfile-dockerfile_lint	ale-dockerfile.txt	/*ale-dockerfile-dockerfile_lint*
+ale-dockerfile-dockerlinter	ale-dockerfile.txt	/*ale-dockerfile-dockerlinter*
 ale-dockerfile-dprint	ale-dockerfile.txt	/*ale-dockerfile-dprint*
 ale-dockerfile-hadolint	ale-dockerfile.txt	/*ale-dockerfile-hadolint*
 ale-dockerfile-options	ale-dockerfile.txt	/*ale-dockerfile-options*
@@ -309,6 +310,8 @@ ale-graphql-eslint	ale-graphql.txt	/*ale-graphql-eslint*
 ale-graphql-gqlint	ale-graphql.txt	/*ale-graphql-gqlint*
 ale-graphql-options	ale-graphql.txt	/*ale-graphql-options*
 ale-graphql-prettier	ale-graphql.txt	/*ale-graphql-prettier*
+ale-groovy-npm-groovy-lint	ale-groovy.txt	/*ale-groovy-npm-groovy-lint*
+ale-groovy-options	ale-groovy.txt	/*ale-groovy-options*
 ale-hack-hack	ale-hack.txt	/*ale-hack-hack*
 ale-hack-hackfmt	ale-hack.txt	/*ale-hack-hackfmt*
 ale-hack-hhast	ale-hack.txt	/*ale-hack-hhast*
@@ -941,6 +944,8 @@ b:ale_dhall_options	ale-dhall.txt	/*b:ale_dhall_options*
 b:ale_disable_lsp	ale.txt	/*b:ale_disable_lsp*
 b:ale_dockerfile_dockerfile_lint_executable	ale-dockerfile.txt	/*b:ale_dockerfile_dockerfile_lint_executable*
 b:ale_dockerfile_dockerfile_lint_options	ale-dockerfile.txt	/*b:ale_dockerfile_dockerfile_lint_options*
+b:ale_dockerfile_dockerlinter_executable	ale-dockerfile.txt	/*b:ale_dockerfile_dockerlinter_executable*
+b:ale_dockerfile_dockerlinter_options	ale-dockerfile.txt	/*b:ale_dockerfile_dockerlinter_options*
 b:ale_dockerfile_hadolint_image	ale-dockerfile.txt	/*b:ale_dockerfile_hadolint_image*
 b:ale_dockerfile_hadolint_options	ale-dockerfile.txt	/*b:ale_dockerfile_hadolint_options*
 b:ale_dockerfile_hadolint_use_docker	ale-dockerfile.txt	/*b:ale_dockerfile_hadolint_use_docker*
@@ -1035,6 +1040,9 @@ b:ale_go_staticcheck_executable	ale-go.txt	/*b:ale_go_staticcheck_executable*
 b:ale_go_staticcheck_lint_package	ale-go.txt	/*b:ale_go_staticcheck_lint_package*
 b:ale_go_staticcheck_options	ale-go.txt	/*b:ale_go_staticcheck_options*
 b:ale_go_staticcheck_use_global	ale-go.txt	/*b:ale_go_staticcheck_use_global*
+b:ale_groovy_npmgroovylint_executable	ale-groovy.txt	/*b:ale_groovy_npmgroovylint_executable*
+b:ale_groovy_npmgroovylint_fix_options	ale-groovy.txt	/*b:ale_groovy_npmgroovylint_fix_options*
+b:ale_groovy_npmgroovylint_options	ale-groovy.txt	/*b:ale_groovy_npmgroovylint_options*
 b:ale_hack_hack_executable	ale-hack.txt	/*b:ale_hack_hack_executable*
 b:ale_hack_hackfmt_options	ale-hack.txt	/*b:ale_hack_hackfmt_options*
 b:ale_hack_hhast_executable	ale-hack.txt	/*b:ale_hack_hhast_executable*
@@ -1835,6 +1843,8 @@ g:ale_dhall_options	ale-dhall.txt	/*g:ale_dhall_options*
 g:ale_disable_lsp	ale.txt	/*g:ale_disable_lsp*
 g:ale_dockerfile_dockerfile_lint_executable	ale-dockerfile.txt	/*g:ale_dockerfile_dockerfile_lint_executable*
 g:ale_dockerfile_dockerfile_lint_options	ale-dockerfile.txt	/*g:ale_dockerfile_dockerfile_lint_options*
+g:ale_dockerfile_dockerlinter_executable	ale-dockerfile.txt	/*g:ale_dockerfile_dockerlinter_executable*
+g:ale_dockerfile_dockerlinter_options	ale-dockerfile.txt	/*g:ale_dockerfile_dockerlinter_options*
 g:ale_dockerfile_hadolint_image	ale-dockerfile.txt	/*g:ale_dockerfile_hadolint_image*
 g:ale_dockerfile_hadolint_options	ale-dockerfile.txt	/*g:ale_dockerfile_hadolint_options*
 g:ale_dockerfile_hadolint_use_docker	ale-dockerfile.txt	/*g:ale_dockerfile_hadolint_use_docker*
@@ -1939,6 +1949,9 @@ g:ale_go_staticcheck_executable	ale-go.txt	/*g:ale_go_staticcheck_executable*
 g:ale_go_staticcheck_lint_package	ale-go.txt	/*g:ale_go_staticcheck_lint_package*
 g:ale_go_staticcheck_options	ale-go.txt	/*g:ale_go_staticcheck_options*
 g:ale_go_staticcheck_use_global	ale-go.txt	/*g:ale_go_staticcheck_use_global*
+g:ale_groovy_npmgroovylint_executable	ale-groovy.txt	/*g:ale_groovy_npmgroovylint_executable*
+g:ale_groovy_npmgroovylint_fix_options	ale-groovy.txt	/*g:ale_groovy_npmgroovylint_fix_options*
+g:ale_groovy_npmgroovylint_options	ale-groovy.txt	/*g:ale_groovy_npmgroovylint_options*
 g:ale_hack_hack_executable	ale-hack.txt	/*g:ale_hack_hack_executable*
 g:ale_hack_hackfmt_options	ale-hack.txt	/*g:ale_hack_hackfmt_options*
 g:ale_hack_hhast_executable	ale-hack.txt	/*g:ale_hack_hhast_executable*

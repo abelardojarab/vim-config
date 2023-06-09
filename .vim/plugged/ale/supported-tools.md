@@ -168,6 +168,7 @@ formatting.
   * [dhall-lint](https://github.com/dhall-lang/dhall-lang)
 * Dockerfile
   * [dockerfile_lint](https://github.com/projectatomic/dockerfile_lint)
+  * [dockerlinter](https://github.com/buddy-works/dockerfile-linter)
   * [dprint](https://dprint.dev)
   * [hadolint](https://github.com/hadolint/hadolint)
 * Elixir
@@ -232,6 +233,8 @@ formatting.
   * [eslint](http://eslint.org/)
   * [gqlint](https://github.com/happylinks/gqlint)
   * [prettier](https://github.com/prettier/prettier)
+* Groovy
+  * [npm-groovy-lint](https://github.com/nvuillam/npm-groovy-lint)
 * Hack
   * [hack](http://hacklang.org/)
   * [hackfmt](https://github.com/facebook/hhvm/tree/master/hphp/hack/hackfmt)
@@ -392,6 +395,7 @@ formatting.
   * nimpretty
 * nix
   * [alejandra](https://github.com/kamadorueda/alejandra)
+  * [deadnix](https://github.com/astro/deadnix)
   * [nix-instantiate](http://nixos.org/nix/manual/#sec-nix-instantiate)
   * [nixfmt](https://github.com/serokell/nixfmt)
   * [nixpkgs-fmt](https://github.com/nix-community/nixpkgs-fmt)

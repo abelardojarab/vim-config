@@ -64,6 +64,8 @@
  "for"
  "do"
  "done"
+ "select"
+ "until"
  "while"
  ] @repeat
 

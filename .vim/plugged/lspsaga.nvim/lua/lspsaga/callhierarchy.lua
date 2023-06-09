@@ -2,6 +2,7 @@ local api, fn, lsp, uv = vim.api, vim.fn, vim.lsp, vim.loop
 local config = require('lspsaga').config
 local libs = require('lspsaga.libs')
 local window = require('lspsaga.window')
+local util = require('lspsaga.util')
 local call_conf, ui = config.callhierarchy, config.ui
 
 local ctx = {}
@@ -122,9 +123,25 @@ function ch:call_hierarchy(item, parent)
         icons[#icons + 1] = kind[target.kind]
         local expand_collapse = '  ' .. ui.expand
         local icon = kind[target.kind][2]
+
+        -- Variable can be used to append name of class to the respective method in the outgoing preview popup.
+        local classNamePart = ''
+
+        -- Class name resolution for Java
+        if vim.bo[self.main_buf].filetype == 'java' then
+          local projectClassPattern = '.+/([^/]+)[.]java'
+          local jdtClassPattern = '/([^/?=]+)[.]class'
+          local projectClass = target.uri:match(projectClassPattern)
+          local jdtClass = target.uri:match(jdtClassPattern)
+          local className = projectClass or jdtClass
+          if className ~= nil then
+            classNamePart = ' @ ' .. (className and className or '')
+          end
+        end
+
         self.data[#self.data + 1] = {
           target = target,
-          name = expand_collapse .. icon .. target.name,
+          name = expand_collapse .. icon .. target.name .. classNamePart,
           highlights = {
             ['SagaCollapse'] = { 0, #expand_collapse },
             ['SagaWinbar' .. kind[target.kind][1]] = { #expand_collapse, #expand_collapse + #icon },
@@ -259,10 +276,9 @@ function ch:expand_collapse()
 end
 
 function ch:apply_map()
-  local keys = call_conf.keys
-  local keymap = vim.keymap.set
-  local opt = { buffer = true, nowait = true }
-  keymap('n', keys.quit, function()
+  local opts = { nowait = true }
+
+  util.map_keys(self.bufnr, 'n', call_conf.keys.quit, function()
     if self.winid and api.nvim_win_is_valid(self.winid) then
       api.nvim_win_close(self.winid, true)
       if self.preview_winid and api.nvim_win_is_valid(self.preview_winid) then
@@ -270,13 +286,13 @@ function ch:apply_map()
       end
       clean_ctx()
     end
-  end, opt)
+  end, opts)
 
-  keymap('n', keys.expand_collapse, function()
+  util.map_keys(self.bufnr, 'n', call_conf.keys.expand_collapse, function()
     self:expand_collapse()
-  end, opt)
+  end, opts)
 
-  keymap('n', keys.jump, function()
+  util.map_keys(self.bufnr, 'n', call_conf.keys.jump, function()
     if self.preview_winid and api.nvim_win_is_valid(self.preview_winid) then
       local node = self:get_node_at_cursor()
       if not node then
@@ -288,15 +304,15 @@ function ch:apply_map()
         { node.target.selectionRange.start.line + 1, node.target.selectionRange.start.character }
       )
     end
-  end, opt)
+  end, opts)
 
-  for action, key in pairs({
-    edit = keys.edit,
-    vsplit = keys.vsplit,
-    split = keys.split,
-    tabe = keys.tabe,
+  for action, keys in pairs({
+    edit = call_conf.keys.edit,
+    vsplit = call_conf.keys.vsplit,
+    split = call_conf.keys.split,
+    tabe = call_conf.keys.tabe,
   }) do
-    vim.keymap.set('n', key, function()
+    util.map_keys(self.bufnr, 'n', keys, function()
       local node = self:get_node_at_cursor()
       if not node then
         return
@@ -315,7 +331,7 @@ function ch:apply_map()
       local width = #api.nvim_get_current_line()
       libs.jump_beacon({ node.target.selectionRange.start.line, 0 }, width)
       clean_ctx()
-    end, opt)
+    end, opts)
   end
 end
 

@@ -27,8 +27,6 @@ g:neoterm_automap_keys	neoterm.txt	/*g:neoterm_automap_keys*
 g:neoterm_autoscroll	neoterm.txt	/*g:neoterm_autoscroll*
 g:neoterm_bracketed_paste	neoterm.txt	/*g:neoterm_bracketed_paste*
 g:neoterm_callbacks.after_repl_exec()	neoterm.txt	/*g:neoterm_callbacks.after_repl_exec()*
-g:neoterm_callbacks.before_create_window(instance)	neoterm.txt	/*g:neoterm_callbacks.before_create_window(instance)*
-g:neoterm_callbacks.before_exec()	neoterm.txt	/*g:neoterm_callbacks.before_exec()*
 g:neoterm_callbacks.before_new()	neoterm.txt	/*g:neoterm_callbacks.before_new()*
 g:neoterm_clear_cmd	neoterm.txt	/*g:neoterm_clear_cmd*
 g:neoterm_command_prefix	neoterm.txt	/*g:neoterm_command_prefix*

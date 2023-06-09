@@ -96,7 +96,7 @@ let s:bin_dir = expand('<sfile>:p:h:h:h').'/bin/'
 let s:bin = {
 \ 'preview': s:bin_dir.'preview.sh',
 \ 'tags':    s:bin_dir.'tags.pl' }
-let s:TYPE = {'dict': type({}), 'funcref': type(function('call')), 'string': type(''), 'list': type([])}
+let s:TYPE = {'bool': type(0), 'dict': type({}), 'funcref': type(function('call')), 'string': type(''), 'list': type([])}
 
 let s:wide = 120
 let s:checked = 0
@@ -793,22 +793,22 @@ endfunction
 " ------------------------------------------------------------------
 " Ag / Rg
 " ------------------------------------------------------------------
-function! s:ag_to_qf(line, has_column)
+function! s:ag_to_qf(line)
   let parts = matchlist(a:line, '\(.\{-}\)\s*:\s*\(\d\+\)\%(\s*:\s*\(\d\+\)\)\?\%(\s*:\(.*\)\)\?')
   let dict = {'filename': &acd ? fnamemodify(parts[1], ':p') : parts[1], 'lnum': parts[2], 'text': parts[4]}
-  if a:has_column
+  if len(parts[3])
     let dict.col = parts[3]
   endif
   return dict
 endfunction
 
-function! s:ag_handler(lines, has_column)
+function! s:ag_handler(lines)
   if len(a:lines) < 2
     return
   endif
 
   let cmd = s:action_for(a:lines[0], 'e')
-  let list = map(filter(a:lines[1:], 'len(v:val)'), 's:ag_to_qf(v:val, a:has_column)')
+  let list = map(filter(a:lines[1:], 'len(v:val)'), 's:ag_to_qf(v:val)')
   if empty(list)
     return
   endif
@@ -817,7 +817,7 @@ function! s:ag_handler(lines, has_column)
   try
     call s:open(cmd, first.filename)
     execute first.lnum
-    if a:has_column
+    if has_key(first, 'col')
       call cursor(0, first.col)
     endif
     normal! zvzz
@@ -847,8 +847,9 @@ function! fzf#vim#ag_raw(command_suffix, ...)
   return call('fzf#vim#grep', extend(['ag --nogroup --column --color '.a:command_suffix, 1], a:000))
 endfunction
 
-" command (string), has_column (bool), [spec (dict)], [fullscreen (bool)]
-function! fzf#vim#grep(grep_command, has_column, ...)
+" command (string), [spec (dict)], [fullscreen (bool)]
+function! fzf#vim#grep(grep_command, ...)
+  let args = copy(a:000)
   let words = []
   for word in split(a:grep_command)
     if word !~# '^[a-z]'
@@ -860,22 +861,57 @@ function! fzf#vim#grep(grep_command, has_column, ...)
   let name    = join(words, '-')
   let capname = join(map(words, 'toupper(v:val[0]).v:val[1:]'), '')
   let opts = {
-  \ 'column':  a:has_column,
   \ 'options': ['--ansi', '--prompt', capname.'> ',
   \             '--multi', '--bind', 'alt-a:select-all,alt-d:deselect-all',
   \             '--delimiter', ':', '--preview-window', '+{2}-/2']
   \}
+  if len(args) && type(args[0]) == s:TYPE.bool
+    call remove(args, 0)
+  endif
+
   function! opts.sink(lines)
-    return s:ag_handler(a:lines, self.column)
+    return s:ag_handler(a:lines)
   endfunction
   let opts['sink*'] = remove(opts, 'sink')
   try
     let prev_default_command = $FZF_DEFAULT_COMMAND
     let $FZF_DEFAULT_COMMAND = a:grep_command
-    return s:fzf(name, opts, a:000)
+    return s:fzf(name, opts, args)
   finally
     let $FZF_DEFAULT_COMMAND = prev_default_command
   endtry
+endfunction
+
+
+" command_prefix (string), initial_query (string), [spec (dict)], [fullscreen (bool)]
+function! fzf#vim#grep2(command_prefix, query, ...)
+  let args = copy(a:000)
+  let words = []
+  for word in split(a:command_prefix)
+    if word !~# '^[a-z]'
+      break
+    endif
+    call add(words, word)
+  endfor
+  let words = empty(words) ? ['grep'] : words
+  let name = join(words, '-')
+  let opts = {
+  \ 'source': ':',
+  \ 'options': ['--ansi', '--prompt', toupper(name).'> ', '--query', a:query,
+  \             '--disabled',
+  \             '--bind', 'start:reload:'.a:command_prefix.' '.shellescape(a:query),
+  \             '--bind', 'change:reload:'.a:command_prefix.' {q} || :',
+  \             '--multi', '--bind', 'alt-a:select-all,alt-d:deselect-all',
+  \             '--delimiter', ':', '--preview-window', '+{2}-/2']
+  \}
+  if len(args) && type(args[0]) == s:TYPE.bool
+    call remove(args, 0)
+  endif
+  function! opts.sink(lines)
+    return s:ag_handler(a:lines)
+  endfunction
+  let opts['sink*'] = remove(opts, 'sink')
+  return s:fzf(name, opts, args)
 endfunction
 
 " ------------------------------------------------------------------
@@ -1134,6 +1170,47 @@ function! fzf#vim#marks(...)
 endfunction
 
 " ------------------------------------------------------------------
+" Jumps
+" ------------------------------------------------------------------
+function! s:jump_format(line)
+  return substitute(a:line, '[0-9]\+', '\=s:yellow(submatch(0), "Number")', '')
+endfunction
+
+function! s:jump_sink(lines)
+  if len(a:lines) < 2
+    return
+  endif
+  let cmd = s:action_for(a:lines[0])
+  if !empty(cmd)
+    execute 'silent' cmd
+  endif
+  let idx = index(s:jumplist, a:lines[1])
+  if idx == -1
+    return
+  endif
+  let current = match(s:jumplist, '\v^\s*\>')
+  let delta = idx - current
+  if delta < 0
+    execute 'normal! ' . -delta . "\<C-O>"
+  else
+    execute 'normal! ' . delta . "\<C-I>"
+  endif
+endfunction
+
+function! fzf#vim#jumps(...)
+  redir => cout
+  silent jumps
+  redir END
+  let s:jumplist = split(cout, '\n')
+  let current = -match(s:jumplist, '\v^\s*\>')
+  return s:fzf('jumps', {
+  \ 'source'  : extend(s:jumplist[0:0], map(s:jumplist[1:], 's:jump_format(v:val)')),
+  \ 'sink*'   : s:function('s:jump_sink'),
+  \ 'options' : '+m -x --ansi --tiebreak=index --cycle --scroll-off 999 --sync --bind start:pos:'.current.' --tac --header-lines 1 --tiebreak=begin --prompt "Jumps> "',
+  \ }, a:000)
+endfunction
+
+" ------------------------------------------------------------------
 " Help tags
 " ------------------------------------------------------------------
 function! s:helptag_sink(line)
@@ -1146,8 +1223,8 @@ function! s:helptag_sink(line)
 endfunction
 
 function! fzf#vim#helptags(...)
-  if !executable('grep') || !executable('perl')
-    return s:warn('Helptags command requires grep and perl')
+  if !executable('perl')
+    return s:warn('Helptags command requires perl')
   endif
   let sorted = sort(split(globpath(&runtimepath, 'doc/tags', 1), '\n'))
   let tags = exists('*uniq') ? uniq(sorted) : fzf#vim#_uniq(sorted)
@@ -1157,10 +1234,9 @@ function! fzf#vim#helptags(...)
   endif
   let s:helptags_script = tempname()
 
-  call writefile(['/('.(s:is_win ? '^[A-Z]:[\/\\].*?[^:]' : '.*?').'):(.*?)\t(.*?)\t(.*)/; printf(qq('.s:green('%-40s', 'Label').'\t%s\t%s\t%s\n), $2, $3, $1, $4)'], s:helptags_script)
+  call writefile(['use Fatal qw(open close); for my $filename (@ARGV) { open(my $file,q(<),$filename); while (<$file>) { /(.*?)\t(.*?)\t(.*)/; push @lines, sprintf(qq('.s:green('%-40s', 'Label').'\t%s\t%s\t%s\n), $1, $2, $filename, $3); } close($file); } print for sort @lines;'], s:helptags_script)
   return s:fzf('helptags', {
-  \ 'source':  'grep --with-filename ".*" '.join(map(tags, 'fzf#shellescape(v:val)')).
-    \ ' | perl -n '.fzf#shellescape(s:helptags_script).' | sort',
+  \ 'source': 'perl '.fzf#shellescape(s:helptags_script).' '.join(map(tags, 'fzf#shellescape(v:val)')),
   \ 'sink':    s:function('s:helptag_sink'),
   \ 'options': ['--ansi', '+m', '--tiebreak=begin', '--with-nth', '..3']}, a:000)
 endfunction

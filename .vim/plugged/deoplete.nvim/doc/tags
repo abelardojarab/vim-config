@@ -39,7 +39,6 @@ deoplete-external-plugins	deoplete.txt	/*deoplete-external-plugins*
 deoplete-external-sources	deoplete.txt	/*deoplete-external-sources*
 deoplete-faq	deoplete.txt	/*deoplete-faq*
 deoplete-faq-config	deoplete.txt	/*deoplete-faq-config*
-deoplete-faq-ft-specific	deoplete.txt	/*deoplete-faq-ft-specific*
 deoplete-faq-general	deoplete.txt	/*deoplete-faq-general*
 deoplete-faq-trouble	deoplete.txt	/*deoplete-faq-trouble*
 deoplete-filter-attribute-__init__	deoplete.txt	/*deoplete-filter-attribute-__init__*

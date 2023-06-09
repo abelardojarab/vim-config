@@ -108,6 +108,12 @@ if has('gui_running')
                             "   truncate msgs (avoid press ENTER msgs).
 endif
 
+if has('nvim')
+lua << EOF
+vim.opt.fillchars = {eob = " "}
+EOF
+endif
+
 syntax enable
 set cursorline
 hi CursorLine term=bold cterm=bold guibg=Grey40
@@ -440,6 +446,14 @@ endif
 
 " Neovim
 if (has('nvim-0.5'))
+   Plug 'nvim-tree/nvim-web-devicons' " Recommended (for coloured icons)
+   " Plug 'ryanoasis/vim-devicons' Icons without colours
+   Plug 'akinsho/bufferline.nvim', { 'tag': '*' }
+
+   " In your init.lua or init.vim
+   set termguicolors
+   " lua require("bufferline").setup()
+
     Plug 'nvim-lua/popup.nvim'
     Plug 'RishabhRD/popfix'
     Plug 'MunifTanjim/nui.nvim'

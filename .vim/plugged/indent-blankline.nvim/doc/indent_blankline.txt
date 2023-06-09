@@ -2,7 +2,7 @@
 
 
 Author: Lukas Reineke <lukas.reineke@protonmail.com>
-Version: 2.20.4
+Version: 2.20.6
 
 ==============================================================================
 CONTENTS                                                    *indent-blankline*
@@ -203,7 +203,6 @@ g:indent_blankline_char_list_blankline *g:indent_blankline_char_list_blankline*
         let g:indent_blankline_char_list_blankline = ['|', '¦', '┆', '┊']
 
 ------------------------------------------------------------------------------
-
 g:indent_blankline_char_highlight_list *g:indent_blankline_char_highlight_list*
 
     Specifies the list of character highlights for each indentation level.
@@ -228,7 +227,6 @@ g:indent_blankline_space_char_blankline *g:indent_blankline_space_char_blankline
         let g:indent_blankline_space_char_blankline = ' '
 
 ------------------------------------------------------------------------------
-
 g:indent_blankline_space_char_highlight_list *g:indent_blankline_space_char_highlight_list*
 
     Specifies the list of space character highlights for each indentation
@@ -242,7 +240,6 @@ g:indent_blankline_space_char_highlight_list *g:indent_blankline_space_char_high
         let g:indent_blankline_space_char_highlight_list = ['Error', 'Function']
 
 ------------------------------------------------------------------------------
-
 g:indent_blankline_space_char_blankline_highlight_list *g:indent_blankline_space_char_blankline_highlight_list*
 
     Specifies the list of space character highlights for each indentation
@@ -633,6 +630,14 @@ g:indent_blankline_context_patterns      *g:indent_blankline_context_patterns*
         "table",                                                             ~
         "tuple",                                                             ~
         "do_block",                                                          ~
+        "Block",                                                             ~
+        "InitList",                                                          ~
+        "FnCallArguments",                                                   ~
+        "IfStatement",                                                       ~
+        "ContainerDecl",                                                     ~
+        "SwitchExpr",                                                        ~
+        "IfExpr",                                                            ~
+        "ParamDeclList",                                                     ~
     ]                                                                        ~
 
     Example: >

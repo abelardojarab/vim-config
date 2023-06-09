@@ -73,7 +73,7 @@ local _split_by_separator = (function()
 end)()
 
 local is_uri = function(filename)
-  return string.match(filename, "^%w+://") ~= nil
+  return string.match(filename, "^[%w+-.]://") ~= nil
 end
 
 local is_absolute = function(filename, sep)
@@ -916,6 +916,18 @@ function Path:readbyterange(offset, length)
   assert(uv.fs_close(fd))
 
   return data
+end
+
+function Path:find_upwards(filename)
+  local folder = Path:new(self)
+  while self:absolute() ~= path.root do
+    local p = folder:joinpath(filename)
+    if p:exists() then
+      return p
+    end
+    folder = folder:parent()
+  end
+  return ""
 end
 
 return Path

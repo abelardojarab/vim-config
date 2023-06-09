@@ -1,10 +1,10 @@
 local api, lsp, fn, uv = vim.api, vim.lsp, vim.fn, vim.loop
 local config = require('lspsaga').config
-local ui = config.ui
 local window = require('lspsaga.window')
 local libs = require('lspsaga.libs')
+local util = require('lspsaga.util')
+local ui = config.ui
 local nvim_buf_set_extmark = api.nvim_buf_set_extmark
-local nvim_buf_set_keymap = api.nvim_buf_set_keymap
 local ns_id = api.nvim_create_namespace('lspsagafinder')
 local co = coroutine
 
@@ -249,7 +249,7 @@ function finder:create_finder_data(result, method)
       winline = -1,
     }
 
-    if not api.nvim_buf_is_loaded(bufnr) then
+    if not api.nvim_buf_is_loaded(bufnr) or not vim.treesitter.highlighter.active[bufnr] then
       node.wipe = true
       --ignore the FileType event avoid trigger the lsp
       vim.opt.eventignore:append({ 'FileType' })
@@ -343,6 +343,8 @@ function finder:render_finder()
             meth_data.start = start
           end
           v.start = start
+          v.idx = k
+          v.count = #item.nodes
           text = indent .. v.word
           api.nvim_buf_set_lines(self.bufnr, line_count, line_count + 1, false, { text })
           width[#width + 1] = #text
@@ -484,6 +486,7 @@ function finder:create_finder_win(width)
           if node then
             curline = node.winline
             start = node.start
+            break
           end
         end
       elseif not in_fname then
@@ -518,7 +521,7 @@ end
 local function unpack_map()
   local map = {}
   for k, v in pairs(config.finder.keys) do
-    if k ~= 'jump_to' and k ~= 'close_in_preview' and k ~= 'expand_or_jump' then
+    if k ~= 'jump_to' and k ~= 'close_in_preview' and k ~= 'expand_or_jump' and k ~= 'quit' then
       map[k] = v
     end
   end
@@ -527,43 +530,32 @@ end
 
 function finder:apply_map()
   local opts = {
-    buffer = self.bufnr,
     nowait = true,
     silent = true,
   }
-  local unpacked = unpack_map()
 
-  for action, map in pairs(unpacked) do
-    if type(map) == 'string' then
-      map = { map }
-    end
-    for _, key in pairs(map) do
-      if key ~= 'quit' then
-        vim.keymap.set('n', key, function()
-          local curline = api.nvim_win_get_cursor(self.winid)[1]
-          local node = self:get_node({ lnum = curline })
-          if not node then
-            return
-          end
-          self:do_action(node, action)
-        end, opts)
+  for action, keys in pairs(unpack_map()) do
+    util.map_keys(self.bufnr, 'n', keys, function()
+      local curline = api.nvim_win_get_cursor(self.winid)[1]
+      local node = self:get_node({ lnum = curline })
+      if not node then
+        return
       end
-    end
-  end
-
-  for _, key in pairs(config.finder.keys.quit) do
-    vim.keymap.set('n', key, function()
-      local ok, buf = pcall(api.nvim_win_get_buf, self.peek_winid)
-      if ok then
-        pcall(api.nvim_buf_clear_namespace, buf, self.preview_hl_ns, 0, -1)
-      end
-      window.nvim_close_valid_window({ self.winid, self.peek_winid })
-      self:clean_data()
-      clean_ctx()
+      self:do_action(node, action)
     end, opts)
   end
 
-  vim.keymap.set('n', config.finder.keys.jump_to, function()
+  util.map_keys(self.bufnr, 'n', config.finder.keys.quit, function()
+    local ok, buf = pcall(api.nvim_win_get_buf, self.peek_winid)
+    if ok then
+      pcall(api.nvim_buf_clear_namespace, buf, self.preview_hl_ns, 0, -1)
+    end
+    window.nvim_close_valid_window({ self.winid, self.peek_winid })
+    self:clean_data()
+    clean_ctx()
+  end, opts)
+
+  util.map_keys(self.bufnr, 'n', config.finder.keys.jump_to, function()
     if self.peek_winid and api.nvim_win_is_valid(self.peek_winid) then
       api.nvim_set_current_win(self.peek_winid)
     end
@@ -625,24 +617,20 @@ function finder:apply_map()
     vim.bo[self.bufnr].modifiable = false
   end
 
-  nvim_buf_set_keymap(self.bufnr, 'n', config.finder.keys.expand_or_jump, '', {
-    noremap = true,
-    nowait = true,
-    callback = function()
-      local curline = api.nvim_win_get_cursor(self.winid)[1]
-      local text = api.nvim_get_current_line()
-      local in_fname = text:find(ui.expand) or text:find(ui.collapse)
-      if in_fname then
-        expand_or_collapse(text, curline)
-        return
-      end
-      local node = self:get_node({ lnum = curline })
-      if not node then
-        return
-      end
-      self:do_action(node, 'edit')
-    end,
-  })
+  util.map_keys(self.bufnr, 'n', config.finder.keys.expand_or_jump, function()
+    local curline = api.nvim_win_get_cursor(self.winid)[1]
+    local text = api.nvim_get_current_line()
+    local in_fname = text:find(ui.expand) or text:find(ui.collapse)
+    if in_fname then
+      expand_or_collapse(text, curline)
+      return
+    end
+    local node = self:get_node({ lnum = curline })
+    if not node then
+      return
+    end
+    self:do_action(node, 'edit')
+  end, opts)
 end
 
 function finder:find_nodes_by_fname(fname)
@@ -798,6 +786,21 @@ function finder:open_preview(node)
     if not self.peek_winid then
       return
     end
+    api.nvim_create_autocmd('WinClosed', {
+      callback = function(opt)
+        local curwin = api.nvim_get_current_win()
+        if curwin == self.peek_winid then
+          local curbuf
+          api.nvim_win_call(curwin, function()
+            curbuf = api.nvim_get_current_buf()
+          end)
+          if curbuf then
+            clear_preview_ns(ns_id, curbuf)
+            pcall(api.nvim_del_autocmd, opt.id)
+          end
+        end
+      end,
+    })
     api.nvim_win_set_hl_ns(self.peek_winid, ns_id)
   end
 
@@ -805,16 +808,25 @@ function finder:open_preview(node)
     api.nvim_buf_add_highlight(node.bufnr, ns_id, 'FinderPreview', node.row, node.col, node.ecol)
   end
 
+  local function apply_node_count_virtual_text()
+    local opts = {
+      virt_text = { { '<--' .. node.idx .. '/' .. node.count, 'IncSearch' } },
+    }
+    api.nvim_buf_set_extmark(node.bufnr, ns_id, node.row, node.col, opts)
+  end
+
   local buf_in_peek = api.nvim_win_get_buf(self.peek_winid)
   if buf_in_peek == node.bufnr then
     api.nvim_win_set_cursor(self.peek_winid, { node.row + 1, node.col })
     highlight_word()
+    apply_node_count_virtual_text()
     return
   end
 
   api.nvim_win_set_buf(self.peek_winid, node.bufnr)
   api.nvim_win_set_cursor(self.peek_winid, { node.row + 1, node.col })
   highlight_word()
+  apply_node_count_virtual_text()
 
   api.nvim_set_option_value('winbar', '', {
     scope = 'local',
@@ -826,6 +838,20 @@ function finder:open_preview(node)
     'Normal:finderNormal,FloatBorder:finderPreviewBorder',
     { scope = 'local', win = self.peek_winid }
   )
+
+  api.nvim_create_autocmd({ 'WinEnter' }, {
+    buffer = self.bufnr,
+    callback = function(opt)
+      local curwin = api.nvim_get_current_win()
+      if curwin == self.peek_winid or curwin == self.winid then
+        return
+      end
+      window.nvim_close_valid_window(self.winid)
+      self:close_auto_preview_win()
+      api.nvim_del_autocmd(opt.id)
+      clean_ctx()
+    end,
+  })
 
   if fn.has('nvim-0.9') == 1 and node.wipe then
     local lang = require('nvim-treesitter.parsers').ft_to_lang(vim.bo[self.main_buf].filetype)

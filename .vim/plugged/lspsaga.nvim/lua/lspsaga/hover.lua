@@ -95,6 +95,9 @@ function hover:open_floating_preview(res, option_fn)
     if line:find('```') then
       in_codeblock = in_codeblock and false or true
     end
+    if line:find('&emsp;') then
+      line = line:gsub('&emsp;', vim.bo.filetype == 'yaml' and '' or ' ')
+    end
     if #line > 0 then
       new[#new + 1] = line
     end
@@ -149,6 +152,17 @@ function hover:open_floating_preview(res, option_fn)
       { scope = 'local', win = self.preview_winid }
     )
     vim.treesitter.start(self.preview_bufnr, 'markdown')
+    vim.treesitter.query.set(
+      'markdown',
+      'highlights',
+      [[
+      ([
+        (info_string)
+        (fenced_code_block_delimiter)
+      ] @conceal
+      (#set! conceal ""))
+    ]]
+    )
   end
 
   vim.keymap.set('n', 'q', function()
@@ -264,7 +278,11 @@ function hover:do_request(args)
     if type(result.contents) == 'string' then -- MarkedString
       value = result.contents
     elseif result.contents.language then -- MarkedString
-      value = result.contents.value
+      if result.contents.language == 'css' then
+        value = '```css\n' .. result.contents.value .. '\n```'
+      else
+        value = result.contents.value
+      end
     elseif vim.tbl_islist(result.contents) then -- MarkedString[]
       if vim.tbl_isempty(result.contents) and should_error(args) then
         vim.notify('No information available')

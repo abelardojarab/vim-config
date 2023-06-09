@@ -540,8 +540,8 @@ append(
 
     Fields:
       - check_mime_type:  Use `file` if available to try to infer whether the
-                          file to preview is a binary if plenary's
-                          filetype detection fails.
+                          file to preview is a binary if filetype
+                          detection fails.
                           Windows users get `file` from:
                           https://github.com/julian-r/file-windows
                           Set to false to attempt to preview any mime type.
@@ -594,52 +594,55 @@ append(
                               end,
                             }
                           The configuration recipes for relevant examples.
-                          Note: if plenary does not recognize your filetype yet --
-                          1) Please consider contributing to:
-                             $PLENARY_REPO/data/plenary/filetypes/builtin.lua
-                          2) Register your filetype locally as per link
-                             https://github.com/nvim-lua/plenary.nvim#plenaryfiletype
+                          Note: we use vim.filetype filetype detection,
+                                so if you have troubles with files not
+                                highlighting correctly, please read
+                                |vim.filetype|
                           Default: nil
       - treesitter:       Determines whether the previewer performs treesitter
                           highlighting, which falls back to regex-based highlighting.
                           `true`: treesitter highlighting for all available filetypes
                           `false`: regex-based highlighting for all filetypes
-                          `table`: following nvim-treesitters highlighting options:
-                            It contains two keys:
-                              - enable boolean|table: if boolean, enable all ts
-                                                      highlighing with that flag,
-                                                      disable still considered.
-                                                      Containing a list of filetypes,
-                                                      that are enabled, disabled
-                                                      ignored because it doesnt make
-                                                      any sense in this case.
-                              - disable table: containing a list of filetypes
-                                               that are disabled
+                          `table`: may contain the following keys:
+                              - enable boolean|table: if boolean, enable ts
+                                                      highlighting for all supported
+                                                      filetypes.
+                                                      if table, ts highlighting is only
+                                                        enabled for given filetypes.
+                              - disable table: list of filetypes for which ts highlighting
+                                               is not used if `enable = true`.
                           Default: true
       - msg_bg_fillchar:  Character to fill background of unpreviewable buffers with
                           Default: "╱"
       - hide_on_startup:  Hide previewer when picker starts. Previewer can be toggled
                           with actions.layout.toggle_preview.
                           Default: false
+      - ls_short:         Determines whether to use the `--short` flag for the `ls`
+                          command when previewing directories. Otherwise will result
+                          to using `--long`.
+                          Default: false
     ]]
 )
 
 append(
   "vimgrep_arguments",
-  { "rg", "--vimgrep", "--smart-case" },
+  { "rg", "--color=never", "--no-heading", "--with-filename", "--line-number", "--column", "--smart-case" },
   [[
     Defines the command that will be used for `live_grep` and `grep_string`
     pickers.
     Hint: Make sure that color is currently set to `never` because we do
     not yet interpret color codes
     Hint 2: Make sure that these options are in your changes arguments:
-      ("--no-heading", "--with-filename", "--line-number", "--column") or
-      "--vimgrep"
+      "--no-heading", "--with-filename", "--line-number", "--column"
     because we need them so the ripgrep output is in the correct format.
 
     Default: {
       "rg",
-      "--vimgrep",
+      "--color=never",
+      "--no-heading",
+      "--with-filename",
+      "--line-number",
+      "--column",
       "--smart-case"
     }]]
 )

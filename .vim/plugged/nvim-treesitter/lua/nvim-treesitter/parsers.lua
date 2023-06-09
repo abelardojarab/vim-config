@@ -237,6 +237,14 @@ list.cooklang = {
   maintainers = { "@addcninblue" },
 }
 
+list.corn = {
+  install_info = {
+    url = "https://github.com/jakestanger/tree-sitter-corn",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@jakestanger" },
+}
+
 list.cpon = {
   install_info = {
     url = "https://github.com/amaanq/tree-sitter-cpon",
@@ -703,6 +711,15 @@ list.ini = {
   experimental = true,
 }
 
+list.ispc = {
+  install_info = {
+    url = "https://github.com/fab4100/tree-sitter-ispc",
+    files = { "src/parser.c" },
+    generate_requires_npm = true,
+  },
+  maintainers = { "@fab4100" },
+}
+
 list.janet_simple = {
   install_info = {
     url = "https://github.com/sogaiu/tree-sitter-janet-simple",
@@ -982,6 +999,14 @@ list.norg = {
   maintainers = { "@JoeyGrajciar", "@vhyrro" },
 }
 
+list.objc = {
+  install_info = {
+    url = "https://github.com/amaanq/tree-sitter-objc",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@amaanq" },
+}
+
 list.ocaml = {
   install_info = {
     url = "https://github.com/tree-sitter/tree-sitter-ocaml",
@@ -1008,6 +1033,14 @@ list.ocamllex = {
     requires_generate_from_grammar = true,
   },
   maintainers = { "@undu" },
+}
+
+list.odin = {
+  install_info = {
+    url = "https://github.com/amaanq/tree-sitter-odin",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@amaanq" },
 }
 
 list.org = {
@@ -1395,7 +1428,7 @@ list.t32 = {
   install_info = {
     url = "https://codeberg.org/xasc/tree-sitter-t32",
     files = { "src/parser.c", "src/scanner.c" },
-    revision = "675cd7de4eb80f2faa1e6d3bc9ee195fa9ef9790",
+    revision = "1dd98248b01e4a3933c1b85b58bab0875e2ba437",
   },
   maintainers = { "@xasc" },
 }
@@ -1512,6 +1545,14 @@ list.ungrammar = {
     files = { "src/parser.c" },
   },
   maintainers = { "@Philipp-M", "@amaanq" },
+}
+
+list.usd = {
+  install_info = {
+    url = "https://github.com/ColinKennedy/tree-sitter-usd",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@ColinKennedy" },
 }
 
 list.uxntal = {

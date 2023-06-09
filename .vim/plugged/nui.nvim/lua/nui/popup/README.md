@@ -155,10 +155,12 @@ Text displayed on the border (as title/footnote).
 
 | Key              | Type                                         | Description                  |
 | ---------------- | -------------------------------------------- | ---------------------------- |
-| `"top"`          | `string` / `NuiText`                         | top border text              |
+| `"top"`          | `string` / `NuiLine` / `NuiText`             | top border text              |
 | `"top_align"`    | `"left"` / `"right"`/ `"center"` _(default)_ | top border text alignment    |
-| `"bottom"`       | `string` / `NuiText`                         | bottom border text           |
+| `"bottom"`       | `string` / `NuiLine` / `NuiText`             | bottom border text           |
 | `"bottom_align"` | `"left"` / `"right"`/ `"center"` _(default)_ | bottom border text alignment |
+
+`"top"` and `"bottom"` also supports list of `(text, hl_group)` tuples, just like the native popup.
 
 **Examples**
 
