@@ -826,7 +826,7 @@ let g:ale_sign_column_always = 1
 let g:ale_set_highlights = 0
 
 if has('nvim-0.5')
-    let g:ale_use_neovim_diagnostics_api = 1
+   let g:ale_use_neovim_diagnostics_api = 1
 endif
 
 " --- Syntastic settings ---
