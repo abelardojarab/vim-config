@@ -47,7 +47,7 @@ local components = {
 ---@param item bufferline.Component?
 local function set_hover_state(item)
   state.set({ hovered = item })
-  vim.schedule(M.refresh)
+  M.refresh()
 end
 
 ---@class HoverOpts
@@ -106,7 +106,11 @@ end
 ---@param parts bufferline.Segment[]
 ---@return bufferline.Segment[]
 local function filter_invalid(parts)
-  return vim.tbl_filter(function(p) return p ~= nil end, parts)
+  local result = {}
+  for _, p in pairs(parts) do
+    if p ~= nil then result[#result + 1] = p end
+  end
+  return result
 end
 
 ---@param segments bufferline.Segment[]
@@ -123,8 +127,10 @@ end
 local function get_marker_size(count, element_size) return count > 0 and strwidth(tostring(count)) + element_size or 0 end
 
 function M.refresh()
-  vim.cmd("redrawtabline")
-  vim.cmd("redraw")
+  vim.schedule(function()
+    vim.cmd("redrawtabline")
+    vim.cmd("redraw")
+  end)
 end
 
 ---Add click action to a component
@@ -674,9 +680,9 @@ function M.tabline(items, tab_indicators)
     right_element_size = right_element_size,
   })
 
-  local fill = hl.fill.hl_group
-  local left_marker = get_trunc_marker(left_trunc_icon, fill, fill, marker.left_count)
-  local right_marker = get_trunc_marker(right_trunc_icon, fill, fill, marker.right_count)
+  local marker_hl = hl.trunc_marker.hl_group
+  local left_marker = get_trunc_marker(left_trunc_icon, marker_hl, marker_hl, marker.left_count)
+  local right_marker = get_trunc_marker(right_trunc_icon, marker_hl, marker_hl, marker.right_count)
 
   local core = join(
     utils.merge_lists(

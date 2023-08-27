@@ -11,19 +11,19 @@ local function get_winid(bufnr)
   return vim.fn.win_findbuf(bufnr)[1]
 end
 
----@param nodes NuiTreeNode[]
----@param parent_node? NuiTreeNode
+---@param nodes NuiTree.Node[]
+---@param parent_node? NuiTree.Node
 ---@param get_node_id nui_tree_get_node_id
----@return { by_id: table<string, NuiTreeNode>, root_ids: string[] }
+---@return { by_id: table<string, NuiTree.Node>, root_ids: string[] }
 local function initialize_nodes(nodes, parent_node, get_node_id)
   local start_depth = parent_node and parent_node:get_depth() + 1 or 1
 
-  ---@type table<string, NuiTreeNode>
+  ---@type table<string, NuiTree.Node>
   local by_id = {}
   ---@type string[]
   local root_ids = {}
 
-  ---@param node NuiTreeNode
+  ---@param node NuiTree.Node
   ---@param depth number
   local function initialize(node, depth)
     node._depth = depth
@@ -70,10 +70,18 @@ local function initialize_nodes(nodes, parent_node, get_node_id)
   }
 end
 
----@class NuiTreeNode
+---@class NuiTree.Node
+---@field _id string
+---@field _depth integer
+---@field _parent_id? string
+---@field _child_ids? string[]
+---@field __children? NuiTree.Node[]
+---@field [string] any
 local TreeNode = {
   super = nil,
 }
+
+---@alias NuiTreeNode NuiTree.Node
 
 ---@return string
 function TreeNode:get_id()
@@ -92,7 +100,8 @@ end
 
 ---@return boolean
 function TreeNode:has_children()
-  return #(self._child_ids or self.__children or {}) > 0
+  local items = self._child_ids or self.__children
+  return items and #items > 0 or false
 end
 
 ---@return string[]
@@ -125,20 +134,36 @@ end
 
 --luacheck: push no max line length
 
----@alias nui_tree_get_node_id fun(node: NuiTreeNode): string
----@alias nui_tree_prepare_node fun(node: NuiTreeNode, parent_node?: NuiTreeNode): nil | string | string[] | NuiLine | NuiLine[]
----@alias nui_tree_internal { buf_options: table<string,any>, win_options: table<string,any>, get_node_id: nui_tree_get_node_id, prepare_node: nui_tree_prepare_node, track_tree_linenr?: boolean }
+---@alias nui_tree_get_node_id fun(node: NuiTree.Node): string
+---@alias nui_tree_prepare_node fun(node: NuiTree.Node, parent_node?: NuiTree.Node): nil | string | string[] | NuiLine | NuiLine[]
 
 --luacheck: pop
 
+---@class nui_tree_internal
+---@field buf_options table<string, any>
+---@field get_node_id nui_tree_get_node_id
+---@field linenr { [1]?: integer, [2]?: integer }
+---@field linenr_by_node_id table<string, { [1]: integer, [2]: integer }>
+---@field node_id_by_linenr table<integer, string>
+---@field prepare_node nui_tree_prepare_node
+---@field win_options table<string, any> # deprecated
+
+---@class nui_tree_options
+---@field bufnr integer
+---@field ns_id? string|integer
+---@field nodes? NuiTree.Node[]
+---@field get_node_id? fun(node: NuiTree.Node): string
+---@field prepare_node? fun(node: NuiTree.Node, parent_node?: NuiTree.Node): nil|string|string[]|NuiLine|NuiLine[]
+
 ---@class NuiTree
 ---@field bufnr integer
----@field nodes { by_id: table<string,NuiTreeNode>, root_ids: string[] }
+---@field nodes { by_id: table<string,NuiTree.Node>, root_ids: string[] }
 ---@field ns_id integer
 ---@field private _ nui_tree_internal
 ---@field winid number # @deprecated
 local Tree = Object("NuiTree")
 
+---@param options nui_tree_options
 function Tree:init(options)
   ---@deprecated
   if options.winid then
@@ -183,7 +208,8 @@ function Tree:init(options)
     }, defaults(options.win_options, {})),
     get_node_id = defaults(options.get_node_id, tree_util.default_get_node_id),
     prepare_node = defaults(options.prepare_node, tree_util.default_prepare_node),
-    track_tree_linenr = nil,
+
+    linenr = {},
   }
 
   _.set_buf_options(self.bufnr, self._.buf_options)
@@ -198,44 +224,47 @@ end
 
 ---@generic D : table
 ---@param data D data table
----@param children NuiTreeNode[]
----@return NuiTreeNode|D
+---@param children? NuiTree.Node[]
+---@return NuiTree.Node|D
 function Tree.Node(data, children)
-  ---@type NuiTreeNode
+  ---@type NuiTree.Node
   local self = {
     __children = children,
     _initialized = false,
     _is_expanded = false,
     _child_ids = nil,
     _parent_id = nil,
+    ---@diagnostic disable-next-line: assign-type-mismatch
     _depth = nil,
+    ---@diagnostic disable-next-line: assign-type-mismatch
     _id = nil,
   }
 
   self = setmetatable(vim.tbl_extend("keep", self, data), {
     __index = TreeNode,
-    __name = "NuiTreeNode",
+    __name = "NuiTree.Node",
   })
 
   return self
 end
 
----@param node_id_or_linenr? string | number
----@return NuiTreeNode|nil node
----@return number|nil linenr
+---@param node_id_or_linenr? string | integer
+---@return NuiTree.Node|nil node
+---@return nil|integer linenr
+---@return nil|integer linenr
 function Tree:get_node(node_id_or_linenr)
   if is_type("string", node_id_or_linenr) then
-    return self.nodes.by_id[node_id_or_linenr], unpack(self._content.linenr_by_node_id[node_id_or_linenr] or {})
+    return self.nodes.by_id[node_id_or_linenr], unpack(self._.linenr_by_node_id[node_id_or_linenr] or {})
   end
 
   local winid = get_winid(self.bufnr)
   local linenr = node_id_or_linenr or vim.api.nvim_win_get_cursor(winid)[1]
-  local node_id = self._content.node_id_by_linenr[linenr]
-  return self.nodes.by_id[node_id], unpack(self._content.linenr_by_node_id[node_id] or {})
+  local node_id = self._.node_id_by_linenr[linenr]
+  return self.nodes.by_id[node_id], unpack(self._.linenr_by_node_id[node_id] or {})
 end
 
 ---@param parent_id? string parent node's id
----@return NuiTreeNode[] nodes
+---@return NuiTree.Node[] nodes
 function Tree:get_nodes(parent_id)
   local node_ids = {}
 
@@ -253,8 +282,8 @@ function Tree:get_nodes(parent_id)
   end, node_ids or {})
 end
 
----@param nodes NuiTreeNode[]
----@param parent_node? NuiTreeNode
+---@param nodes NuiTree.Node[]
+---@param parent_node? NuiTree.Node
 function Tree:_add_nodes(nodes, parent_node)
   local new_nodes = initialize_nodes(nodes, parent_node, self._.get_node_id)
 
@@ -275,15 +304,11 @@ function Tree:_add_nodes(nodes, parent_node)
   end
 end
 
----@param nodes NuiTreeNode[]
+---@param nodes NuiTree.Node[]
 ---@param parent_id? string parent node's id
 function Tree:set_nodes(nodes, parent_id)
-  --luacheck: push no max line length
-
-  ---@type { linenr: {[1]?:integer,[2]?:integer}, lines: string[]|NuiLine[], node_id_by_linenr: table<number,string>, linenr_by_node_id: table<string, {[1]:integer,[2]:integer}> }
-  self._content = { linenr = {}, lines = {}, node_id_by_linenr = {}, linenr_by_node_id = {} }
-
-  --luacheck: pop
+  self._.node_id_by_linenr = {}
+  self._.linenr_by_node_id = {}
 
   if not parent_id then
     self.nodes = { by_id = {}, root_ids = {} }
@@ -307,7 +332,7 @@ function Tree:set_nodes(nodes, parent_id)
   self:_add_nodes(nodes, parent_node)
 end
 
----@param node NuiTreeNode
+---@param node NuiTree.Node
 ---@param parent_id? string parent node's id
 function Tree:add_node(node, parent_id)
   local parent_node = self.nodes.by_id[parent_id]
@@ -332,7 +357,7 @@ local function remove_node(tree, node_id)
 end
 
 ---@param node_id string
----@return NuiTreeNode
+---@return NuiTree.Node
 function Tree:remove_node(node_id)
   local node = remove_node(self, node_id)
   local parent_id = node._parent_id
@@ -350,113 +375,107 @@ function Tree:remove_node(node_id)
 end
 
 ---@param linenr_start number start line number (1-indexed)
+---@return (string|NuiLine)[]|{ len: integer } lines
 function Tree:_prepare_content(linenr_start)
-  self._content.lines = {}
-  self._content.node_id_by_linenr = {}
-  self._content.linenr_by_node_id = {}
+  local internal = self._
 
-  local current_linenr = 1
+  local by_id = self.nodes.by_id
+
+  ---@type { [1]: string|NuiLine }
+  local list_wrapper = {}
+
+  local tree_linenr = 0
+  local lines = { len = tree_linenr }
+
+  local node_id_by_linenr = {}
+  internal.node_id_by_linenr = node_id_by_linenr
+
+  local linenr_by_node_id = {}
+  internal.linenr_by_node_id = linenr_by_node_id
 
   local function prepare(node_id, parent_node)
-    local node = self.nodes.by_id[node_id]
+    local node = by_id[node_id]
     if not node then
       return
     end
 
-    local lines = self._.prepare_node(node, parent_node)
-
-    if lines then
-      if not is_type("table", lines) or lines.content then
-        lines = { lines }
+    local node_lines = internal.prepare_node(node, parent_node)
+    if node_lines then
+      if type(node_lines) ~= "table" or node_lines.content then
+        list_wrapper[1] = node_lines
+        node_lines = list_wrapper
       end
+      ---@cast node_lines -string, -NuiLine
 
-      local linenr = {}
-      for _, line in ipairs(lines) do
-        self._content.lines[current_linenr] = line
-        self._content.node_id_by_linenr[current_linenr + linenr_start - 1] = node:get_id()
-        linenr[1] = linenr[1] or (current_linenr + linenr_start - 1)
-        linenr[2] = (current_linenr + linenr_start - 1)
-        current_linenr = current_linenr + 1
+      local node_linenr = linenr_by_node_id[node_id] or {}
+      for node_line_idx = 1, #node_lines do
+        local node_line = node_lines[node_line_idx]
+
+        tree_linenr = tree_linenr + 1
+        local buffer_linenr = tree_linenr + linenr_start - 1
+
+        lines[tree_linenr] = node_line
+
+        node_id_by_linenr[buffer_linenr] = node_id
+
+        if node_line_idx == 1 then
+          node_linenr[1] = buffer_linenr
+        end
+        node_linenr[2] = buffer_linenr
       end
-      self._content.linenr_by_node_id[node:get_id()] = linenr
+      linenr_by_node_id[node_id] = node_linenr
     end
 
-    if not node:has_children() or not node:is_expanded() then
-      return
-    end
-
-    for _, child_node_id in ipairs(node:get_child_ids()) do
-      prepare(child_node_id, node)
+    local child_ids = node._child_ids
+    if child_ids and node._is_expanded then
+      for child_id_idx = 1, #child_ids do
+        prepare(child_ids[child_id_idx], node)
+      end
     end
   end
 
-  for _, node_id in ipairs(self.nodes.root_ids) do
-    prepare(node_id)
+  local root_ids = self.nodes.root_ids
+  for node_id_idx = 1, #root_ids do
+    prepare(root_ids[node_id_idx])
   end
 
-  self._content.linenr = { linenr_start, current_linenr - 1 + linenr_start - 1 }
+  lines.len = tree_linenr
+
+  return lines
 end
 
 ---@param linenr_start? number start line number (1-indexed)
 function Tree:render(linenr_start)
-  if is_type("nil", self._.track_tree_linenr) then
-    self._.track_tree_linenr = is_type("number", linenr_start)
-  end
+  linenr_start = math.max(1, linenr_start or self._.linenr[1] or 1)
 
-  linenr_start = linenr_start or self._content.linenr[1] or 1
+  local prev_linenr = { self._.linenr[1], self._.linenr[2] }
 
-  local prev_linenr = { self._content.linenr[1], self._content.linenr[2] }
-  self:_prepare_content(linenr_start)
-  local next_linenr = { self._content.linenr[1], self._content.linenr[2] }
+  local lines = self:_prepare_content(linenr_start)
+  local line_idx = lines.len
+  lines.len = nil
 
   _.set_buf_options(self.bufnr, { modifiable = true, readonly = false })
 
-  local buf_lines = vim.tbl_map(function(line)
-    if is_type("string", line) then
-      return line
-    end
-    return line:content()
-  end, self._content.lines)
+  _.clear_namespace(self.bufnr, self.ns_id, prev_linenr[1], prev_linenr[2])
 
-  if self._.track_tree_linenr then
-    _.clear_namespace(self.bufnr, self.ns_id, prev_linenr[1], prev_linenr[2])
+  -- if linenr_start was shifted downwards,
+  -- clear the previously rendered lines above.
+  _.clear_lines(
+    self.bufnr,
+    math.min(linenr_start, prev_linenr[1] or linenr_start),
+    prev_linenr[1] and linenr_start - 1 or 0
+  )
 
-    -- if linenr_start was shifted downwards, clear the
-    -- previously rendered buffer lines above the tree.
-    _.clear_lines(
-      self.bufnr,
-      math.min(next_linenr[1], prev_linenr[1] or next_linenr[1]),
-      prev_linenr[1] and next_linenr[1] - 1 or 0
-    )
-
-    -- for initial render, start inserting the tree in a single buffer line.
-    local content_linenr_range = {
-      next_linenr[1],
-      next_linenr[1],
-    }
-    -- for subsequent renders, replace the buffer lines from previous tree.
-    if prev_linenr[1] then
-      content_linenr_range[2] = prev_linenr[2] < next_linenr[2] and math.min(next_linenr[2], prev_linenr[2])
-        or math.max(next_linenr[2], prev_linenr[2])
-    end
-
-    vim.api.nvim_buf_set_lines(self.bufnr, content_linenr_range[1] - 1, content_linenr_range[2], false, buf_lines)
-  else
-    _.clear_namespace(self.bufnr, self.ns_id)
-
-    vim.api.nvim_buf_set_lines(self.bufnr, 0, -1, false, buf_lines)
-  end
-
-  for i, line in ipairs(self._content.lines) do
-    if not is_type("string", line) then
-      line:highlight(self.bufnr, self.ns_id, i + linenr_start - 1)
-    end
-  end
+  -- for initial render, start inserting in a single line.
+  -- for subsequent renders, replace the lines from previous render.
+  _.render_lines(lines, self.bufnr, self.ns_id, linenr_start, prev_linenr[1] and prev_linenr[2] or linenr_start)
 
   _.set_buf_options(self.bufnr, { modifiable = false, readonly = true })
+
+  self._.linenr[1], self._.linenr[2] = linenr_start, line_idx + linenr_start - 1
 end
 
----@alias NuiTree.constructor fun(options: table): NuiTree
+---@alias NuiTree.constructor fun(options: nui_tree_options): NuiTree
 ---@type NuiTree|NuiTree.constructor
 local NuiTree = Tree
 

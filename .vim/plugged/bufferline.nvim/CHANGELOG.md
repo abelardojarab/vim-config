@@ -1,5 +1,33 @@
 # Changelog
 
+## [4.3.0](https://github.com/akinsho/bufferline.nvim/compare/v4.2.0...v4.3.0) (2023-07-17)
+
+
+### Features
+
+* **command:** add BufferLineCloseOthers command ([#774](https://github.com/akinsho/bufferline.nvim/issues/774)) ([9d6ab3a](https://github.com/akinsho/bufferline.nvim/commit/9d6ab3a56ad71bed9929c7acd7620e827a073d25))
+* **ui:** trunc marker highlights ([#781](https://github.com/akinsho/bufferline.nvim/issues/781)) ([77779e3](https://github.com/akinsho/bufferline.nvim/commit/77779e34d673dd41244b710c22fb18bbfa4c455f)), closes [#792](https://github.com/akinsho/bufferline.nvim/issues/792)
+
+
+### Bug Fixes
+
+* **config:** highlighting for tab separators ([#784](https://github.com/akinsho/bufferline.nvim/issues/784)) ([cd27a52](https://github.com/akinsho/bufferline.nvim/commit/cd27a52ecdfed7f14a41b61b7976f155e3d593c7))
+* store paths in g:BufferlinePositions ([#780](https://github.com/akinsho/bufferline.nvim/issues/780)) ([2f391fd](https://github.com/akinsho/bufferline.nvim/commit/2f391fde91b9c3876eee359ee24cc352050e5e48))
+* **ui:** always schedule refreshing ([fe77474](https://github.com/akinsho/bufferline.nvim/commit/fe774743cc7434d8f5539093108bf7d6d950f416))
+
+## [4.2.0](https://github.com/akinsho/bufferline.nvim/compare/v4.1.0...v4.2.0) (2023-06-26)
+
+
+### Features
+
+* **commands/go_to:** go to the last element if index out of bounds ([#758](https://github.com/akinsho/bufferline.nvim/issues/758)) ([6073426](https://github.com/akinsho/bufferline.nvim/commit/60734264a8655a7db3595159fb50076dc24c2f2c))
+* **commands:** add option to wrap when moving buffers at ends ([#759](https://github.com/akinsho/bufferline.nvim/issues/759)) ([da1875c](https://github.com/akinsho/bufferline.nvim/commit/da1875c1eee9aa9b7e19cda5c70ed7d7702d5f06))
+
+
+### Performance Improvements
+
+* **ui:** avoid (some) expensive functions ([#754](https://github.com/akinsho/bufferline.nvim/issues/754)) ([018bdf6](https://github.com/akinsho/bufferline.nvim/commit/018bdf61a97e00caeff05d16977437c63018762e))
+
 ## [4.1.0](https://github.com/akinsho/bufferline.nvim/compare/v4.0.0...v4.1.0) (2023-05-03)
 
 

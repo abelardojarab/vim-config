@@ -18,7 +18,7 @@
  (#set! "priority" 105) ; Higher priority to mark the whole sexpr as a comment
 )
 (kwd_lit) @symbol
-(str_lit) @string @spell
+(str_lit) @string
 (num_lit) @number
 (char_lit) @character
 (bool_lit) @boolean
@@ -101,9 +101,9 @@
 
 ; Interop
 ((sym_lit) @method
- (#match? @method "^\\.[^-]"))
+ (#lua-match? @method "^[.][^-]"))
 ((sym_lit) @field
- (#match? @field "^\\.-"))
+ (#lua-match? @field "^[.]-"))
 ((sym_lit) @field
  (#lua-match? @field "^[%u].*/.+"))
 (list_lit
@@ -133,7 +133,7 @@
  (#any-of? @keyword.coroutine
   "alts!" "alts!!" "await" "await-for" "await1" "chan" "close!" "future" "go" "sync" "thread" "timeout" "<!" "<!!" ">!" ">!!"))
 ((sym_lit) @keyword.function
- (#match? @keyword.function "^(defn|defn-|fn|fn[*])$"))
+ (#any-of? @keyword.function "defn" "defn-" "fn" "fn*"))
 
 ; Comment
 ((sym_lit) @comment
@@ -305,7 +305,7 @@
   ;; 1.11
   "NaN?" "abs" "infinite?" "iteration" "random-uuid"
   "parse-boolean" "parse-double" "parse-long" "parse-uuid"
-  "seq-to-map-for-destructuring"
+  "seq-to-map-for-destructuring" "update-keys" "update-vals"
   ;; 1.12
   "partitionv" "partitionv-all" "splitv-at"))
 

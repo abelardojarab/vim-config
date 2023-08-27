@@ -1,18 +1,14 @@
-local helpers = require('test.functional.helpers')()
+local helpers = require'test.helpers'
 
-local system       = helpers.funcs.system
-local exec_lua     = helpers.exec_lua
-local matches      = helpers.matches
-local exec_capture = helpers.exec_capture
-local eq           = helpers.eq
-local fn           = helpers.funcs
-local get_buf_var  = helpers.curbufmeths.get_var
-
-local timeout = 4000
+local timeout = 8000
 
 local M = helpers
 
-M.inspect = require('vim.inspect')
+local exec_lua = helpers.exec_lua
+local matches = helpers.matches
+local eq = helpers.eq
+local get_buf_var = helpers.curbufmeths.get_var
+local system = helpers.funcs.system
 
 M.scratch   = os.getenv('PJ_ROOT')..'/scratch'
 M.gitdir    = M.scratch..'/.git'
@@ -30,15 +26,13 @@ M.test_config = {
     changedelete = {hl = 'DiffChange', text = '%'},
     untracked    = {hl = 'DiffChange', text = '#'},
   },
-  keymaps = {
-    noremap = true,
-    buffer = true,
-    ['n mhs'] = '<cmd>lua require"gitsigns".stage_hunk()<CR>',
-    ['n mhu'] = '<cmd>lua require"gitsigns".undo_stage_hunk()<CR>',
-    ['n mhr'] = '<cmd>lua require"gitsigns".reset_hunk()<CR>',
-    ['n mhp'] = '<cmd>lua require"gitsigns".preview_hunk()<CR>',
-    ['n mhS'] = '<cmd>lua require"gitsigns".stage_buffer()<CR>',
-    ['n mhU'] = '<cmd>lua require"gitsigns".reset_buffer_index()<CR>',
+  on_attach = {
+    {'n', 'mhs', '<cmd>lua require"gitsigns".stage_hunk()<CR>'},
+    {'n', 'mhu', '<cmd>lua require"gitsigns".undo_stage_hunk()<CR>'},
+    {'n', 'mhr', '<cmd>lua require"gitsigns".reset_hunk()<CR>'},
+    {'n', 'mhp', '<cmd>lua require"gitsigns".preview_hunk()<CR>'},
+    {'n', 'mhS', '<cmd>lua require"gitsigns".stage_buffer()<CR>'},
+    {'n', 'mhU', '<cmd>lua require"gitsigns".reset_buffer_index()<CR>'},
   },
   update_debounce = 5,
 }
@@ -49,7 +43,9 @@ local test_file_text = {
 }
 
 function M.git(args)
+  exec_lua("vim.loop.sleep(20)")
   system{"git", "-C", M.scratch, unpack(args)}
+  exec_lua("vim.loop.sleep(20)")
 end
 
 function M.cleanup()
@@ -107,12 +103,8 @@ function M.expectf(cond, interval)
   cond()
 end
 
-function M.command_fmt(str, ...)
-  helpers.command(str:format(...))
-end
-
 function M.edit(path)
-  M.command_fmt("edit %s", path)
+  helpers.command("edit " .. path)
 end
 
 function M.write_to_file(path, text)
@@ -124,72 +116,46 @@ function M.write_to_file(path, text)
   f:close()
 end
 
-local function spec_text(s)
-  if type(s) == 'table' then
-    return s.text
+--- @param line string
+--- @param spec string|{next:boolean, pattern:boolean, text:string}
+--- @return boolean
+local function match_spec_elem(line, spec)
+  if spec.pattern then
+    if line:match(spec.text) then
+      return true
+    end
+  elseif spec.next then
+    -- local matcher = spec.pattern and matches or eq
+    -- matcher(spec.text, line)
+    if spec.pattern then
+      matches(spec.text, line)
+    else
+      eq(spec.text, line)
+    end
+    return true
   end
-  return s
+
+  return spec == line
 end
 
+--- Match lines in spec. Not all lines have to match
+--- @param lines string[]
+--- @param spec table<integer, (string|{next:boolean, pattern:boolean, text:string})?>
 function M.match_lines(lines, spec)
   local i = 1
-  for lid, line in ipairs(lines) do
-    if line ~= '' then
-      local s = spec[i]
-      if s then
-        if s.pattern then
-          matches(s.text, line)
-        else
-          eq(s, line)
-        end
-      else
-        local extra = {}
-        for j=lid,#lines do
-          table.insert(extra, lines[j])
-        end
-        error('Unexpected extra text:\n    '..table.concat(extra, '\n    '))
-      end
+  for _, line in ipairs(lines) do
+    local s = spec[i]
+    if line ~= '' and s and match_spec_elem(line, s) then
       i = i + 1
     end
   end
 
   if i < #spec + 1 then
-    local msg = {'lines:'}
-    for _, l in ipairs(lines) do
-      msg[#msg+1] = string.format('    - "%s"', l)
-    end
-    error(('Did not match pattern \'%s\' with %s'):format(spec_text(spec[i]), table.concat(msg, '\n')))
-  end
-end
-
-local function match_lines2(lines, spec)
-  local i = 1
-  for _, line in ipairs(lines) do
-    if line ~= '' then
-      local s = spec[i]
-      if s then
-        if s.pattern then
-          if string.match(line, s.text) then
-            i = i + 1
-          end
-        elseif s.next then
-          eq(s.text, line)
-          i = i + 1
-        else
-          if s == line then
-            i = i + 1
-          end
-        end
-      end
-    end
-  end
-
-  if i < #spec + 1 then
-    local unmatched_msg = table.concat(helpers.tbl_map(function(v)
+    local unmatched_msg = table.concat(vim.tbl_map(function(v)
       return string.format('    - %s', v.text or v)
     end, spec), '\n')
 
-    local lines_msg = table.concat(helpers.tbl_map(function(v)
+    local lines_msg = table.concat(vim.tbl_map(function(v)
       return string.format('    - %s', v)
     end, lines), '\n')
 
@@ -201,35 +167,52 @@ local function match_lines2(lines, spec)
 end
 
 function M.p(str)
-  return {text=str, pattern=true}
+  return {text = str, pattern = true}
 end
 
 function M.n(str)
-  return {text=str, next=true}
+  return {text = str, next = true}
 end
 
+function M.np(str)
+  return {text = str, pattern = true, next = true}
+end
+
+--- @return string[]
 function M.debug_messages()
   return exec_lua("return require'gitsigns.debug.log'.messages")
 end
 
-function M.match_dag(lines, spec)
-  for _, s in ipairs(spec) do
-    match_lines2(lines, {s})
-  end
+--- Like match_debug_messages but elements in spec are unordered
+--- @param spec table<integer, (string|{next:boolean, pattern:boolean, text:string})?>
+function M.match_dag(spec)
+  M.expectf(function()
+    local messages = M.debug_messages()
+    for _, s in ipairs(spec) do
+      M.match_lines(messages, {s})
+    end
+  end)
 end
 
+--- @param spec table<integer, (string|{next:boolean, pattern:boolean, text:string})?>
 function M.match_debug_messages(spec)
   M.expectf(function()
     M.match_lines(M.debug_messages(), spec)
   end)
 end
 
-local git_version
-
 function M.setup_gitsigns(config, extra)
   extra = extra or ''
   exec_lua([[
       local config = ...
+      if config and config.on_attach then
+        local maps = config.on_attach
+        config.on_attach = function(bufnr)
+          for _, map in ipairs(maps) do
+            vim.keymap.set(map[1], map[2], map[3], {buffer = bufnr})
+          end
+        end
+      end
     ]]..extra..[[
       require('gitsigns').setup(...)
     ]], config)
@@ -238,16 +221,10 @@ function M.setup_gitsigns(config, extra)
   end)
 end
 
-local id = 0
-M.it = function(it)
-  return function(name, test)
-    id = id+1
-    return it(name..' #'..id..'#', test)
-  end
-end
-
 function M.check(attrs, interval)
   attrs = attrs or {}
+  local fn = helpers.funcs
+
   M.expectf(function()
     local status = attrs.status
     local signs  = attrs.signs
@@ -304,7 +281,7 @@ function M.check(attrs, interval)
         end
       end
 
-      eq(signs, act, M.inspect(buf_signs))
+      eq(signs, act, vim.inspect(buf_signs))
     end
   end, interval)
 end

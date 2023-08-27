@@ -74,6 +74,7 @@ CONTENTS                                                  *vim-lsp-contents*
       g:lsp_document_highlight_enabled      |g:lsp_document_highlight_enabled|
       g:lsp_document_highlight_delay        |g:lsp_document_highlight_delay|
       g:lsp_get_supported_capabilities      |g:lsp_get_supported_capabilities|
+      g:lsp_document_symbol_detail          |g:lsp_document_symbol_detail|
       g:lsp_peek_alignment                  |g:lsp_peek_alignment|
       g:lsp_preview_max_width               |g:lsp_preview_max_width|
       g:lsp_preview_max_height              |g:lsp_preview_max_height|
@@ -951,6 +952,22 @@ g:lsp_get_supported_capabilities         *g:lsp_get_supported_capabilities*
     calling `lsp#default_get_supported_capabilities` from within your
     function.
 
+g:lsp_document_symbol_detail                 *g:lsp_document_symbol_detail*
+    Type: |Number|
+    Default: `0`
+
+    Determines whether document symbol shows details or not. Set to `1` to
+    show details.
+
+    Note: showing details needs to turn on setting below: >
+      \ 'capabilities': {
+      \     'textDocument': {
+      \         'documentSymbol': {
+      \             'hierarchicalDocumentSymbolSupport': v:true,
+      \         },
+      \     },
+      \ },
+
 g:lsp_peek_alignment                                 *g:lsp_peek_alignment*
     Type: |String|
     Default: `"center"`
@@ -1794,7 +1811,7 @@ LspNextReference                                         *:LspNextReference*
 
 Jump to the next reference of the symbol under cursor.
 
-LspNextWarning [-wrap=0]                              :LspNextWarning*
+LspNextWarning [-wrap=0]                              *:LspNextWarning*
 
 Jump to Next warning diagnostics
 With '-wrap=0', stop wrapping around the end of file.
@@ -1892,9 +1909,17 @@ Prints the status of all registered servers. Use `:verbose LspStatus` to
 additionally show each server's workspace_config.
 See also |vim-lsp-healthcheck|.
 
-LspStopServer                                                *:LspStopServer*
+LspStopServer [name]                                         *:LspStopServer*
 
-Stop all active servers.
+If 'name' is not specified, then all active servers that handle files matching
+the current buffer type are stopped.  This is often what you want.  For
+example, if you have multiple files of different types open, `LspStopServer`
+will only stop the server for the current buffer.
+
+When 'name' is provided, it acts as an additional restriction, only stopping
+server that handles the current buffer type, if it also matches the specifie
+name.  'name' value is compred to the 'name' property in the
+|lsp#register_server()| call.
 
 ==============================================================================
 Autocommands                                          *vim-lsp-autocommands*

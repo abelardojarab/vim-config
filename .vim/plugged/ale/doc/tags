@@ -268,6 +268,7 @@ ale-erlang-erlc	ale-erlang.txt	/*ale-erlang-erlc*
 ale-erlang-erlfmt	ale-erlang.txt	/*ale-erlang-erlfmt*
 ale-erlang-options	ale-erlang.txt	/*ale-erlang-options*
 ale-erlang-syntaxerl	ale-erlang.txt	/*ale-erlang-syntaxerl*
+ale-eruby-erbformatter	ale-eruby.txt	/*ale-eruby-erbformatter*
 ale-eruby-erblint	ale-eruby.txt	/*ale-eruby-erblint*
 ale-eruby-options	ale-eruby.txt	/*ale-eruby-options*
 ale-eruby-ruumba	ale-eruby.txt	/*ale-eruby-ruumba*
@@ -296,8 +297,6 @@ ale-go-gofumpt	ale-go.txt	/*ale-go-gofumpt*
 ale-go-golangci-lint	ale-go.txt	/*ale-go-golangci-lint*
 ale-go-golangserver	ale-go.txt	/*ale-go-golangserver*
 ale-go-golines	ale-go.txt	/*ale-go-golines*
-ale-go-golint	ale-go.txt	/*ale-go-golint*
-ale-go-gometalinter	ale-go.txt	/*ale-go-gometalinter*
 ale-go-gopls	ale-go.txt	/*ale-go-gopls*
 ale-go-govet	ale-go.txt	/*ale-go-govet*
 ale-go-options	ale-go.txt	/*ale-go-options*
@@ -463,6 +462,7 @@ ale-make-options	ale-make.txt	/*ale-make-options*
 ale-markdown-cspell	ale-markdown.txt	/*ale-markdown-cspell*
 ale-markdown-dprint	ale-markdown.txt	/*ale-markdown-dprint*
 ale-markdown-markdownlint	ale-markdown.txt	/*ale-markdown-markdownlint*
+ale-markdown-marksman	ale-markdown.txt	/*ale-markdown-marksman*
 ale-markdown-mdl	ale-markdown.txt	/*ale-markdown-mdl*
 ale-markdown-options	ale-markdown.txt	/*ale-markdown-options*
 ale-markdown-pandoc	ale-markdown.txt	/*ale-markdown-pandoc*
@@ -781,6 +781,7 @@ ale-yaml-prettier	ale-yaml.txt	/*ale-yaml-prettier*
 ale-yaml-spectral	ale-yaml.txt	/*ale-yaml-spectral*
 ale-yaml-swaglint	ale-yaml.txt	/*ale-yaml-swaglint*
 ale-yaml-yamlfix	ale-yaml.txt	/*ale-yaml-yamlfix*
+ale-yaml-yamlfmt	ale-yaml.txt	/*ale-yaml-yamlfmt*
 ale-yaml-yamllint	ale-yaml.txt	/*ale-yaml-yamllint*
 ale-yang-lsp	ale-yang.txt	/*ale-yang-lsp*
 ale-yang-options	ale-yang.txt	/*ale-yang-options*
@@ -984,6 +985,7 @@ b:ale_erlang_erlc_options	ale-erlang.txt	/*b:ale_erlang_erlc_options*
 b:ale_erlang_erlfmt_executable	ale-erlang.txt	/*b:ale_erlang_erlfmt_executable*
 b:ale_erlang_erlfmt_options	ale-erlang.txt	/*b:ale_erlang_erlfmt_options*
 b:ale_erlang_syntaxerl_executable	ale-erlang.txt	/*b:ale_erlang_syntaxerl_executable*
+b:ale_eruby_erbformatter_executable	ale-eruby.txt	/*b:ale_eruby_erbformatter_executable*
 b:ale_eruby_erblint_executable	ale-eruby.txt	/*b:ale_eruby_erblint_executable*
 b:ale_eruby_ruumba_executable	ale-eruby.txt	/*b:ale_eruby_ruumba_executable*
 b:ale_exclude_highlights	ale.txt	/*b:ale_exclude_highlights*
@@ -1019,11 +1021,6 @@ b:ale_go_golangci_lint_executable	ale-go.txt	/*b:ale_go_golangci_lint_executable
 b:ale_go_golangci_lint_options	ale-go.txt	/*b:ale_go_golangci_lint_options*
 b:ale_go_golangci_lint_package	ale-go.txt	/*b:ale_go_golangci_lint_package*
 b:ale_go_golines_options	ale-go.txt	/*b:ale_go_golines_options*
-b:ale_go_golint_executable	ale-go.txt	/*b:ale_go_golint_executable*
-b:ale_go_golint_options	ale-go.txt	/*b:ale_go_golint_options*
-b:ale_go_gometalinter_executable	ale-go.txt	/*b:ale_go_gometalinter_executable*
-b:ale_go_gometalinter_lint_package	ale-go.txt	/*b:ale_go_gometalinter_lint_package*
-b:ale_go_gometalinter_options	ale-go.txt	/*b:ale_go_gometalinter_options*
 b:ale_go_gopls_executable	ale-go.txt	/*b:ale_go_gopls_executable*
 b:ale_go_gopls_fix_executable	ale-go.txt	/*b:ale_go_gopls_fix_executable*
 b:ale_go_gopls_fix_options	ale-go.txt	/*b:ale_go_gopls_fix_options*
@@ -1192,6 +1189,7 @@ b:ale_lua_stylua_options	ale-lua.txt	/*b:ale_lua_stylua_options*
 b:ale_make_checkmake_config	ale-make.txt	/*b:ale_make_checkmake_config*
 b:ale_markdown_markdownlint_executable	ale-markdown.txt	/*b:ale_markdown_markdownlint_executable*
 b:ale_markdown_markdownlint_options	ale-markdown.txt	/*b:ale_markdown_markdownlint_options*
+b:ale_markdown_marksman_executable	ale-markdown.txt	/*b:ale_markdown_marksman_executable*
 b:ale_markdown_mdl_executable	ale-markdown.txt	/*b:ale_markdown_mdl_executable*
 b:ale_markdown_mdl_options	ale-markdown.txt	/*b:ale_markdown_mdl_options*
 b:ale_markdown_pandoc_executable	ale-markdown.txt	/*b:ale_markdown_pandoc_executable*
@@ -1663,6 +1661,9 @@ b:ale_yaml_swaglint_use_global	ale-yaml.txt	/*b:ale_yaml_swaglint_use_global*
 b:ale_yaml_yamlfix_executable	ale-yaml.txt	/*b:ale_yaml_yamlfix_executable*
 b:ale_yaml_yamlfix_options	ale-yaml.txt	/*b:ale_yaml_yamlfix_options*
 b:ale_yaml_yamlfix_use_global	ale-yaml.txt	/*b:ale_yaml_yamlfix_use_global*
+b:ale_yaml_yamlfmt_executable	ale-yaml.txt	/*b:ale_yaml_yamlfmt_executable*
+b:ale_yaml_yamlfmt_options	ale-yaml.txt	/*b:ale_yaml_yamlfmt_options*
+b:ale_yaml_yamlfmt_use_global	ale-yaml.txt	/*b:ale_yaml_yamlfmt_use_global*
 b:ale_yaml_yamllint_executable	ale-yaml.txt	/*b:ale_yaml_yamllint_executable*
 b:ale_yaml_yamllint_options	ale-yaml.txt	/*b:ale_yaml_yamllint_options*
 b:ale_yang_lsp_executable	ale-yang.txt	/*b:ale_yang_lsp_executable*
@@ -1890,6 +1891,7 @@ g:ale_erlang_erlc_options	ale-erlang.txt	/*g:ale_erlang_erlc_options*
 g:ale_erlang_erlfmt_executable	ale-erlang.txt	/*g:ale_erlang_erlfmt_executable*
 g:ale_erlang_erlfmt_options	ale-erlang.txt	/*g:ale_erlang_erlfmt_options*
 g:ale_erlang_syntaxerl_executable	ale-erlang.txt	/*g:ale_erlang_syntaxerl_executable*
+g:ale_eruby_erbformatter_executable	ale-eruby.txt	/*g:ale_eruby_erbformatter_executable*
 g:ale_eruby_erblint_executable	ale-eruby.txt	/*g:ale_eruby_erblint_executable*
 g:ale_eruby_ruumba_executable	ale-eruby.txt	/*g:ale_eruby_ruumba_executable*
 g:ale_exclude_highlights	ale.txt	/*g:ale_exclude_highlights*
@@ -1928,11 +1930,6 @@ g:ale_go_golangci_lint_executable	ale-go.txt	/*g:ale_go_golangci_lint_executable
 g:ale_go_golangci_lint_options	ale-go.txt	/*g:ale_go_golangci_lint_options*
 g:ale_go_golangci_lint_package	ale-go.txt	/*g:ale_go_golangci_lint_package*
 g:ale_go_golines_options	ale-go.txt	/*g:ale_go_golines_options*
-g:ale_go_golint_executable	ale-go.txt	/*g:ale_go_golint_executable*
-g:ale_go_golint_options	ale-go.txt	/*g:ale_go_golint_options*
-g:ale_go_gometalinter_executable	ale-go.txt	/*g:ale_go_gometalinter_executable*
-g:ale_go_gometalinter_lint_package	ale-go.txt	/*g:ale_go_gometalinter_lint_package*
-g:ale_go_gometalinter_options	ale-go.txt	/*g:ale_go_gometalinter_options*
 g:ale_go_gopls_executable	ale-go.txt	/*g:ale_go_gopls_executable*
 g:ale_go_gopls_fix_executable	ale-go.txt	/*g:ale_go_gopls_fix_executable*
 g:ale_go_gopls_fix_options	ale-go.txt	/*g:ale_go_gopls_fix_options*
@@ -2122,6 +2119,7 @@ g:ale_lua_stylua_options	ale-lua.txt	/*g:ale_lua_stylua_options*
 g:ale_make_checkmake_config	ale-make.txt	/*g:ale_make_checkmake_config*
 g:ale_markdown_markdownlint_executable	ale-markdown.txt	/*g:ale_markdown_markdownlint_executable*
 g:ale_markdown_markdownlint_options	ale-markdown.txt	/*g:ale_markdown_markdownlint_options*
+g:ale_markdown_marksman_executable	ale-markdown.txt	/*g:ale_markdown_marksman_executable*
 g:ale_markdown_mdl_executable	ale-markdown.txt	/*g:ale_markdown_mdl_executable*
 g:ale_markdown_mdl_options	ale-markdown.txt	/*g:ale_markdown_mdl_options*
 g:ale_markdown_pandoc_executable	ale-markdown.txt	/*g:ale_markdown_pandoc_executable*
@@ -2622,6 +2620,9 @@ g:ale_yaml_swaglint_use_global	ale-yaml.txt	/*g:ale_yaml_swaglint_use_global*
 g:ale_yaml_yamlfix_executable	ale-yaml.txt	/*g:ale_yaml_yamlfix_executable*
 g:ale_yaml_yamlfix_options	ale-yaml.txt	/*g:ale_yaml_yamlfix_options*
 g:ale_yaml_yamlfix_use_global	ale-yaml.txt	/*g:ale_yaml_yamlfix_use_global*
+g:ale_yaml_yamlfmt_executable	ale-yaml.txt	/*g:ale_yaml_yamlfmt_executable*
+g:ale_yaml_yamlfmt_options	ale-yaml.txt	/*g:ale_yaml_yamlfmt_options*
+g:ale_yaml_yamlfmt_use_global	ale-yaml.txt	/*g:ale_yaml_yamlfmt_use_global*
 g:ale_yaml_yamllint_executable	ale-yaml.txt	/*g:ale_yaml_yamllint_executable*
 g:ale_yaml_yamllint_options	ale-yaml.txt	/*g:ale_yaml_yamllint_options*
 g:ale_yang_lsp_executable	ale-yang.txt	/*g:ale_yang_lsp_executable*

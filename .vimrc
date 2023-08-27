@@ -249,6 +249,7 @@ Plug 'ton/vim-bufsurf'
 
 " Git tools
 Plug 'airblade/vim-gitgutter'
+Plug 'zivyangll/git-blame.vim'
 if !has('nvim')
     Plug 'tpope/vim-fugitive' " Git integration
 endif
@@ -315,7 +316,10 @@ Plug 'lighttiger2505/deoplete-vim-lsp'
 Plug 'liuchengxu/vista.vim'
 Plug 'prabirshrestha/vim-lsp'
 Plug 'mattn/vim-lsp-settings'
+
+if (has('nvim-0.9'))
 Plug 'sakhnik/nvim-gdb', { 'do': ':!./install.sh' }
+endif
 
 if (has('nvim'))
     Plug 'kosayoda/nvim-lightbulb'
@@ -400,6 +404,10 @@ Plug 'hail2u/vim-css3-syntax'
 Plug 'aklt/plantuml-syntax'
 Plug 'gerardbm/asy.vim'
 Plug 'gerardbm/eukleides.vim'
+Plug 'google/vim-maktaba'
+Plug 'bazelbuild/vim-bazel'
+
+Plug 'rodjek/vim-puppet'  " Puppet integration
 
 " tmux
 Plug 'christoomey/vim-tmux-navigator'

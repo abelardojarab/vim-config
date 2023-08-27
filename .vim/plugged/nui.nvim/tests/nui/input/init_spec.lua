@@ -51,6 +51,75 @@ describe("nui.input", function()
     end)
   end)
 
+  describe("o.on_change", function()
+    it("works", function()
+      local done = false
+      local values = {}
+
+      input = Input(popup_options, {
+        on_change = function(value)
+          values[#values + 1] = value
+        end,
+        on_close = function()
+          done = true
+        end,
+      })
+
+      input:mount()
+
+      feedkeys("aa", "x") -- append a
+      feedkeys("ab", "x") -- append b
+      feedkeys("ac", "x") -- append c
+
+      vim.fn.wait(100, function()
+        return done
+      end)
+
+      eq(values, { "a", "ab", "abc" })
+    end)
+  end)
+
+  describe("o.on_close", function()
+    it("is called on <C-c>", function()
+      local done = false
+
+      input = Input(popup_options, {
+        on_close = function()
+          done = true
+        end,
+      })
+
+      input:mount()
+
+      feedkeys("i<C-c>", "x")
+
+      vim.fn.wait(2000, function()
+        return done
+      end)
+
+      eq(done, true)
+    end)
+
+    it("is called on unmount", function()
+      local done = false
+
+      input = Input(popup_options, {
+        on_close = function()
+          done = true
+        end,
+      })
+
+      input:mount()
+      input:unmount()
+
+      vim.fn.wait(200, function()
+        return done
+      end)
+
+      eq(done, true)
+    end)
+  end)
+
   describe("cursor_position_patch", function()
     local initial_cursor
 
@@ -120,7 +189,9 @@ describe("nui.input", function()
 
       input:mount()
 
-      input:map("i", "<esc>", input.input_props.on_close, { nowait = true, noremap = true })
+      input:map("i", "<esc>", function()
+        input:unmount()
+      end, { nowait = true, noremap = true })
 
       feedkeys("i<esc>", "x")
 
@@ -144,7 +215,9 @@ describe("nui.input", function()
 
       input:mount()
 
-      input:map("n", "<esc>", input.input_props.on_close, { nowait = true, noremap = true })
+      input:map("n", "<esc>", function()
+        input:unmount()
+      end, { nowait = true, noremap = true })
 
       feedkeys("<esc>", "x")
 
@@ -154,6 +227,29 @@ describe("nui.input", function()
 
       eq(done, true)
       eq(vim.api.nvim_win_get_cursor(parent_winid), initial_cursor)
+    end)
+  end)
+
+  describe("method :unmount", function()
+    it("is idempotent", function()
+      local done = 0
+
+      input = Input(popup_options, {
+        on_close = function()
+          done = done + 1
+        end,
+      })
+
+      input:mount()
+      input:unmount()
+      input:unmount()
+      input:unmount()
+
+      vim.fn.wait(200, function()
+        return done > 1
+      end)
+
+      eq(done, 1)
     end)
   end)
 end)

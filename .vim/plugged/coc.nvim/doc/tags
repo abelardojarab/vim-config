@@ -686,6 +686,7 @@ coc-preferences-messageLevel	coc-config.txt	/*coc-preferences-messageLevel*
 coc-preferences-promptInput	coc-config.txt	/*coc-preferences-promptInput*
 coc-preferences-renameFillCurrent	coc-config.txt	/*coc-preferences-renameFillCurrent*
 coc-preferences-silentAutoupdate	coc-config.txt	/*coc-preferences-silentAutoupdate*
+coc-preferences-tagDefinitionTimeout	coc-config.txt	/*coc-preferences-tagDefinitionTimeout*
 coc-preferences-useQuickfixForLocations	coc-config.txt	/*coc-preferences-useQuickfixForLocations*
 coc-preferences-watchmanPath	coc-config.txt	/*coc-preferences-watchmanPath*
 coc-preferences-willSaveHandlerTimeout	coc-config.txt	/*coc-preferences-willSaveHandlerTimeout*

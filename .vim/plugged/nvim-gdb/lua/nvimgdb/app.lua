@@ -1,30 +1,30 @@
 -- vim: set et ts=2 sw=2:
 
 local log = require 'nvimgdb.log'
+local NvimGdb = require'nvimgdb'
 
--- @class App @debugger manager
--- @field private destructors table<string, function> @custom destructors to be executed during cleanup
--- @field private config Config @resolved configuration
--- @field private backend Backend @selected backend-specific routines
--- @field private client Client @spawned debugger manager
--- @field private proxy Proxy @connection to the side channel
--- @field private breakpoint Breakpoint @breakpoint sign manager
--- @field private keymaps Keymaps @dynamic keymaps manager
--- @field private cursor Cursor @current line sign nandler
--- @field private win Win @jump window manager
--- @field private parser ParserImpl @debugger output parser
--- @field private tabpage_created boolean @indicates whether the tabpage was created and needs to be closed during cleanup
+---@class App @debugger manager
+---@field private destructors table<string, function> custom destructors to be executed during cleanup
+---@field private config Config resolved configuration
+---@field private backend Backend selected backend-specific routines
+---@field private client Client spawned debugger manager
+---@field private proxy Proxy connection to the side channel
+---@field private breakpoint Breakpoint breakpoint sign manager
+---@field private keymaps Keymaps dynamic keymaps manager
+---@field private cursor Cursor current line sign nandler
+---@field private win Win jump window manager
+---@field private parser ParserImpl debugger output parser
+---@field private tabpage_created boolean indicates whether the tabpage was created and needs to be closed during cleanup
 local App = {}
 App.efmmgr = require 'nvimgdb.efmmgr'
 App.__index = App
 
--- Create a new instance of the debugger in the current tabpage.
--- @param backend_name string @backend name
--- @param launch_cmd string @proxy application name
--- @param client_cmd string @debugger launching command
--- @return App @new instance
-function App.new(backend_name, launch_cmd, client_cmd)
-  log.debug({"function App.new(", backend_name, launch_cmd, client_cmd, ")"})
+---Create a new instance of the debugger in the current tabpage.
+---@param backend_name string backend name
+---@param client_cmd string[] debugger launching command
+---@return App new instance
+function App.new(backend_name, client_cmd)
+  log.debug({"App.new", backend_name = backend_name, client_cmd = client_cmd})
   local self = setmetatable({}, App)
 
   -- destructors to be executed during cleanup()
@@ -36,15 +36,18 @@ function App.new(backend_name, launch_cmd, client_cmd)
   self._last_command = nil
 
   local edited_buf = vim.api.nvim_get_current_buf()
+  if not vim.api.nvim_buf_is_loaded(edited_buf) or vim.api.nvim_buf_get_option(edited_buf, 'buftype') == 'terminal' then
+    edited_buf = nil
+  end
 
   -- Check if a debugging session is already running in this tabpage
   self.tabpage_created = false
   if getmetatable(NvimGdb.i(true)) == App then
     -- Create new tab for the new debugging view
-    NvimGdb.vim.cmd('tabnew')
+    vim.api.nvim_command('tabnew')
     vim.wo.winfixwidth = false
     vim.wo.winfixheight = false
-    NvimGdb.vim.cmd('silent wincmd o')
+    vim.api.nvim_command('silent wincmd o')
     self.tabpage_created = true
   end
 
@@ -52,10 +55,10 @@ function App.new(backend_name, launch_cmd, client_cmd)
   local start_win = vim.api.nvim_get_current_win()
 
   -- Get the selected backend module
-  self.backend = require "nvimgdb.backend".choose(backend_name)
+  self.backend = require("nvimgdb.backend." .. backend_name).new()
 
   -- Spawn gdb client in a new terminal window
-  self.client = require'nvimgdb.client'.new(self.config, launch_cmd, client_cmd)
+  self.client = require'nvimgdb.client'.new(self.config, self.backend, client_cmd)
   if start_win == self.client.win then
     -- Apparently, the configuration has been overridden to use current window
     -- for the debugging terminal. Thus, a new window will be assigned or created
@@ -80,7 +83,7 @@ function App.new(backend_name, launch_cmd, client_cmd)
 
   -- Initialize the parser
   local parser_actions = require'nvimgdb.parser_actions'.new(self.cursor, self.win)
-  self.parser = self.backend.create_parser(parser_actions)
+  self.parser = self.backend.create_parser(parser_actions, self.proxy)
 
   -- Setup 'errorformat' for the given backend.
   App.efmmgr.setup(self.backend.get_error_formats())
@@ -88,12 +91,12 @@ function App.new(backend_name, launch_cmd, client_cmd)
   return self
 end
 
--- The late initialization items that require accessing via tabpage.
+---The late initialization items that require accessing via tabpage.
 function App:postinit()
-  log.debug({"function App:postinit()"})
+  log.debug({"App:postinit"})
   -- Spawn the debugger, the parser should be ready by now.
   self.client:start()
-  NvimGdb.vim.cmd("doautocmd User NvimGdbStart")
+  vim.api.nvim_command("doautocmd User NvimGdbStart")
 
   -- Start insert mode in the debugger window
   vim.cmd("startinsert")
@@ -103,11 +106,11 @@ function App:postinit()
   self.keymaps:dispatch_set()
 end
 
--- Finish up the debugging session.
--- @param tab number @tabpage number
+---Finish up the debugging session.
+---@param tab number tabpage number
 function App:cleanup(tab)
-  log.debug({"function App:cleanup(", tab, ")"})
-  NvimGdb.vim.cmd("doautocmd User NvimGdbCleanup")
+  log.debug({"App:cleanup", tab = tab})
+  vim.api.nvim_command("doautocmd User NvimGdbCleanup")
 
   -- Execute scheduled destructors
   for _, destr in pairs(self.destructors) do
@@ -116,6 +119,9 @@ function App:cleanup(tab)
 
   -- Remove from 'errorformat' for the given backend.
   App.efmmgr.teardown(self.backend.get_error_formats())
+
+  -- Destroy the parser
+  self.parser:cleanup()
 
   -- Clean up the breakpoint signs
   self.breakpoint:reset_signs()
@@ -136,7 +142,7 @@ function App:cleanup(tab)
   if self.tabpage_created then
     for _, tabpage in ipairs(vim.api.nvim_list_tabpages()) do
       if tabpage == tab then
-        NvimGdb.vim.cmd("tabclose! " .. vim.api.nvim_tabpage_get_number(tabpage))
+        vim.api.nvim_command("tabclose! " .. vim.api.nvim_tabpage_get_number(tabpage))
         break
       end
     end
@@ -146,13 +152,25 @@ function App:cleanup(tab)
   end
 end
 
--- Send a command to the debugger.
--- @param cmd string @command template
--- @param a1 string @parameter 1 if command has format placeholders
--- @param a2 string @parameter 2
--- @param a3 string @parameter 3
+---Expose the parser object
+---@return ParserImpl
+function App:get_parser()
+  return self.parser
+end
+
+---Expose the Win object
+---@return Win
+function App:get_win()
+  return self.win
+end
+
+---Send a command to the debugger.
+---@param cmd string command template
+---@param a1 string? parameter 1 if command has format placeholders
+---@param a2 string? parameter 2
+---@param a3 string? parameter 3
 function App:send(cmd, a1, a2, a3)
-  log.debug({"function App:send(", cmd, a1, a2, a3, ")"})
+  log.debug({"App:send(", cmd = cmd, a1 = a1, a2 = a2, a3 = a3})
   if cmd ~= nil then
     local command = self.backend:translate_command(cmd):format(a1, a2, a3)
     self.client:send_line(command)
@@ -162,26 +180,51 @@ function App:send(cmd, a1, a2, a3)
   end
 end
 
--- Execute a custom debugger command and return its output.
--- @param cmd string @debugger command to execute
--- @return string @fetched debugger output
-function App:custom_command(cmd)
-  log.debug({"function App:custom_command(", cmd, ")"})
-  return self.proxy:query('handle-command ' .. cmd)
+---Execute a custom debugger command and return its output.
+---@async
+---@param cmd string debugger command to execute
+---@return string fetched debugger output
+function App:custom_command_async(cmd)
+  log.debug({"App:custom_command_async", cmd = cmd})
+  local response = self.proxy:query('handle-command ' .. cmd)
+  if type(response) == 'string' then
+    return response
+  end
+  if type(response) == 'table' and next(response) == nil then
+    return ''
+  end
+  return tostring(response)
 end
 
---[[Create a window to watch for a debugger expression.
+---Execute a custom debugger command and return its output.
+---@deprecated
+---@param cmd string debugger command to execute
+---@return string fetched debugger output
+function App:custom_command(cmd)
+  log.debug({"App:custom_command", cmd = cmd})
+  local done = false
+  local response = nil
+  coroutine.resume(coroutine.create(function()
+    response = self:custom_command_async(cmd)
+    done = true
+  end))
+  if vim.wait(500, function() return done end) then
+    return response
+  end
+  log.error("Custom command timed out")
+  return ''
+end
 
-The output of the expression or command will be displayed
-in that window.
-]]
--- @param cmd string @debugger command to watch
+---Create a window to watch for a debugger expression.
+---The output of the expression or command will be displayed
+---in that window.
+---@param cmd string debugger command to watch
 function App:create_watch(cmd, mods)
-  log.debug({"function App:create_watch(", cmd, mods, ")"})
+  log.debug({"App:create_watch", cmd = cmd, mods = mods})
   if not mods or mods == '' then
     mods = 'vert'
   end
-  NvimGdb.vim.cmd(mods .. " new | set readonly buftype=nowrite")
+  vim.api.nvim_command(mods .. " new | set readonly buftype=nowrite")
   self.keymaps:dispatch_set()
   local buf = vim.api.nvim_get_current_buf()
   vim.api.nvim_buf_set_name(buf, cmd)
@@ -206,7 +249,13 @@ function App:create_watch(cmd, mods)
     pattern = "NvimGdbQuery",
     group = augid,
     callback = function()
-      vim.api.nvim_buf_set_lines(buf, 0, -1, 0, vim.fn.split(NvimGdb.i():custom_command(cmd), '\r*\n'))
+      coroutine.resume(coroutine.create(function()
+        local response = NvimGdb.here:custom_command_async(cmd)
+        -- The buffer may have been unloaded already
+        if vim.api.nvim_buf_is_loaded(buf) then
+          vim.api.nvim_buf_set_lines(buf, 0, -1, 0, vim.fn.split(response, '\r*\n'))
+        end
+      end))
     end
   })
 
@@ -222,12 +271,12 @@ function App:create_watch(cmd, mods)
 
 
   -- Return the cursor to the previous window
-  NvimGdb.vim.cmd("wincmd l")
+  vim.api.nvim_command("wincmd l")
 end
 
--- Toggle breakpoint in the cursor line
+---Toggle breakpoint in the cursor line
 function App:breakpoint_toggle()
-  log.debug({"function App:breakpoint_toggle()"})
+  log.debug({"App:breakpoint_toggle"})
   if self.parser:is_running() then
     -- pause first
     self.client:interrupt()
@@ -247,9 +296,9 @@ function App:breakpoint_toggle()
   end
 end
 
--- Clear all breakpoints
+---Clear all breakpoints
 function App:breakpoint_clear_all()
-  log.debug({"function App:breakpoint_clear_all()"})
+  log.debug({"App:breakpoint_clear_all"})
   if self.parser:is_running() then
     -- pause first
     self.client:interrupt()
@@ -258,9 +307,9 @@ function App:breakpoint_clear_all()
   self:send('delete_breakpoints')
 end
 
--- Actions to execute when a tabpage is entered.
+---Actions to execute when a tabpage is entered.
 function App:on_tab_enter()
-  log.debug({"function App:on_tab_enter()"})
+  log.debug({"App:on_tab_enter"})
   -- Restore the signs as they may have been spoiled
   if self.parser:is_paused() then
     self.cursor:show()
@@ -269,9 +318,9 @@ function App:on_tab_enter()
   self:on_buf_enter()
 end
 
--- Actions to execute when a tabpage is left.
+---Actions to execute when a tabpage is left.
 function App:on_tab_leave()
-  log.debug({"function App:on_tab_leave()"})
+  log.debug({"App:on_tab_leave"})
   -- Hide the signs
   self.cursor:hide()
   self.breakpoint:clear_signs()
@@ -279,25 +328,27 @@ function App:on_tab_leave()
   self:on_buf_leave()
 end
 
--- Actions to execute when a buffer is entered.
+---Actions to execute when a buffer is entered.
 function App:on_buf_enter()
-  log.debug({"function App:on_buf_enter()"})
+  log.debug({"App:on_buf_enter"})
   -- Apply keymaps to the jump window only.
   if vim.bo.filetype ~= 'nvimgdb' and self.win:is_jump_window_active() then
     self.keymaps:dispatch_set()
     -- Ensure breakpoints are shown if are queried dynamically
-    self.win:query_breakpoints()
+    coroutine.resume(coroutine.create(function()
+      self.win:query_breakpoints()
+    end))
   end
 end
 
--- Actions to execute when a buffer is left.
+---Actions to execute when a buffer is left.
 function App:on_buf_leave()
-  log.debug({"function App:on_buf_leave()"})
+  log.debug({"App:on_buf_leave"})
   if vim.bo.filetype == 'nvimgdb' then
     -- Move the cursor to the end of the buffer
     local jump_bottom = self.config:get_or('jump_bottom_gdb_buf', false)
     if jump_bottom then
-      NvimGdb.vim.cmd("$")
+      vim.api.nvim_command("$")
     end
     return
   end
@@ -306,15 +357,21 @@ function App:on_buf_leave()
   end
 end
 
--- Load backtrace or breakpoints into the location list.
--- @param kind "backtrace"|"breakpoints"
--- @param mods string @ command modifiers like "aboveleft"
+---@enum LopenKind
+App.lopen_kind = {
+  backtrace = 0,
+  breakpoints = 1
+}
+
+---Load backtrace or breakpoints into the location list.
+---@param kind LopenKind
+---@param mods string @ command modifiers like "aboveleft"
 function App:lopen(kind, mods)
-  log.debug({"function App:lopen(", kind, mods, ")"})
+  log.debug({"App:lopen", kind = kind, mods = mods})
   local cmd = ''
-  if kind == "backtrace" then
+  if kind == App.lopen_kind.backtrace then
     cmd = self.backend:translate_command('bt')
-  elseif kind == "breakpoints" then
+  elseif kind == App.lopen_kind.breakpoints then
     cmd = self.backend:translate_command('info breakpoints')
   else
     log.warn({"Unknown lopen kind", kind})
@@ -323,12 +380,13 @@ function App:lopen(kind, mods)
   self.win:lopen(cmd, mods)
 end
 
--- Split command output into lines for llist
--- @param cmd string @debugger command to execute
--- @return string[] @output lines
+---Split command output into lines for llist
+---@async
+---@param cmd string debugger command to execute
+---@return string[] output lines
 function App:get_for_llist(cmd)
-  log.debug({"function App:get_for_llist(", cmd, ")"})
-  local output = self:custom_command(cmd)
+  log.debug({"App:get_for_llist", cmd = cmd})
+  local output = self:custom_command_async(cmd)
   local lines = {}
   for line in output:gmatch("[^\r\n]+") do
     lines[#lines + 1] = line

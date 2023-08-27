@@ -35,7 +35,7 @@ https://github.com/luals/lua-language-server
 
 Lua language server.
 
-`lua-language-server` can be installed by following the instructions [here](https://github.com/luals/lua-language-server/wiki/Getting-Started#command-line).
+`lua-language-server` can be installed by following the instructions [here](https://luals.github.io/#neovim-install).
 
 The default `cmd` assumes that the `lua-language-server` binary can be found in `$PATH`.
 
@@ -49,32 +49,32 @@ Completion results will include a workspace indexing progress message until the 
 
 ```lua
 require'lspconfig'.lua_ls.setup {
-  settings = {
-    Lua = {
-      runtime = {
-        -- Tell the language server which version of Lua you're using (most likely LuaJIT in the case of Neovim)
-        version = 'LuaJIT',
-      },
-      diagnostics = {
-        -- Get the language server to recognize the `vim` global
-        globals = {'vim'},
-      },
-      workspace = {
+  on_init = function(client)
+    local path = client.workspace_folders[1].name
+    if not vim.loop.fs_stat(path..'/.luarc.json') and not vim.loop.fs_stat(path..'/.luarc.jsonc') then
+      client.config.settings = vim.tbl_deep_extend('force', client.config.settings.Lua, {
+        runtime = {
+          -- Tell the language server which version of Lua you're using (most likely LuaJIT in the case of Neovim)
+          version = 'LuaJIT'
+        },
         -- Make the server aware of Neovim runtime files
-        library = vim.api.nvim_get_runtime_file("", true),
-      },
-      -- Do not send telemetry data containing a randomized but unique identifier
-      telemetry = {
-        enable = false,
-      },
-    },
-  },
+        workspace = {
+          library = { vim.env.VIMRUNTIME }
+          -- or pull in all of 'runtimepath'. NOTE: this is a lot slower
+          -- library = vim.api.nvim_get_runtime_file("", true)
+        }
+      })
+
+      client.notify("workspace/didChangeConfiguration", { settings = client.config.settings })
+    end
+    return true
+  end
 }
 ```
 
-See `lua-language-server`'s [documentation](https://github.com/luals/lua-language-server/blob/master/locale/en-us/setting.lua) for an explanation of the above fields:
-* [Lua.runtime.path](https://github.com/luals/lua-language-server/blob/076dd3e5c4e03f9cef0c5757dfa09a010c0ec6bf/locale/en-us/setting.lua#L5-L13)
-* [Lua.workspace.library](https://github.com/luals/lua-language-server/blob/076dd3e5c4e03f9cef0c5757dfa09a010c0ec6bf/locale/en-us/setting.lua#L77-L78)
+See `lua-language-server`'s [documentation](https://luals.github.io/wiki/settings/) for an explanation of the above fields:
+* [Lua.runtime.path](https://luals.github.io/wiki/settings/#runtimepath)
+* [Lua.workspace.library](https://luals.github.io/wiki/settings/#workspacelibrary)
 
 ]],
     default_config = {

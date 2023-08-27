@@ -183,6 +183,14 @@ Namespace id (`number`) or name (`string`).
 
 ---
 
+### `anchor`
+
+**Type:** `"NW"` / `"NE"` / `"SW"` / `"SE"`
+
+Decides which corner of the popup to place at `position`.
+
+---
+
 ### `relative`
 
 **Type:** `string` or `table`
@@ -562,11 +570,12 @@ size or position after it's mounted.
 
 `config` is a `table` having the following keys:
 
-| Key        | Type               |
-| ---------- | ------------------ |
-| `relative` | `string` / `table` |
-| `position` | `string` / `table` |
-| `size`     | `string` / `table` |
+| Key        | Type                              |
+| ---------- | --------------------------------- |
+| `anchor`   | `"NW"` / `"NE"` / `"SW"` / `"SE"` |
+| `relative` | `string` / `table`                |
+| `position` | `string` / `table`                |
+| `size`     | `string` / `table`                |
 
 They are the same options used for popup initialization.
 
@@ -604,6 +613,31 @@ Sets border highlight.
 
 ```lua
 popup.border:set_highlight("SpecialChar")
+```
+
+---
+
+### `popup.border:set_style`
+
+_Signature:_ `popup.border:set_style(style: string|table) -> nil`
+
+Sets border style.
+
+**Parameters**
+
+| Name    | Type               | Description  |
+| ------- | ------------------ | ------------ |
+| `style` | `string` / `table` | border style |
+
+This `style` parameter is exactly the same as popup option `border.style`.
+
+You'll need to call `popup:update_layout()` after this for the change to render on screen.
+
+**Examples**
+
+```lua
+popup.border:set_style("rounded")
+popup:update_layout()
 ```
 
 ---

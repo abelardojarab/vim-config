@@ -3,6 +3,12 @@ local message_history = {}
 local notifications = {}
 local notification_count = 0
 
+local levels = {}
+for k, v in pairs(vim.log.levels) do
+  table.insert(levels, v, k)
+end
+
+---@param message string
 local function create(message, level, delay)
   if not level then
     level = vim.log.levels.INFO
@@ -22,6 +28,7 @@ local function create(message, level, delay)
     or { height = 0, row = vim.api.nvim_get_option("lines") - 2 }
 
   local message = vim.split(message, "\n")
+
   local width = 16
   for _, line in ipairs(message) do
     width = math.max(width, #line)
@@ -120,6 +127,7 @@ local function create(message, level, delay)
       table.insert(message_history, {
         content = message,
         level = level,
+        kind = levels[level],
       })
 
       if vim.fn.winbufnr(window) ~= -1 then
@@ -139,6 +147,9 @@ end
 
 return {
   create = create,
+  error = function(msg, delay)
+    return create(msg, vim.log.levels.ERROR, delay)
+  end,
   delete_all = function()
     for _, n in ipairs(notifications) do
       n:delete()

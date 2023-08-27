@@ -175,6 +175,7 @@ Notes:
   * `elm-make`
 * Erb
   * `erb`
+  * `erb-formatter`
   * `erblint`
   * `erubi`
   * `erubis`
@@ -213,8 +214,6 @@ Notes:
   * `golangci-lint`!!
   * `golangserver`
   * `golines`
-  * `golint`
-  * `gometalinter`!!
   * `gopls`
   * `gosimple`!!
   * `gotype`!!
@@ -365,6 +364,7 @@ Notes:
   * `cspell`
   * `languagetool`!!
   * `markdownlint`!!
+  * `marksman`
   * `mdl`
   * `pandoc`
   * `prettier`
@@ -699,6 +699,7 @@ Notes:
   * `swaglint`
   * `yaml-language-server`
   * `yamlfix`
+  * `yamlfmt`
   * `yamllint`
 * YANG
   * `yang-lsp`

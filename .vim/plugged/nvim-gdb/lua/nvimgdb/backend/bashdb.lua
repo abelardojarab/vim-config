@@ -2,24 +2,27 @@
 -- vim: set et ts=2 sw=2:
 
 local log = require'nvimgdb.log'
-local Common = require'nvimgdb.backend.common'
+local Backend = require'nvimgdb.backend'
 local ParserImpl = require'nvimgdb.parser_impl'
+local utils = require'nvimgdb.utils'
 
--- @class BackendBashdb:Backend @specifics of BashDB
+---@class BackendBashdb: Backend specifics of BashDB
 local C = {}
 C.__index = C
-setmetatable(C, {__index = Common})
+setmetatable(C, {__index = Backend})
 
--- @return BackendBashdb @new instance
+---@return BackendBashdb new instance
 function C.new()
   local self = setmetatable({}, C)
   return self
 end
 
--- Create a parser to recognize state changes and code jumps
--- @param actions ParserActions @callbacks for the parser
--- @return ParserImpl @new parser instance
-function C.create_parser(actions)
+---Create a parser to recognize state changes and code jumps
+---@param actions ParserActions callbacks for the parser
+---@param proxy Proxy side channel connection to the debugger
+---@return ParserImpl new parser instance
+function C.create_parser(actions, proxy)
+  local _ = proxy
   local P = {}
   P.__index = P
   setmetatable(P, {__index = ParserImpl})
@@ -59,13 +62,14 @@ function C.create_parser(actions)
   return self
 end
 
--- @param fname string @full path to the source
--- @param proxy Proxy @connection to the side channel
--- @return FileBreakpoints @collection of actual breakpoints
+---@async
+---@param fname string full path to the source
+---@param proxy Proxy connection to the side channel
+---@return FileBreakpoints collection of actual breakpoints
 function C.query_breakpoints(fname, proxy)
   log.info("Query breakpoints for " .. fname)
   local response = proxy:query('handle-command info breakpoints')
-  if response == nil or response == "" then
+  if response == nil or type(response) ~= 'string' or response == "" then
     return {}
   end
 
@@ -94,14 +98,14 @@ function C.query_breakpoints(fname, proxy)
   return breaks
 end
 
--- @type CommandMap
+---@type CommandMap
 C.command_map = {
   delete_breakpoints = 'delete',
   breakpoint = 'break',
   ['info breakpoints'] = 'info breakpoints',
 }
 
--- @return string[]
+---@return string[]
 function C.get_error_formats()
   -- Return the list of errorformats for backtrace, breakpoints.
   return {[[%m\ in\ file\ `%f'\ at\ line\ %l]],
@@ -122,6 +126,24 @@ function C.get_error_formats()
   --         breakpoint already hit 1 time
   -- 3   breakpoint keep y   /tmp/nvim-gdb/test/main.sh:3
   -- 4   breakpoint keep y   /tmp/nvim-gdb/test/main.sh:8
+end
+
+---@param client_cmd string[] original debugger command
+---@param tmp_dir string path to the session state directory
+---@param proxy_addr string full path to the file with the udp port in the session state directory
+---@return string[] command to launch the debugger with termopen()
+function C.get_launch_cmd(client_cmd, tmp_dir, proxy_addr)
+  local _ = tmp_dir
+  local cmd = {
+    utils.is_windows and 'nvim.exe' or 'nvim', '--clean', '-u', 'NONE',
+    '-l', utils.get_plugin_file_path('lib', 'proxy', 'bashdb.lua'),
+    '-a', proxy_addr
+  }
+  -- Append the rest of arguments
+  for i = 1, #client_cmd do
+    cmd[#cmd + 1] = client_cmd[i]
+  end
+  return cmd
 end
 
 return C

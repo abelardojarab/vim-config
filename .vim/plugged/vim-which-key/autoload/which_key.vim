@@ -56,6 +56,8 @@ function! s:handle_char_on_start_is_ok(c) abort
   let char = type(a:c) == s:TYPE.number ? nr2char(a:c) : a:c
   if has_key(s:KEYCODES, char)
     let char = s:KEYCODES[char]
+  else
+    let char = which_key#char_handler#parse_raw(char)
   endif
   let s:which_key_trigger .= ' '.(char ==# ' ' ? '<Space>' : char)
   let next_level = get(s:runtime, char)
@@ -97,6 +99,8 @@ function! which_key#start(vis, bang, prefix) " {{{
   else
     if has_key(s:KEYCODES, prefix)
       let prefix = s:KEYCODES[prefix]
+    else
+      let prefix = which_key#char_handler#parse_raw(prefix)
     endif
     if has_key(s:MERGE_INTO, prefix)
       let prefix = s:MERGE_INTO[prefix]
@@ -215,14 +219,34 @@ function! s:echo_prompt() abort
   echohl None
 endfunction
 
-function! s:has_children(input) abort
-  if index(s:REQUIRES_REGEX_ESCAPE, a:input) != -1
-    let group = map(keys(s:runtime), {_,v -> v =~# '^\'.a:input})
-  else
-    let group = map(keys(s:runtime), {_,v -> v =~# '^'.a:input})
-  endif
-  return len(filter(group, 'v:val == 1')) > 1
-endfunction
+if has('lambda')
+  function! s:has_children(input) abort
+    if index(s:REQUIRES_REGEX_ESCAPE, a:input) != -1
+      let group = map(keys(s:runtime), {_,v -> v =~# '^\'.a:input})
+    else
+      let group = map(keys(s:runtime), {_,v -> v =~# '^'.a:input})
+    endif
+    return len(filter(group, 'v:val == 1')) > 1
+  endfunction
+else
+  function! s:has_children(input) abort
+    if index(s:REQUIRES_REGEX_ESCAPE, a:input) != -1
+      let regex = '^\'.a:input
+    else
+      let regex = '^'.a:input
+    endif
+    let cnt = 0
+    for each in keys(s:runtime)
+      if each =~# regex
+        let cnt += 1
+        if cnt > 1
+          return 1
+        endif
+      endif
+    endfor
+    return 0
+  endfunction
+endif
 
 function! s:show_upper_level_mappings() abort
   " Top level
@@ -244,7 +268,6 @@ function! s:show_upper_level_mappings() abort
 endfunction
 
 function! s:getchar() abort
-  let input = ''
   try
     let c = getchar()
   " Handle <C-C>
@@ -266,13 +289,8 @@ function! s:getchar() abort
     return ''
   endif
 
-  " :h keycode
-  " <CR>, <Enter>
-  if c == 13
-    return '<CR>'
-  endif
+  let input = which_key#char_handler#parse_raw(c)
 
-  let input .= which_key#char_handler#parse_raw(c)
   if s:has_children(input)
     while 1
       if !which_key#char_handler#timeout_for_next_char()
@@ -282,6 +300,15 @@ function! s:getchar() abort
       endif
     endwhile
   endif
+
+  " Convert special keys to internal data structure that use String as the
+  " key, e.g., "\<Tab>" => "<Tab>"
+  if has_key(s:KEYCODES, input)
+    let input = s:KEYCODES[input]
+  elseif has_key(s:MERGE_INTO, input)
+    let input = s:MERGE_INTO[input]
+  endif
+
   return input
 endfunction
 

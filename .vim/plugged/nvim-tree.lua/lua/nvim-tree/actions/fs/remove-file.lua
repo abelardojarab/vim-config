@@ -4,7 +4,9 @@ local view = require "nvim-tree.view"
 local lib = require "nvim-tree.lib"
 local notify = require "nvim-tree.notify"
 
-local M = {}
+local M = {
+  config = {},
+}
 
 local function close_windows(windows)
   if view.View.float.enable and #vim.api.nvim_list_wins() == 1 then
@@ -31,7 +33,7 @@ local function clear_buffer(absolute_path)
         end
       end
       vim.api.nvim_buf_delete(buf.bufnr, { force = true })
-      if M.close_window then
+      if M.config.actions.remove_file.close_window then
         close_windows(buf.windows)
       end
       return
@@ -69,36 +71,44 @@ local function remove_dir(cwd)
   return vim.loop.fs_rmdir(cwd)
 end
 
+--- Remove a node, notify errors, dispatch events
+--- @param node table
+function M.remove(node)
+  local notify_node = notify.render_path(node.absolute_path)
+  if node.nodes ~= nil and not node.link_to then
+    local success = remove_dir(node.absolute_path)
+    if not success then
+      return notify.error("Could not remove " .. notify_node)
+    end
+    events._dispatch_folder_removed(node.absolute_path)
+  else
+    events._dispatch_will_remove_file(node.absolute_path)
+    local success = vim.loop.fs_unlink(node.absolute_path)
+    if not success then
+      return notify.error("Could not remove " .. notify_node)
+    end
+    events._dispatch_file_removed(node.absolute_path)
+    clear_buffer(node.absolute_path)
+  end
+  notify.info(notify_node .. " was properly removed.")
+end
+
 function M.fn(node)
   if node.name == ".." then
     return
   end
 
   local function do_remove()
-    if node.nodes ~= nil and not node.link_to then
-      local success = remove_dir(node.absolute_path)
-      if not success then
-        return notify.error("Could not remove " .. node.name)
-      end
-      events._dispatch_folder_removed(node.absolute_path)
-    else
-      local success = vim.loop.fs_unlink(node.absolute_path)
-      if not success then
-        return notify.error("Could not remove " .. node.name)
-      end
-      events._dispatch_file_removed(node.absolute_path)
-      clear_buffer(node.absolute_path)
-    end
-    notify.info(node.absolute_path .. " was properly removed.")
-    if M.enable_reload then
+    M.remove(node)
+    if not M.config.filesystem_watchers.enable then
       require("nvim-tree.actions.reloaders.reloaders").reload_explorer()
     end
   end
 
   if M.config.ui.confirm.remove then
     local prompt_select = "Remove " .. node.name .. " ?"
-    local prompt_input = prompt_select .. " y/n: "
-    lib.prompt(prompt_input, prompt_select, { "y", "n" }, { "Yes", "No" }, function(item_short)
+    local prompt_input = prompt_select .. " y/N: "
+    lib.prompt(prompt_input, prompt_select, { "", "y" }, { "No", "Yes" }, function(item_short)
       utils.clear_prompt()
       if item_short == "y" then
         do_remove()
@@ -110,10 +120,9 @@ function M.fn(node)
 end
 
 function M.setup(opts)
-  M.config = {}
-  M.config.ui = opts.ui or {}
-  M.enable_reload = not opts.filesystem_watchers.enable
-  M.close_window = opts.actions.remove_file.close_window
+  M.config.ui = opts.ui
+  M.config.actions = opts.actions
+  M.config.filesystem_watchers = opts.filesystem_watchers
 end
 
 return M

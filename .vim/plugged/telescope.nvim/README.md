@@ -83,7 +83,7 @@ Using [vim-plug](https://github.com/junegunn/vim-plug)
 
 ```viml
 Plug 'nvim-lua/plenary.nvim'
-Plug 'nvim-telescope/telescope.nvim', { 'tag': '0.1.1' }
+Plug 'nvim-telescope/telescope.nvim', { 'tag': '0.1.2' }
 " or                                , { 'branch': '0.1.x' }
 ```
 
@@ -91,14 +91,14 @@ Using [dein](https://github.com/Shougo/dein.vim)
 
 ```viml
 call dein#add('nvim-lua/plenary.nvim')
-call dein#add('nvim-telescope/telescope.nvim', { 'rev': '0.1.1' })
+call dein#add('nvim-telescope/telescope.nvim', { 'rev': '0.1.2' })
 " or                                         , { 'rev': '0.1.x' })
 ```
 Using [packer.nvim](https://github.com/wbthomason/packer.nvim)
 
 ```lua
 use {
-  'nvim-telescope/telescope.nvim', tag = '0.1.1',
+  'nvim-telescope/telescope.nvim', tag = '0.1.2',
 -- or                            , branch = '0.1.x',
   requires = { {'nvim-lua/plenary.nvim'} }
 }
@@ -109,15 +109,15 @@ Using [lazy.nvim](https://github.com/folke/lazy.nvim)
 ```lua
 -- init.lua:
     {
-    'nvim-telescope/telescope.nvim', tag = '0.1.1',
--- or                              , branch = '0.1.1',
+    'nvim-telescope/telescope.nvim', tag = '0.1.2',
+-- or                              , branch = '0.1.x',
       dependencies = { 'nvim-lua/plenary.nvim' }
     }
 
 -- plugins/telescope.lua:
 return {
-    'nvim-telescope/telescope.nvim', tag = '0.1.1',
--- or                              , branch = '0.1.1',
+    'nvim-telescope/telescope.nvim', tag = '0.1.2',
+-- or                              , branch = '0.1.x',
       dependencies = { 'nvim-lua/plenary.nvim' }
     }
 ```
@@ -248,6 +248,10 @@ Many familiar mapping patterns are set up as defaults.
 | `<C-t>`        | Go to a file in a new tab                            |
 | `<C-u>`        | Scroll up in preview window                          |
 | `<C-d>`        | Scroll down in preview window                        |
+| `<C-f>`        | Scroll left in preview window                        |
+| `<C-k>`        | Scroll right in preview window                       |
+| `<M-f>`        | Scroll left in results window                        |
+| `<M-k>`        | Scroll right in results window                       |
 | `<C-/>`        | Show mappings for picker actions (insert mode)       |
 | `?`            | Show mappings for picker actions (normal mode)       |
 | `<C-c>`        | Close telescope                                      |
@@ -357,6 +361,7 @@ Built-in functions. Ready to be bound to any key you like.
 |-------------------------------------|------------------------------------------------------------------------------------------------------------|
 | `builtin.git_commits`               | Lists git commits with diff preview, checkout action `<cr>`, reset mixed `<C-r>m`, reset soft `<C-r>s` and reset hard `<C-r>h` |
 | `builtin.git_bcommits`              | Lists buffer's git commits with diff preview and checks them out on `<cr>`                                 |
+| `builtin.git_bcommits_range`        | Lists buffer's git commits in a range of lines. Use options `from` and `to` to specify the range. In visual mode, lists commits for the selected lines |
 | `builtin.git_branches`              | Lists all branches with log preview, checkout action `<cr>`, track action `<C-t>`, rebase action`<C-r>`, create action `<C-a>`, switch action `<C-s>`, delete action `<C-d>` and merge action `<C-y>` |
 | `builtin.git_status`                | Lists current changes per file with diff preview and add action. (Multi-selection still WIP)               |
 | `builtin.git_stash`                 | Lists stash items in current repository with ability to apply them on `<cr>`                               |
@@ -407,9 +412,9 @@ vim.api.nvim_create_autocmd("User", {
   pattern = "TelescopePreviewerLoaded",
   callback = function(args)
     if args.data.filetype ~= "help" then
-      vim.bo.number = true
+      vim.wo.number = true
     elseif args.data.bufname:match("*.csv") then
-      vim.bo.wrap = false
+      vim.wo.wrap = false
     end
   end,
 })

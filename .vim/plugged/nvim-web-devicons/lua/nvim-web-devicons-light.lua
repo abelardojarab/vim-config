@@ -23,6 +23,12 @@ local icons_by_filename = {
     cterm_color = "239",
     name = "DsStore",
   },
+  [".editorconfig"] = {
+    icon = "",
+    color = "#333333",
+    cterm_color = "236",
+    name = "EditorConfig",
+  },
   [".eslintrc"] = {
     icon = "",
     color = "#4b32c3",
@@ -82,6 +88,12 @@ local icons_by_filename = {
     color = "#643995",
     cterm_color = "91",
     name = "SettingsJson",
+  },
+  ["svelte.config.js"] = {
+    icon = "",
+    color = "#bf2e00",
+    cterm_color = "160",
+    name = "SvelteConfig",
   },
   [".vimrc"] = {
     icon = "",
@@ -851,6 +863,12 @@ local icons_by_file_extension = {
     cterm_color = "58",
     name = "Json",
   },
+  ["jsonc"] = {
+    icon = "",
+    color = "#666620",
+    cterm_color = "58",
+    name = "Jsonc",
+  },
   ["json5"] = {
     icon = "",
     color = "#666620",
@@ -1444,6 +1462,12 @@ local icons_by_file_extension = {
     cterm_color = "22",
     name = "Txt",
   },
+  ["vsh"] = {
+    icon = "",
+    color = "#3e5a7f",
+    cterm_color = "24",
+    name = "Vlang",
+  },
   ["v"] = {
     icon = "󰍛",
     color = "#017226",
@@ -1547,7 +1571,7 @@ local icons_by_file_extension = {
     name = "Yml",
   },
   ["zig"] = {
-    icon = "",
+    icon = "",
     color = "#7b4d0e",
     cterm_color = "94",
     name = "Zig",

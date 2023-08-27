@@ -14,8 +14,9 @@ CONTENTS                                                     *NvimgdbContents*
     5. Events ............... |NvimgdbEvents|
     6. Functions ............ |NvimgdbFunctions|
     7. Backends ............. |NvimgdbBackends|
-       7.1 GDB .............. |NvimgdbGDB|
+       7.1 GDB, LLDB ........ |NvimgdbGDB|  |NvimgdbLLDB|
        7.2 rr ............... |NvimgdbRR|
+       7.3 PDB, BashDB ...... |NvimgdbPDB|  |NvimgdbBashDB|
     8. Limitations .......... |NvimgdbLimitations|
     9. Development .......... |NvimgdbDevelopment|
    10. Trivia ............... |NvimgdbTrivia|
@@ -35,11 +36,12 @@ parameter: >
 or alternatively `:GdbStartLLDB` with LLDB launch string as parameter: >
 
     :GdbStartLLDB lldb a.out
-
-The two commands above support command-completion which uses CMake and `find`
-to locate executables associated with the current buffer, and `find` which
-locates all executables in the current path or below. This behavior can be
-disabled by the user via variables. See the |NvimgdbVariables| section below.
+.
+                                                                   *c_<C-E>*
+The two commands above allow choosing executable either querying from from
+CMake or guessing with the `find` command. Press <C-E> when entering or
+editing the command, and the project will be searched for available
+executables.
 
 To debug prerecorded execution using `rr replay`, execute the following
 command: >
@@ -66,6 +68,15 @@ stack with `:GdbFrameUp` and `:GdbFrameDown`.
 
 To quit debugging, either close the tabpage with the debugging session or
 execute the command `:GdbDebugStop`.
+
+Supported debuggers and operating systems:
+
+                  Linux       Darwin       Windows
+        GDB        +            -            +
+        LLDB       +            +            +
+        PDB        +            +            +
+        BashDB     +            +            -
+        rr         +            -            -
 
 ==============================================================================
 Section 2: Commands                                          *NvimgdbCommands*
@@ -210,9 +221,9 @@ allows overriding the given keys. For example, the default config is: >
       \ 'key_framedown':  '<c-n>',
       \ 'key_eval':       '<f9>',
       \ 'key_quit':       None,
-      \ 'set_tkeymaps':   'function("lua", "NvimGdb.i().keymaps:set_t()")',
-      \ 'set_keymaps':    'function("lua", "NvimGdb.i().keymaps.set()")',
-      \ 'unset_keymaps':  'function("lua", "NvimGdb.i().keymaps.unset()")',
+      \ 'set_tkeymaps':   'function("lua", "NvimGdb.here.keymaps:set_t()")',
+      \ 'set_keymaps':    'function("lua", "NvimGdb.here.keymaps.set()")',
+      \ 'unset_keymaps':  'function("lua", "NvimGdb.here.keymaps.unset()")',
       \ 'sign_current_line': '▶',
       \ 'sign_breakpoint': [ '●', '●²', '●³', '●⁴', '●⁵', '●⁶', '●⁷', '●⁸', '●⁹', '●ⁿ' ],
       \ 'sign_breakpoint_priority': 10,
@@ -239,9 +250,9 @@ The key `sign_breakpoint_priority` defines the sign priority for the
 breakpoint. The sign priority for the current line is always one greater than
 breakpoint's.
 
-The `find` program will be used to locate all executables and populate the
-|:command-completion-custom| for `:GdbStart` and `:GdbStartLLDB`. To disable
-this set `g:nvimgdb_use_find_executables` to 0.
+The `find` program will be used to locate all executables to select with |c_<C-E>|
+for `:GdbStart` and `:GdbStartLLDB`. To disable this set
+`g:nvimgdb_use_find_executables` to 0.
 
 This plugin will also search for any executables associated with the current
 buffer via the CMake API if there is a CMake directory present and the `cmake`
@@ -259,7 +270,8 @@ You can call the default handler from within the hook and/or define your own
 very specific terminal keymaps.  The keys `set_keymaps` and `unset_keymaps`
 are called every time when the source code windows is entered and left.  The
 first one can be used to define source window-specific keymaps and the latter
-to carefully cleanup them.  See `test/keymap_hooks.vim` for an example.
+to carefully cleanup them.  See `keymap_hooks()` in `test/40_keymap_spec.lua`
+for an example.
 
 Finally, every configuration key can be overridden with a global variable
 prefixed `g:nvimgdb_`.  For example, `g:nvimgdb_key_next` overrides
@@ -306,7 +318,7 @@ debugging session will be created on a separate tabpage.
 
 The key `sticky_dbg_buf` makes the debugger terminal always shown in a window.
 Setting it to true (default) will make sure to restore the terminal window
-with `termwin_command` if it's accidentally or intentially closed.
+with `termwin_command` if it's accidentally or intentionally closed.
 
 The key `jump_bottom_gdb_buf` enables jumping to the bottom of the gdb terminal
 buffer when focus is moved to a different window.
@@ -323,7 +335,7 @@ NvimGdbQuery            Fired whenever the plugin queried for breakpoints.
                         with `GdbCustomCommand()`
 
                                                                 *NvimGdbBreak*
-NvimGdbBreak            Fired whenever the programm is paused.
+NvimGdbBreak            Fired whenever the program is paused.
 
                                                              *NvimGdbContinue*
 NvimGdbContinue         Fired whenever the program is resumed after it has
@@ -338,10 +350,27 @@ NvimGdbCleanup          Fired before the debugging session ends.
 ==============================================================================
 Section 6: Functions                                        *NvimgdbFunctions*
 
-The plugin is implemented Lua.
+The plugin is implemented Lua. Debugger application is associated with a
+tabpage. The App object in the current tabpage can be accessed the following
+way: >
 
-                                                          *GdbCustomCommand()*
-GdbCustomCommand("cmd")
+    require'nvimgdb'.here
+<
+For example, to execute a custom command: >
+
+    coroutine.resume(coroutine.create(function()
+      local app = require'nvimgdb'.here
+      local output = app:custom_command_async("info registers")
+      -- Do whatever is required to process the output
+    end))
+<
+Note that the processing is asynchronous, because the network communication
+with the debugger proxy will be performed to obtain the result. It's possible
+to use `vim.wait()` to get the result synchronously, but this may have impact
+on the Neovim UI.
+
+                                               *deprecated-GdbCustomCommand()*
+GdbCustomCommand("cmd")  *DEPRECATED*
                         Execute debugger command and return the output of the
                         command.  This can be combined with `NvimgdbEvents` to
                         implement watch expressions. For instance, the
@@ -358,19 +387,18 @@ you created a new window displaying the buffer bufnum. Then try the following:
     :autocmd User NvimGdbQuery call nvim_buf_set_lines(bufnum, 0, -1, 0,
         \ split(GdbCustomCommand("info locals"), "\n"))
 <
+The function is executed synchronously and therefore is deprecated in favour
+of Lua `app:custom_command_async(cmd)`.
 
 ==============================================================================
 Section 7: Backends                                          *NvimgdbBackends*
 
 ------------------------------------------------------------------------------
-Section 7.1 GDB                                                   *NvimgdbGDB*
+Section 7.1 GDB, LLDB                                *NvimgdbGDB*  *NvimgdbLLDB*
 
-- GDB is run via a proxy pty application, which allows to execute concealed
-  service commands, like "info breakpoints" on each stop. Thus, the plugin
-  is able to very carefully display current set of breakpoints with the
-  temporal ones disappearing after hit. Technically, the proxy app is a python
-  program that launches gdb in a pseudo terminal, listens a unix socket for
-  commands, and processes the output of GDB to filter out service commands.
+- To establish a side channel for service commands execution, a Python script
+  is injected into GDB/LLDB. It spawns a thread listening for commands via a
+  UDP socket, executes them and sends a JSON response back.
 
 ------------------------------------------------------------------------------
 Section 7.2 rr                                                     *NvimgdbRR*
@@ -386,17 +414,21 @@ Section 7.2 rr                                                     *NvimgdbRR*
   The command `:GdbStartRR` is identical to `:GdbStart rr replay` with a
   workaround for the PTY requirement.
 
+------------------------------------------------------------------------------
+Section 7.3 PDB, BashDB                            *NvimgdbPDB*  *NvimgdbBashDB*
+
+- PDB and BashDB are run via a proxy pty application, which allows executing
+  concealed service commands, like "info breakpoints" on each stop. Thus, the
+  plugin is able to very carefully display current set of breakpoints with the
+  temporal ones disappearing after hit. Technically, the proxy app is a lua
+  program that launches pdb in a pseudo terminal, listens a UDP socket for
+  commands, and processes the output of PDB to filter out service commands.
+
 
 ==============================================================================
 Section 8: Limitations                                    *NvimgdbLimitations*
 
-- The plugin is sensitive to the debugger settings. If prompt or frame format
-  is changed, random errors may occur.
-
-- LLDB uses the same frame format in multiple different situations. The
-  command "thread backtrace", for instance, will cause jumps in the source
-  code. Workaround: execute "frame info" in the debugger or
-  `:GdbFrameUp` followed by `:GdbFrameDown`.
+- ???
 
 ==============================================================================
 Section 9: Development                                    *NvimgdbDevelopment*
@@ -406,10 +438,11 @@ Section 9: Development                                    *NvimgdbDevelopment*
   written to the current directory:
   + nvimgdb.log  contains the logs of the Python plugin
   + proxy.log    contains the logs of the proxy script harnessing the debugger
-  + engine.log   captures the editor screens during automatic testing.
+  + engine.log   captures the editor screens during automatic testing
+  + spy_ui.log   captures the screen too.
 
 - To ease reproduction of an issue, set the environment variable `CI`, and
-  launch NeoVim with the auxiliary script `test/nvim`. The screen cast will
+  launch NeoVim with the auxiliary script `test/nvim.py`. The screen cast will
   be written to the log file spy_ui.log. Alternatively, consider recording
   the terminal script with the ubiquitous command `script`.
 
@@ -419,13 +452,12 @@ Section 9: Development                                    *NvimgdbDevelopment*
   to ensure the original keymaps are preserved and restored after debugging
   session: https://vi.stackexchange.com/questions/7734/how-to-save-and-restore-a-mapping
 
-- PDB and BASHDB like GDB run via a proxy application. Although, they
-  don't have a stock distinctive prefix to bypass the history.
+- PDB and BASHDB are run via a proxy application. Although, they don't have a
+  stock distinctive prefix to bypass the history.
 
 - Breakpoints are queried from GDB, LLDB and PDB on every pause using the
-  established side channels: the pty proxy for GDB, LLDB, PDB and BASHDB.
-  The communication is done via unix domain sockets (see
-  lua/nvimgdb/breakpoint.lua).
+  established side channels: either the pty proxy or an injected Python script.
+  The communication is done via UDP sockets (see lua/nvimgdb/proxy.lua).
 
 ==============================================================================
 Section 10: Trivia                                             *NvimgdbTrivia*

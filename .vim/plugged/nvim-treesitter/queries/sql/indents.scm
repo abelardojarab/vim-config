@@ -5,10 +5,10 @@
  (case)
  (subquery)
  (insert)
+ (when_clause)
 ] @indent.begin
 
-
-(compound_statement
+(block
   (keyword_begin)
 ) @indent.begin
 

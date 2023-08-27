@@ -24,6 +24,12 @@ local icons_by_filename = {
     cterm_color = "239",
     name = "DsStore",
   },
+  [".editorconfig"] = {
+    icon = "",
+    color = "#ffffff",
+    cterm_color = "15",
+    name = "EditorConfig",
+  },
   [".eslintrc"] = {
     icon = "",
     color = "#4b32c3",
@@ -83,6 +89,12 @@ local icons_by_filename = {
     color = "#854CC7",
     cterm_color = "98",
     name = "SettingsJson",
+  },
+  ["svelte.config.js"] = {
+    icon = "",
+    color = "#ff3e00",
+    cterm_color = "196",
+    name = "SvelteConfig",
   },
   [".vimrc"] = {
     icon = "",
@@ -853,6 +865,12 @@ local icons_by_file_extension = {
     cterm_color = "185",
     name = "Json",
   },
+  ["jsonc"] = {
+    icon = "",
+    color = "#cbcb41",
+    cterm_color = "185",
+    name = "Jsonc",
+  },
   ["json5"] = {
     icon = "",
     color = "#cbcb41",
@@ -1446,6 +1464,12 @@ local icons_by_file_extension = {
     cterm_color = "113",
     name = "Txt",
   },
+  ["vsh"] = {
+    icon = "",
+    color = "#5d87bf",
+    cterm_color = "67",
+    name = "Vlang",
+  },
   ["v"] = {
     icon = "󰍛",
     color = "#019833",
@@ -1549,7 +1573,7 @@ local icons_by_file_extension = {
     name = "Yml",
   },
   ["zig"] = {
-    icon = "",
+    icon = "",
     color = "#f69a1b",
     cterm_color = "172",
     name = "Zig",
@@ -1696,6 +1720,7 @@ local filetypes = {
   ["jpeg"] = "jpeg",
   ["jpg"] = "jpg",
   ["json"] = "json",
+  ["jsonc"] = "jsonc",
   ["json5"] = "json5",
   ["julia"] = "jl",
   ["kotlin"] = "kt",

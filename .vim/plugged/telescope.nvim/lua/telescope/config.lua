@@ -353,24 +353,24 @@ append(
 
 append(
   "get_status_text",
-  function(self)
+  function(self, opts)
     local ww = #(self:get_multi_selection())
     local xx = (self.stats.processed or 0) - (self.stats.filtered or 0)
     local yy = self.stats.processed or 0
-    if xx == 0 and yy == 0 then
-      return ""
+
+    local status_icon = ""
+    if opts and not opts.completed then
+      status_icon = "*"
     end
 
-    -- local status_icon
-    -- if opts.completed then
-    --   status_icon = "✔️"
-    -- else
-    --   status_icon = "*"
-    -- end
+    if xx == 0 and yy == 0 then
+      return status_icon
+    end
+
     if ww == 0 then
-      return string.format("%s / %s", xx, yy)
+      return string.format("%s %s / %s", status_icon, xx, yy)
     else
-      return string.format("%s / %s / %s", ww, xx, yy)
+      return string.format("%s %s / %s / %s", status_icon, ww, xx, yy)
     end
   end,
   [[
@@ -769,6 +769,25 @@ append(
     be opened in and the cursor placed in upon leaving the picker.
 
     Default: `function() return 0 end`
+  ]]
+)
+
+append(
+  "git_worktrees",
+  nil,
+  [[
+  A table of arrays of detached working trees with keys `gitdir` and `toplevel`.
+  Used to pass `--git-dir` and `--work-tree` flags to git commands when telescope fails
+  to infer the top-level directory of a given working tree based on cwd.
+  Example:
+  git_worktrees = {
+    {
+      toplevel = vim.env.HOME,
+      gitdir = vim.env.HOME .. '/.cfg'
+    }
+  }
+
+  Default: nil
   ]]
 )
 

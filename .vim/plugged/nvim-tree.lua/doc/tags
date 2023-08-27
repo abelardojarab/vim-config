@@ -5,7 +5,6 @@
 :NvimTreeFindFile	nvim-tree-lua.txt	/*:NvimTreeFindFile*
 :NvimTreeFindFileToggle	nvim-tree-lua.txt	/*:NvimTreeFindFileToggle*
 :NvimTreeFocus	nvim-tree-lua.txt	/*:NvimTreeFocus*
-:NvimTreeGenerateOnAttach	nvim-tree-lua.txt	/*:NvimTreeGenerateOnAttach*
 :NvimTreeOpen	nvim-tree-lua.txt	/*:NvimTreeOpen*
 :NvimTreeRefresh	nvim-tree-lua.txt	/*:NvimTreeRefresh*
 :NvimTreeResize	nvim-tree-lua.txt	/*:NvimTreeResize*
@@ -15,8 +14,6 @@ nvim-tree-api	nvim-tree-lua.txt	/*nvim-tree-api*
 nvim-tree-api.commands	nvim-tree-lua.txt	/*nvim-tree-api.commands*
 nvim-tree-api.commands.get()	nvim-tree-lua.txt	/*nvim-tree-api.commands.get()*
 nvim-tree-api.config	nvim-tree-lua.txt	/*nvim-tree-api.config*
-nvim-tree-api.config.mappings.active()	nvim-tree-lua.txt	/*nvim-tree-api.config.mappings.active()*
-nvim-tree-api.config.mappings.default()	nvim-tree-lua.txt	/*nvim-tree-api.config.mappings.default()*
 nvim-tree-api.config.mappings.default_on_attach()	nvim-tree-lua.txt	/*nvim-tree-api.config.mappings.default_on_attach()*
 nvim-tree-api.config.mappings.get_keymap()	nvim-tree-lua.txt	/*nvim-tree-api.config.mappings.get_keymap()*
 nvim-tree-api.config.mappings.get_keymap_default()	nvim-tree-lua.txt	/*nvim-tree-api.config.mappings.get_keymap_default()*
@@ -45,6 +42,7 @@ nvim-tree-api.live_filter	nvim-tree-lua.txt	/*nvim-tree-api.live_filter*
 nvim-tree-api.live_filter.clear()	nvim-tree-lua.txt	/*nvim-tree-api.live_filter.clear()*
 nvim-tree-api.live_filter.start()	nvim-tree-lua.txt	/*nvim-tree-api.live_filter.start()*
 nvim-tree-api.marks	nvim-tree-lua.txt	/*nvim-tree-api.marks*
+nvim-tree-api.marks.bulk.delete()	nvim-tree-lua.txt	/*nvim-tree-api.marks.bulk.delete()*
 nvim-tree-api.marks.bulk.move()	nvim-tree-lua.txt	/*nvim-tree-api.marks.bulk.move()*
 nvim-tree-api.marks.clear()	nvim-tree-lua.txt	/*nvim-tree-api.marks.clear()*
 nvim-tree-api.marks.get()	nvim-tree-lua.txt	/*nvim-tree-api.marks.get()*
@@ -110,7 +108,6 @@ nvim-tree-highlight	nvim-tree-lua.txt	/*nvim-tree-highlight*
 nvim-tree-introduction	nvim-tree-lua.txt	/*nvim-tree-introduction*
 nvim-tree-mappings	nvim-tree-lua.txt	/*nvim-tree-mappings*
 nvim-tree-mappings-default	nvim-tree-lua.txt	/*nvim-tree-mappings-default*
-nvim-tree-mappings-legacy	nvim-tree-lua.txt	/*nvim-tree-mappings-legacy*
 nvim-tree-netrw	nvim-tree-lua.txt	/*nvim-tree-netrw*
 nvim-tree-os-specific	nvim-tree-lua.txt	/*nvim-tree-os-specific*
 nvim-tree-quickstart	nvim-tree-lua.txt	/*nvim-tree-quickstart*
@@ -126,6 +123,7 @@ nvim-tree.actions.expand_all.max_folder_discovery	nvim-tree-lua.txt	/*nvim-tree.
 nvim-tree.actions.file_popup	nvim-tree-lua.txt	/*nvim-tree.actions.file_popup*
 nvim-tree.actions.file_popup.open_win_config	nvim-tree-lua.txt	/*nvim-tree.actions.file_popup.open_win_config*
 nvim-tree.actions.open_file	nvim-tree-lua.txt	/*nvim-tree.actions.open_file*
+nvim-tree.actions.open_file.eject	nvim-tree-lua.txt	/*nvim-tree.actions.open_file.eject*
 nvim-tree.actions.open_file.quit_on_open	nvim-tree-lua.txt	/*nvim-tree.actions.open_file.quit_on_open*
 nvim-tree.actions.open_file.resize_window	nvim-tree-lua.txt	/*nvim-tree.actions.open_file.resize_window*
 nvim-tree.actions.open_file.window_picker	nvim-tree-lua.txt	/*nvim-tree.actions.open_file.window_picker*
@@ -157,11 +155,11 @@ nvim-tree.filters.custom	nvim-tree-lua.txt	/*nvim-tree.filters.custom*
 nvim-tree.filters.dotfiles	nvim-tree-lua.txt	/*nvim-tree.filters.dotfiles*
 nvim-tree.filters.exclude	nvim-tree-lua.txt	/*nvim-tree.filters.exclude*
 nvim-tree.filters.git_clean	nvim-tree-lua.txt	/*nvim-tree.filters.git_clean*
+nvim-tree.filters.git_ignored	nvim-tree-lua.txt	/*nvim-tree.filters.git_ignored*
 nvim-tree.filters.no_buffer	nvim-tree-lua.txt	/*nvim-tree.filters.no_buffer*
 nvim-tree.git	nvim-tree-lua.txt	/*nvim-tree.git*
 nvim-tree.git.disable_for_dirs	nvim-tree-lua.txt	/*nvim-tree.git.disable_for_dirs*
 nvim-tree.git.enable	nvim-tree-lua.txt	/*nvim-tree.git.enable*
-nvim-tree.git.ignore	nvim-tree-lua.txt	/*nvim-tree.git.ignore*
 nvim-tree.git.show_on_dirs	nvim-tree-lua.txt	/*nvim-tree.git.show_on_dirs*
 nvim-tree.git.show_on_open_dirs	nvim-tree-lua.txt	/*nvim-tree.git.show_on_open_dirs*
 nvim-tree.git.timeout	nvim-tree-lua.txt	/*nvim-tree.git.timeout*
@@ -192,11 +190,11 @@ nvim-tree.modified.enable	nvim-tree-lua.txt	/*nvim-tree.modified.enable*
 nvim-tree.modified.show_on_dirs	nvim-tree-lua.txt	/*nvim-tree.modified.show_on_dirs*
 nvim-tree.modified.show_on_open_dirs	nvim-tree-lua.txt	/*nvim-tree.modified.show_on_open_dirs*
 nvim-tree.notify	nvim-tree-lua.txt	/*nvim-tree.notify*
+nvim-tree.notify.absolute_path	nvim-tree-lua.txt	/*nvim-tree.notify.absolute_path*
 nvim-tree.notify.threshold	nvim-tree-lua.txt	/*nvim-tree.notify.threshold*
 nvim-tree.on_attach	nvim-tree-lua.txt	/*nvim-tree.on_attach*
 nvim-tree.prefer_startup_root	nvim-tree-lua.txt	/*nvim-tree.prefer_startup_root*
 nvim-tree.reload_on_bufenter	nvim-tree-lua.txt	/*nvim-tree.reload_on_bufenter*
-nvim-tree.remove_keymaps	nvim-tree-lua.txt	/*nvim-tree.remove_keymaps*
 nvim-tree.renderer	nvim-tree-lua.txt	/*nvim-tree.renderer*
 nvim-tree.renderer.add_trailing	nvim-tree-lua.txt	/*nvim-tree.renderer.add_trailing*
 nvim-tree.renderer.full_name	nvim-tree-lua.txt	/*nvim-tree.renderer.full_name*
@@ -221,7 +219,13 @@ nvim-tree.renderer.icons.show.folder_arrow	nvim-tree-lua.txt	/*nvim-tree.rendere
 nvim-tree.renderer.icons.show.git	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.show.git*
 nvim-tree.renderer.icons.show.modified	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.show.modified*
 nvim-tree.renderer.icons.symlink_arrow	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.symlink_arrow*
-nvim-tree.renderer.icons.webdev_colors	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.webdev_colors*
+nvim-tree.renderer.icons.web_devicons	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.web_devicons*
+nvim-tree.renderer.icons.web_devicons.file	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.web_devicons.file*
+nvim-tree.renderer.icons.web_devicons.file.color	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.web_devicons.file.color*
+nvim-tree.renderer.icons.web_devicons.file.enable	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.web_devicons.file.enable*
+nvim-tree.renderer.icons.web_devicons.folder	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.web_devicons.folder*
+nvim-tree.renderer.icons.web_devicons.folder.color	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.web_devicons.folder.color*
+nvim-tree.renderer.icons.web_devicons.folder.enable	nvim-tree-lua.txt	/*nvim-tree.renderer.icons.web_devicons.folder.enable*
 nvim-tree.renderer.indent_markers	nvim-tree-lua.txt	/*nvim-tree.renderer.indent_markers*
 nvim-tree.renderer.indent_markers.enable	nvim-tree-lua.txt	/*nvim-tree.renderer.indent_markers.enable*
 nvim-tree.renderer.indent_markers.icons	nvim-tree-lua.txt	/*nvim-tree.renderer.indent_markers.icons*
@@ -233,7 +237,10 @@ nvim-tree.renderer.symlink_destination	nvim-tree-lua.txt	/*nvim-tree.renderer.sy
 nvim-tree.respect_buf_cwd	nvim-tree-lua.txt	/*nvim-tree.respect_buf_cwd*
 nvim-tree.root_dirs	nvim-tree-lua.txt	/*nvim-tree.root_dirs*
 nvim-tree.select_prompts	nvim-tree-lua.txt	/*nvim-tree.select_prompts*
-nvim-tree.sort_by	nvim-tree-lua.txt	/*nvim-tree.sort_by*
+nvim-tree.sort	nvim-tree-lua.txt	/*nvim-tree.sort*
+nvim-tree.sort.files_first	nvim-tree-lua.txt	/*nvim-tree.sort.files_first*
+nvim-tree.sort.folders_first	nvim-tree-lua.txt	/*nvim-tree.sort.folders_first*
+nvim-tree.sort.sorter	nvim-tree-lua.txt	/*nvim-tree.sort.sorter*
 nvim-tree.sync_root_with_cwd	nvim-tree-lua.txt	/*nvim-tree.sync_root_with_cwd*
 nvim-tree.system_open	nvim-tree-lua.txt	/*nvim-tree.system_open*
 nvim-tree.system_open.args	nvim-tree-lua.txt	/*nvim-tree.system_open.args*
@@ -262,9 +269,6 @@ nvim-tree.view.float.enable	nvim-tree-lua.txt	/*nvim-tree.view.float.enable*
 nvim-tree.view.float.open_win_config	nvim-tree-lua.txt	/*nvim-tree.view.float.open_win_config*
 nvim-tree.view.float.quit_on_focus_loss	nvim-tree-lua.txt	/*nvim-tree.view.float.quit_on_focus_loss*
 nvim-tree.view.hide_root_folder	nvim-tree-lua.txt	/*nvim-tree.view.hide_root_folder*
-nvim-tree.view.mappings	nvim-tree-lua.txt	/*nvim-tree.view.mappings*
-nvim-tree.view.mappings.custom_only	nvim-tree-lua.txt	/*nvim-tree.view.mappings.custom_only*
-nvim-tree.view.mappings.list	nvim-tree-lua.txt	/*nvim-tree.view.mappings.list*
 nvim-tree.view.number	nvim-tree-lua.txt	/*nvim-tree.view.number*
 nvim-tree.view.preserve_window_proportions	nvim-tree-lua.txt	/*nvim-tree.view.preserve_window_proportions*
 nvim-tree.view.relativenumber	nvim-tree-lua.txt	/*nvim-tree.view.relativenumber*

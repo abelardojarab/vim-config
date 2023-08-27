@@ -5,13 +5,13 @@ local defaults = utils.defaults
 
 --luacheck: push no max line length
 
+---@alias nui_layout_option_anchor "NW"|"NE"|"SW"|"SE"
 ---@alias nui_layout_option_relative_type "'cursor'"|"'editor'"|"'win'"|"'buf'"
 ---@alias nui_layout_option_relative { type: nui_layout_option_relative_type, winid?: number, position?: { row: number, col: number }  }
 ---@alias nui_layout_option_position { row: number|string, col: number|string }
 ---@alias nui_layout_option_size { width: number|string, height: number|string }
----@alias nui_layout_config { relative?: nui_layout_option_relative, size?: nui_layout_option_size, position?: nui_layout_option_position }
 ---@alias nui_layout_internal_position { relative: "'cursor'"|"'editor'"|"'win'", win: number, bufpos?: number[], row: number, col: number }
----@alias nui_layout_container_info { relative: nui_layout_option_relative_type, size: nui_layout_option_size, type: "'editor'"|"'window'" }
+---@alias nui_layout_container_info { relative: nui_layout_option_relative_type, size: { height: integer, width: integer }, type: "'editor'"|"'window'" }
 
 --luacheck: pop
 
@@ -87,13 +87,11 @@ function mod.get_container_info(position)
     }
   end
 
-  if relative == "cursor" or relative == "win" then
-    return {
-      relative = position.bufpos and "buf" or relative,
-      size = utils.get_window_size(position.win),
-      type = "window",
-    }
-  end
+  return {
+    relative = position.bufpos and "buf" or relative,
+    size = utils.get_window_size(position.win),
+    type = "window",
+  }
 end
 
 ---@param relative nui_layout_option_relative
@@ -120,7 +118,7 @@ function mod.parse_relative(relative, fallback_winid)
 end
 
 ---@param component_internal table
----@param config nui_layout_config
+---@param config nui_layout_options
 function mod.update_layout_config(component_internal, config)
   local internal = component_internal
 
@@ -132,34 +130,37 @@ function mod.update_layout_config(component_internal, config)
 
   local win_config = internal.win_config
 
+  if config.anchor then
+    win_config.anchor = config.anchor
+  end
+
   if options.relative then
     internal.layout.relative = options.relative
 
     local fallback_winid = internal.position and internal.position.win or vim.api.nvim_get_current_win()
-    internal.position = vim.tbl_extend(
-      "force",
-      internal.position or {},
-      mod.parse_relative(internal.layout.relative, fallback_winid)
-    )
+    internal.position =
+      vim.tbl_extend("force", internal.position or {}, mod.parse_relative(internal.layout.relative, fallback_winid))
 
     win_config.relative = internal.position.relative
     win_config.win = internal.position.relative == "win" and internal.position.win or nil
     win_config.bufpos = internal.position.bufpos
   end
 
+  -- luacov: disable
   if not win_config.relative then
     return error("missing layout config: relative")
   end
+  -- luacov: enable
 
   local prev_container_size = internal.container_info and internal.container_info.size
   internal.container_info = mod.get_container_info(internal.position)
   local container_size_changed = not mod.size.are_same(internal.container_info.size, prev_container_size)
 
-  local need_size_refresh = container_size_changed
-    and internal.layout.size
-    and mod.size.contains_percentage_string(internal.layout.size)
-
-  if options.size or need_size_refresh then
+  if
+    options.size
+    -- need_size_refresh
+    or (container_size_changed and internal.layout.size and mod.size.contains_percentage_string(internal.layout.size))
+  then
     internal.layout.size = options.size or internal.layout.size
 
     internal.size = mod.calculate_window_size(internal.layout.size, internal.container_info.size)
@@ -172,11 +173,15 @@ function mod.update_layout_config(component_internal, config)
     return error("missing layout config: size")
   end
 
-  local need_position_refresh = container_size_changed
-    and internal.layout.position
-    and mod.position.contains_percentage_string(internal.layout.position)
-
-  if options.position or need_position_refresh then
+  if
+    options.position
+    -- need_position_refresh
+    or (
+      container_size_changed
+      and internal.layout.position
+      and mod.position.contains_percentage_string(internal.layout.position)
+    )
+  then
     internal.layout.position = options.position or internal.layout.position
 
     internal.position = vim.tbl_extend(
@@ -198,7 +203,7 @@ end
 ---@param size_b? nui_layout_option_size
 ---@return boolean
 function mod_size.are_same(size_a, size_b)
-  return size_b and size_a.width == size_b.width and size_a.height == size_b.height
+  return size_b and size_a.width == size_b.width and size_a.height == size_b.height or false
 end
 
 ---@param size nui_layout_option_size

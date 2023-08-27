@@ -39,7 +39,7 @@ end
 ---@vararg string
 ---@return integer
 function M.measure(...)
-  return M.fold(function(accum, item) return accum + api.nvim_strwidth(tostring(item)) end, { ... }, 0)
+  return M.fold(function(accum, item) return accum + strwidth(tostring(item)) end, { ... }, 0)
 end
 
 ---Concatenate a series of strings together
@@ -80,7 +80,7 @@ end
 -- https://stackoverflow.com/questions/1410862/concatenation-of-tables-in-lua
 --- @generic T
 --- @vararg T
---- @return T
+--- @return T[]
 function M.merge_lists(...)
   local t = {}
   for n = 1, select("#", ...) do
@@ -154,6 +154,30 @@ function M.notify(msg, level, opts)
   vim.schedule(function() vim.notify(msg, level, nopts) end)
 end
 
+---@return number[]?
+function M.restore_positions()
+  local str = vim.g[constants.positions_key]
+  local ok, paths = pcall(vim.json.decode, str)
+  if not ok or type(paths) ~= "table" or #paths == 0 then return nil end
+  local ids = vim.tbl_map(function(path)
+    local escaped = vim.fn.fnameescape(path)
+    return vim.fn.bufnr("^" .. escaped .. "$" --[[@as integer]])
+  end, paths)
+  return vim.tbl_filter(function(id) return id ~= -1 end, ids)
+end
+
+---@param ids number[]
+function M.save_positions(ids)
+  local paths = vim.tbl_map(function(id) return vim.api.nvim_buf_get_name(id) end, ids)
+  vim.g[constants.positions_key] = vim.json.encode(paths)
+end
+
+--- @param elements bufferline.TabElement[]
+--- @return number[]
+function M.get_ids(elements)
+  return vim.tbl_map(function(item) return item.id end, elements)
+end
+
 ---Get an icon for a filetype using either nvim-web-devicons or vim-devicons
 ---if using the lua plugin this also returns the icon's highlights
 ---@param opts bufferline.IconFetcherOpts
@@ -200,12 +224,12 @@ function M.is_current_stable_release() return vim.version().minor >= current_sta
 ---@param col_limit integer
 ---@return string
 local function truncate_by_cell(str, col_limit)
-  if str and str:len() == api.nvim_strwidth(str) then return fn.strcharpart(str, 0, col_limit) end
+  if str and str:len() == strwidth(str) then return fn.strcharpart(str, 0, col_limit) end
   local short = fn.strcharpart(str, 0, col_limit)
-  local width = api.nvim_strwidth(short)
+  local width = strwidth(short)
   while width > 1 and width > col_limit do
     short = fn.strcharpart(short, 0, fn.strchars(short) - 1)
-    width = api.nvim_strwidth(short)
+    width = strwidth(short)
   end
   return short
 end
@@ -221,7 +245,7 @@ function M.truncate_name(name, word_limit)
   local ext = fn.fnamemodify(name, ":e")
   if ext ~= "" then
     local truncated = name:gsub("%." .. ext, "", 1)
-    if api.nvim_strwidth(truncated) < word_limit then return truncated .. constants.ELLIPSIS end
+    if strwidth(truncated) < word_limit then return truncated .. constants.ELLIPSIS end
   end
   return truncate_by_cell(name, word_limit - 1) .. constants.ELLIPSIS
 end

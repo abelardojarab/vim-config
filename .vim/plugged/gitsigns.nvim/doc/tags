@@ -18,7 +18,6 @@ gitsigns-config-current_line_blame_formatter_opts	gitsigns.txt	/*gitsigns-config
 gitsigns-config-current_line_blame_opts	gitsigns.txt	/*gitsigns-config-current_line_blame_opts*
 gitsigns-config-debug_mode	gitsigns.txt	/*gitsigns-config-debug_mode*
 gitsigns-config-diff_opts	gitsigns.txt	/*gitsigns-config-diff_opts*
-gitsigns-config-keymaps	gitsigns.txt	/*gitsigns-config-keymaps*
 gitsigns-config-linehl	gitsigns.txt	/*gitsigns-config-linehl*
 gitsigns-config-max_file_length	gitsigns.txt	/*gitsigns-config-max_file_length*
 gitsigns-config-numhl	gitsigns.txt	/*gitsigns-config-numhl*

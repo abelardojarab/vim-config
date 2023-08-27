@@ -18,6 +18,7 @@ local configurations = {
     flags = {
       stat = "--stat",
       oneline = "--oneline",
+      no_patch = "--no-patch",
     },
     options = {
       format = "--format",
@@ -43,6 +44,7 @@ local configurations = {
       porcelain = "--porcelain",
     },
   },
+
   log = config {
     flags = {
       oneline = "--oneline",
@@ -50,6 +52,7 @@ local configurations = {
       remotes = "--remotes",
       all = "--all",
       graph = "--graph",
+      color = "--color",
     },
     options = {
       pretty = "--pretty",
@@ -64,11 +67,27 @@ local configurations = {
       end,
     },
   },
+
   config = config {
     flags = {
+      _local = "--local",
+      global = "--global",
+      list = "--list",
       _get = "--get",
+      _add = "--add",
+      _unset = "--unset",
     },
     aliases = {
+      set = function(tbl)
+        return function(key, value)
+          return tbl.arg_list { key, value }
+        end
+      end,
+      unset = function(tbl)
+        return function(key)
+          return tbl._unset.args(key)
+        end
+      end,
       get = function(tbl)
         return function(path)
           return tbl._get.args(path)
@@ -76,6 +95,7 @@ local configurations = {
       end,
     },
   },
+
   diff = config {
     flags = {
       cached = "--cached",
@@ -83,15 +103,19 @@ local configurations = {
       patch = "--patch",
       name_only = "--name-only",
       no_ext_diff = "--no-ext-diff",
+      no_index = "--no-index",
     },
   },
+
   stash = config {
     flags = {
       apply = "apply",
       drop = "drop",
+      push = "push",
       index = "--index",
     },
   },
+
   rebase = config {
     flags = {
       interactive = "-i",
@@ -100,15 +124,27 @@ local configurations = {
       skip = "--skip",
     },
   },
+
   merge = config {
     flags = {
       continue = "--continue",
       abort = "--abort",
     },
   },
+
+  ["merge-base"] = config {
+    flags = {
+      is_ancestor = "--is-ancestor",
+    },
+  },
+
   reset = config {
     flags = {
       hard = "--hard",
+      mixed = "--mixed",
+      soft = "--soft",
+      keep = "--keep",
+      merge = "--merge",
     },
     aliases = {
       commit = function(tbl)
@@ -118,14 +154,43 @@ local configurations = {
       end,
     },
   },
+
+  revert = config {
+    flags = {
+      no_commit = "--no-commit",
+      continue = "--continue",
+      skip = "--skip",
+      abort = "--abort",
+    },
+  },
+
   checkout = config {
     short_opts = {
       b = "-b",
     },
+    flags = {
+      _track = "--track",
+      detach = "--detach",
+    },
     aliases = {
+      track = function(tbl)
+        return function(branch)
+          return tbl._track.args(branch)
+        end
+      end,
+      rev = function(tbl)
+        return function(rev)
+          return tbl.args(rev)
+        end
+      end,
       branch = function(tbl)
         return function(branch)
           return tbl.args(branch)
+        end
+      end,
+      commit = function(tbl)
+        return function(commit)
+          return tbl.args(commit)
         end
       end,
       new_branch = function(tbl)
@@ -140,19 +205,24 @@ local configurations = {
       end,
     },
   },
+
   remote = config {
     flags = {
       push = "--push",
+      add = "add",
+      rm = "rm",
+      rename = "rename",
+      prune = "prune",
     },
     aliases = {
       get_url = function(tbl)
         return function(remote)
-          tbl.prefix("get-url")
-          return tbl.args(remote)
+          return tbl.args("get-url", remote)
         end
       end,
     },
   },
+
   apply = config {
     flags = {
       cached = "--cached",
@@ -165,23 +235,36 @@ local configurations = {
       end,
     },
   },
+
   add = config {
     flags = {
       update = "-u",
       all = "-A",
     },
   },
+
   commit = config {
     flags = {
+      all = "--all",
+      no_verify = "--no-verify",
       amend = "--amend",
       only = "--only",
       dry_run = "--dry-run",
       no_edit = "--no-edit",
+      edit = "--edit",
+    },
+    aliases = {
+      with_message = function(tbl)
+        return function(message)
+          return tbl.args("-F", "-").input(message)
+        end
+      end,
     },
     options = {
       commit_message_file = "--file",
     },
   },
+
   push = config {
     flags = {
       delete = "--delete",
@@ -199,6 +282,7 @@ local configurations = {
       end,
     },
   },
+
   pull = config {
     flags = {
       no_commit = "--no-commit",
@@ -207,11 +291,19 @@ local configurations = {
       flags = {},
     },
   },
+
+  cherry = config {
+    flags = {
+      verbose = "-v",
+    },
+  },
+
   branch = config {
     flags = {
       all = "-a",
       delete = "-d",
       remotes = "-r",
+      force = "--force",
       current = "--show-current",
       very_verbose = "-vv",
       move = "-m",
@@ -229,7 +321,21 @@ local configurations = {
       end,
     },
   },
-  fetch = config {},
+
+  fetch = config {
+    options = {
+      recurse_submodules = "--recurse-submodules",
+      verbose = "--verbose",
+    },
+    aliases = {
+      jobs = function(tbl)
+        return function(n)
+          return tbl.args("--jobs=" .. tostring(n))
+        end
+      end,
+    },
+  },
+
   ["read-tree"] = config {
     flags = {
       merge = "-m",
@@ -245,7 +351,9 @@ local configurations = {
       end,
     },
   },
+
   ["write-tree"] = config {},
+
   ["commit-tree"] = config {
     flags = {
       no_gpg_sign = "--no-gpg-sign",
@@ -270,6 +378,7 @@ local configurations = {
       end,
     },
   },
+
   ["update-index"] = config {
     flags = {
       add = "--add",
@@ -277,30 +386,75 @@ local configurations = {
       refresh = "--refresh",
     },
   },
+
   ["show-ref"] = config {
     flags = {
       verify = "--verify",
     },
   },
+
+  ["show-branch"] = config {
+    flags = {
+      all = "--all",
+    },
+  },
+
+  reflog = config {
+    flags = {
+      show = "show",
+    },
+    options = {
+      format = "--format",
+    },
+    aliases = {
+      date = function(tbl)
+        return function(mode)
+          return tbl.args("--date=" .. mode)
+        end
+      end,
+    },
+  },
+
   ["update-ref"] = config {
     flags = {
       create_reflog = "--create-reflog",
     },
-    short_opts = {
-      message = "-m",
+    aliases = {
+      message = function(tbl)
+        return function(text)
+          local escaped_text, _ = text:gsub([["]], [[\"]])
+          return tbl.args("-m", string.format([["%s"]], escaped_text))
+        end
+      end,
     },
   },
+
   ["ls-files"] = config {
     flags = {
       others = "--others",
       deleted = "--deleted",
       modified = "--modified",
       cached = "--cached",
+      deduplicate = "--deduplicate",
+      exclude_standard = "--exclude-standard",
       full_name = "--full-name",
     },
   },
+
+  ["ls-remote"] = config {
+    aliases = {
+      remote = function(tbl)
+        return function(remote)
+          return tbl.args(remote)
+        end
+      end,
+    },
+  },
+
   ["rev-parse"] = config {
     flags = {
+      verify = "--verify",
+      short = "--short",
       revs_only = "--revs-only",
       no_revs = "--no-revs",
       flags = "--flags",
@@ -312,10 +466,27 @@ local configurations = {
       abbrev_ref = "--abbrev-ref",
     },
   },
+
+  ["cherry-pick"] = config {
+    flags = {
+      no_commit = "--no-commit",
+      continue = "--continue",
+      skip = "--skip",
+      abort = "--abort",
+    },
+  },
 }
 
+-- TODO: Consider returning a Path object, since consumers of this function tend to need that anyways.
 local function git_root()
-  return process.new({ cmd = { "git", "rev-parse", "--show-toplevel" } }):spawn_blocking().stdout[1]
+  local process =
+    process.new({ cmd = { "git", "rev-parse", "--show-toplevel" }, ignore_code = true }):spawn_blocking()
+
+  if process ~= nil and process.code == 0 then
+    return process.stdout[1]
+  else
+    return ""
+  end
 end
 
 local git_root_sync = function()
@@ -327,15 +498,13 @@ local git_dir_path_sync = function()
 end
 
 local git_is_repository_sync = function(cwd)
-  local result
-
   if not cwd then
-    result = vim.fn.system("git rev-parse --is-inside-work-tree")
+    vim.fn.system("git rev-parse --is-inside-work-tree")
   else
-    result = vim.fn.system(string.format("git -C %s rev-parse --is-inside-work-tree", cwd))
+    vim.fn.system(string.format("git -C %q rev-parse --is-inside-work-tree", cwd))
   end
 
-  return vim.trim(result) == "true"
+  return vim.v.shell_error == 0
 end
 
 local history = {}
@@ -355,15 +524,17 @@ local function handle_new_cmd(job, popup, hidden_text)
   })
 
   do
-    local log_fn = logger.debug
+    local log_fn = logger.trace
     if job.code > 0 then
       log_fn = logger.error
     end
-    log_fn(string.format("Execution of '%s'", job.cmd))
     if job.code > 0 then
-      log_fn(string.format("  failed with code %d", job.code))
+      log_fn(
+        string.format("[CLI] Execution of '%s' failed with code %d after %d ms", job.cmd, job.code, job.time)
+      )
+    else
+      log_fn(string.format("[CLI] Execution of '%s' succeeded in %d ms", job.cmd, job.time))
     end
-    log_fn(string.format("  took %d ms", job.time))
   end
 
   if popup and job.code ~= 0 then
@@ -576,12 +747,13 @@ local function new_builder(subcommand)
     env = {},
   }
 
-  local function to_process(verbose, suppress_error)
-    -- Disable the pager so that the commands don't stop and wait for pagination
-    local cmd = { "git", "--no-pager", "-c", "color.ui=always", "--no-optional-locks", subcommand }
+  local function to_process(verbose, suppress_error, ignore_code)
+    local cmd = {}
+
     for _, o in ipairs(state.options) do
       table.insert(cmd, o)
     end
+
     for _, arg in ipairs(state.arguments) do
       if arg ~= "" then
         table.insert(cmd, arg)
@@ -590,17 +762,20 @@ local function new_builder(subcommand)
 
     if #state.files > 0 then
       table.insert(cmd, "--")
-    end
 
-    for _, f in ipairs(state.files) do
-      table.insert(cmd, f)
+      for _, f in ipairs(state.files) do
+        table.insert(cmd, f)
+      end
     end
 
     if state.prefix then
       table.insert(cmd, 1, state.prefix)
     end
 
-    logger.debug(string.format("[CLI]: Executing '%s %s'", subcommand, table.concat(cmd, " ")))
+    -- Disable the pager so that the commands don't stop and wait for pagination
+    cmd = util.merge({ "git", "--no-pager", "-c", "color.ui=always", "--no-optional-locks", subcommand }, cmd)
+
+    logger.trace(string.format("[CLI]: Executing '%s': '%s'", subcommand, table.concat(cmd, " ")))
 
     return process.new {
       cmd = cmd,
@@ -608,6 +783,7 @@ local function new_builder(subcommand)
       env = state.env,
       pty = state.in_pty,
       verbose = verbose,
+      ignore_code = ignore_code,
       on_error = suppress_error,
     }
   end
@@ -647,6 +823,22 @@ local function new_builder(subcommand)
 
       return result
     end,
+    call_ignoring_exit_code = function(verbose)
+      local p = to_process(verbose, false, true)
+      local result = p:spawn_async()
+
+      assert(result, "Command did not complete")
+
+      handle_new_cmd({
+        cmd = table.concat(p.cmd, " "),
+        stdout = result.stdout,
+        stderr = result.stderr,
+        code = 0,
+        time = result.time,
+      }, state.show_popup, state.hide_text)
+
+      return result
+    end,
     call = function(verbose)
       local p = to_process(verbose, not state.show_popup)
       local result = p:spawn_async(function()
@@ -674,7 +866,7 @@ local function new_builder(subcommand)
     end,
     call_sync = function(verbose, external_errors)
       local p = to_process(verbose, external_errors)
-      logger.debug(string.format("[CLI]: Executing '%s %s'", subcommand, table.concat(p.cmd, " ")))
+
       if not p:spawn() then
         error("Failed to run command")
         return nil
@@ -688,6 +880,27 @@ local function new_builder(subcommand)
         stdout = result.stdout,
         stderr = result.stderr,
         code = result.code,
+        time = result.time,
+      }, state.show_popup, state.hide_text)
+
+      return result
+    end,
+    call_sync_ignoring_exit_code = function(verbose, external_errors)
+      local p = to_process(verbose, external_errors, true)
+
+      if not p:spawn() then
+        error("Failed to run command")
+        return nil
+      end
+
+      local result = p:wait()
+      assert(result, "Command did not complete")
+
+      handle_new_cmd({
+        cmd = table.concat(p.cmd, " "),
+        stdout = result.stdout,
+        stderr = result.stderr,
+        code = 0,
         time = result.time,
       }, state.show_popup, state.hide_text)
 
@@ -763,7 +976,7 @@ local meta = {
       return new_builder(key)
     end
 
-    error("unknown field")
+    error("unknown field: " .. key)
   end,
 }
 

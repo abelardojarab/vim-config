@@ -630,8 +630,8 @@ function! s:connect(addr) abort
 
   let s:state['ch'] = l:ch
 
-  " Set running because so that the next go#debug#Stack call doesn't change
-  " operation to continue.
+  " Set running so that the next go#debug#Stack call doesn't change operation
+  " to continue.
   let s:state['running'] = 0
 
   " It is ok to halt whether whether delve was started with connect, debug, or
@@ -653,6 +653,9 @@ function! s:sync_breakpoints()
     let l:promise = go#promise#New(function('s:rpc_response'), 20000, {})
     call s:call_jsonrpc(l:promise.wrapper, 'RPCServer.ListBreakpoints', {'All': v:true})
     let l:res = l:promise.await()
+    if type(l:res) != v:t_dict || !has_key(l:res, 'result') || type(l:res.result) != v:t_dict || !has_key(l:res.result, 'Breakpoints')
+      call go#util#EchoError('could not list breakpoints')
+    endif
     let l:breakpoints = l:res.result.Breakpoints
 
     let l:signs = s:list_breakpointsigns()
@@ -798,7 +801,7 @@ function! s:handleRPCResult(resp) abort
     " response.
     call call(s:state.resultHandlers[l:id], [function('s:check_errors', [a:resp]), a:resp])
   catch
-    throw v:exception
+    throw substitute(v:exception, '^Vim', '', '')
   finally
     if has_key(s:state.resultHandlers, l:id)
       call remove(s:state.resultHandlers, l:id)
@@ -1367,9 +1370,9 @@ function! go#debug#Stack(name) abort
   if s:state.running is 0
     if l:name != 'halt'
       let l:name = 'continue'
+      let s:state.running = 1
+      call s:continue()
     endif
-    let s:state.running = 1
-    call s:continue()
   endif
 
   " Add a breakpoint to the main.Main if the user didn't define any.
@@ -1446,7 +1449,7 @@ function! s:handleNextInProgress(res)
       endif
     endwhile
   catch
-    throw v:exception
+    throw substitute(v:exception, '^Vim', '', '')
   endtry
 endfunction
 

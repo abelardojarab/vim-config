@@ -14,20 +14,18 @@ local mod = {}
 local function get_child_position(box_dir)
   if box_dir == "row" then
     return "right"
-  elseif box_dir == "col" then
+  else
     return "bottom"
   end
 end
 
 ---@param position nui_split_internal_position
----@param child { size: number|string|nui_layout_option_size, grow?: boolean }
+---@param child { size: nui_layout_option_size, grow?: boolean }
 ---@param container_size { width?: number, height?: number }
 ---@param growable_dimension_per_factor? number
 local function get_child_size(position, child, container_size, growable_dimension_per_factor)
   local child_size
-  if not u.is_type("table", child.size) then
-    child_size = child.size --[[@as number|string]]
-  elseif position == "left" or position == "right" then
+  if position == "left" or position == "right" then
     child_size = child.size.width
   else
     child_size = child.size.height
@@ -48,15 +46,19 @@ local function get_container_size(meta)
 end
 
 function mod.process(box, meta)
+  -- luacov: disable
   if box.mount or box.component or not box.box then
     return error("invalid paramter: box")
   end
+  -- luacov: enable
 
   local container_size = get_container_size(meta)
 
+  -- luacov: disable
   if not u.is_type("number", container_size.width) and not u.is_type("number", container_size.height) then
     return error("invalid value: box.size")
   end
+  -- luacov: enable
 
   local consumed_size = {
     width = 0,

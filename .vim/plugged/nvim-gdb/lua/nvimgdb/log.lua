@@ -1,8 +1,5 @@
 local log = {}
 
--- FIXME: DOC
--- Should be exposed in the vim docs.
---
 -- Log level dictionary with reverse lookup as well.
 --
 -- Can be used to lookup the number from the name or the name from the number.
@@ -18,29 +15,42 @@ log.levels = {
 }
 
 -- Default log level.
-local current_log_level = log.levels.CRIT
-if vim.api.nvim_eval("$CI") ~= "" then
-  current_log_level = log.levels.DEBUG
+log.current_log_level = (vim.env.CI == nil) and log.levels.CRIT or log.levels.DEBUG
+
+local logfilename = 'nvimgdb.log'
+local logfile = nil
+
+--- Returns the log filename.
+---@return string log filename
+function log.get_filename()
+  return logfilename
+end
+
+local get_logfile = function()
+  if logfile == nil then
+    logfile = assert(io.open(logfilename, "a+"))
+  end
+  return logfile
+end
+
+---Set log file name
+---@param filename string new log filename
+function log.set_filename(filename)
+  if filename ~= logfilename then
+    logfilename = filename
+    if logfile ~= nil then
+      logfile:close()
+      logfile = nil
+    end
+  end
 end
 
 local log_date_format = "%F %H:%M:%S"
 
 do
-  local logfilename = 'nvimgdb.log'
-
-  --- Returns the log filename.
-  --@returns (string) log filename
-  function log.get_filename()
-    return logfilename
-  end
-
-  --vim.fn.mkdir(vim.fn.stdpath('cache'), "p")
-  local logfile = nil
-  local get_logfile = function()
-    if logfile == nil then
-      logfile = assert(io.open(logfilename, "a+"))
-    end
-    return logfile
+  local function get_timestamp()
+    local sec, usec = vim.loop.gettimeofday()
+    return os.date(log_date_format, sec) .. "," .. string.format("%03d", math.floor(usec / 1000))
   end
 
   for level, levelnr in pairs(log.levels) do
@@ -62,11 +72,18 @@ do
     -- This way you can avoid string allocations if the log level isn't high enough.
     log[level:lower()] = function(...)
       local argc = select("#", ...)
-      if levelnr < current_log_level then return false end
+      if levelnr < log.current_log_level then return false end
       if argc == 0 then return true end
       local info = debug.getinfo(2, "Sl")
-      local fileinfo = string.format("%s:%s", info.short_src, info.currentline)
-      local parts = { table.concat({os.date(log_date_format), " [", level, "] ", fileinfo, ": "}, "") }
+      local src = info.short_src
+      -- Chop off the long path prefix, just keep everything relative to lua/ or lib/
+      local suffix = src:match("l[ui][ab][/\\].+")
+      if suffix ~= nil then
+        src = suffix
+      end
+
+      local fileinfo = string.format("%s:%s", src, info.currentline)
+      local parts = { table.concat({get_timestamp(), " [", level, "] ", fileinfo, ": "}, "") }
       for i = 1, argc do
         local arg = select(i, ...)
         if arg == nil then
@@ -95,11 +112,11 @@ log.levels[5] = "CRIT"
 --@param level string|number One of `vim.lsp.log.levels`
 function log.set_level(level)
   if type(level) == 'string' then
-    current_log_level = assert(log.levels[level:upper()], string.format("Invalid log level: %q", level))
+    log.current_log_level = assert(log.levels[level:upper()], string.format("Invalid log level: %q", level))
   else
     assert(type(level) == 'number', "level must be a number or string")
     assert(log.levels[level], string.format("Invalid log level: %d", level))
-    current_log_level = level
+    log.current_log_level = level
   end
 end
 
@@ -107,7 +124,7 @@ end
 --@param level number log level
 --@returns (bool) true if would log, false if not
 function log.should_log(level)
-  return level >= current_log_level
+  return level >= log.current_log_level
 end
 
 return log

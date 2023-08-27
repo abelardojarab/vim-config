@@ -1,0 +1,17 @@
+return {
+    AuthHandler  = require('distant-core.auth'),
+    builder      = require('distant-core.builder'),
+    Client       = require('distant-core.client'),
+    Cli          = require('distant-core.cli'),
+    Destination  = require('distant-core.destination'),
+    EventEmitter = require('distant-core.emitter'),
+    installer    = require('distant-core.installer'),
+    Job          = require('distant-core.job'),
+    log          = require('distant-core.log'),
+    Manager      = require('distant-core.manager'),
+    Server       = require('distant-core.server'),
+    Timeout      = require('distant-core.timeout'),
+    ui           = require('distant-core.ui'),
+    utils        = require('distant-core.utils'),
+    Version      = require('distant-core.version'),
+}

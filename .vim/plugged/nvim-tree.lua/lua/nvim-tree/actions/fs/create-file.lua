@@ -9,9 +9,10 @@ local find_file = require("nvim-tree.actions.finders.find-file").fn
 local M = {}
 
 local function create_and_notify(file)
+  events._dispatch_will_create_file(file)
   local ok, fd = pcall(vim.loop.fs_open, file, "w", 420)
   if not ok then
-    notify.error("Couldn't create file " .. file)
+    notify.error("Couldn't create file " .. notify.render_path(file))
     return
   end
   vim.loop.fs_close(fd)
@@ -80,7 +81,7 @@ function M.fn(node)
       elseif not utils.file_exists(path_to_create) then
         local success = vim.loop.fs_mkdir(path_to_create, 493)
         if not success then
-          notify.error("Could not create folder " .. path_to_create)
+          notify.error("Could not create folder " .. notify.render_path(path_to_create))
           is_error = true
           break
         end
@@ -88,16 +89,12 @@ function M.fn(node)
       end
     end
     if not is_error then
-      notify.info(new_file_path .. " was properly created")
+      notify.info(notify.render_path(new_file_path) .. " was properly created")
     end
 
     -- synchronously refreshes as we can't wait for the watchers
     find_file(utils.path_remove_trailing(new_file_path))
   end)
-end
-
-function M.setup(opts)
-  M.enable_reload = not opts.filesystem_watchers.enable
 end
 
 return M

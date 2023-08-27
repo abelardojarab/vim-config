@@ -782,6 +782,16 @@
       }
     }
   ],
+  "jsonnet": [
+    {
+      "command": "jsonnet-language-server",
+      "url": "https://github.com/grafana/jsonnet-language-server",
+      "description": "A Language Server Protocol (LSP) server for Jsonnet",
+      "requires": [
+        "go"
+      ]
+    }
+  ],
   "julia": [
     {
       "command": "julia-language-server",
@@ -887,6 +897,14 @@
       "command": "rnix-lsp",
       "url": "https://github.com/nix-community/rnix-lsp",
       "description": "Language server implementation for Nix",
+      "requires": [
+        "nix"
+      ]
+    },
+    {
+      "command": "nixd",
+      "url": "https://github.com/nix-community/nixd",
+      "description": "Nix language server, based on nix libraries",
       "requires": [
         "nix"
       ]
@@ -1316,6 +1334,17 @@
       "description": "Static type checker for Ruby",
       "requires": [
         "gem"
+      ]
+    },
+    {
+      "command": "rubocop-lsp-mode",
+      "url": "https://github.com/rubocop/rubocop",
+      "description": "A Ruby static code analyzer and formatter, based on the community Ruby style guide.",
+      "requires": [
+        "bundle"
+      ],
+      "root_uri_patterns": [
+        "Gemfile"
       ]
     }
   ],

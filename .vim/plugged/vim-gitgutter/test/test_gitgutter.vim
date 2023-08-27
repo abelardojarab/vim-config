@@ -59,6 +59,7 @@ function SetUp()
         \ " && cp ../fixture.foo .".
         \ " && cp ../fixture.txt .".
         \ " && cp ../fixture_dos.txt .".
+        \ " && cp ../fixture_dos_noeol.txt .".
         \ " && git add . && git commit -m 'initial'".
         \ " && git config diff.mnemonicPrefix false")
   execute ':cd' s:test_repo
@@ -79,7 +80,7 @@ function TearDown()
   silent! execute s:bufnr+1.',$bdelete!'
 
   execute ':cd' s:current_dir
-  " call system("rm -rf ".s:test_repo)
+  call system("rm -rf ".s:test_repo)
 endfunction
 
 "
@@ -250,6 +251,35 @@ function Test_filename_umlaut()
 endfunction
 
 
+function Test_file_cmd()
+  normal ggo*
+
+  file other.txt
+
+  call s:trigger_gitgutter()
+  call assert_equal(1, b:gitgutter.enabled)
+  call assert_equal('', b:gitgutter.path)
+  call s:assert_signs([], 'other.txt')
+
+  write
+
+  call s:trigger_gitgutter()
+  call assert_equal(-2, b:gitgutter.path)
+endfunction
+
+
+function Test_saveas()
+  normal ggo*
+
+  saveas other.txt
+
+  call s:trigger_gitgutter()
+  call assert_equal(1, b:gitgutter.enabled)
+  call assert_equal(-2, b:gitgutter.path)
+  call s:assert_signs([], 'other.txt')
+endfunction
+
+
 " FIXME: this test fails when it is the first (or only) test to be run
 function Test_follow_symlink()
   let tmp = 'symlink'
@@ -408,6 +438,12 @@ function Test_preview_dos()
 endfunction
 
 
+function Test_dos_noeol()
+  edit! fixture_dos_noeol.txt
+  GitGutter
+
+  call s:assert_signs([], 'fixture_dos_noeol.txt')
+endfunction
 
 
 function Test_hunk_stage()
@@ -770,7 +806,7 @@ endfunction
 
 
 function Test_overlapping_hunk_op()
-  func Answer(char)
+  func! Answer(char)
     call feedkeys(a:char."\<CR>")
   endfunc
 
@@ -1188,7 +1224,7 @@ function Test_clean_smudge_filter()
   call system("git config --local include.path ../.gitconfig")
   call system("rm fixture.foo && git checkout fixture.foo")
 
-  func Answer(char)
+  func! Answer(char)
     call feedkeys(a:char."\<CR>")
   endfunc
 

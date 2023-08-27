@@ -638,6 +638,22 @@ telescope.setup({opts})                                    *telescope.setup()*
           Default: `function() return 0 end`
 
 
+                                         *telescope.defaults.git_worktrees*
+    git_worktrees: ~
+        A table of arrays of detached working trees with keys `gitdir` and `toplevel`.
+        Used to pass `--git-dir` and `--work-tree` flags to git commands when telescope fails
+        to infer the top-level directory of a given working tree based on cwd.
+        Example:
+        git_worktrees = {
+          {
+            toplevel = vim.env.HOME,
+            gitdir = vim.env.HOME .. '/.cfg'
+          }
+        }
+
+        Default: nil
+
+
                                         *telescope.defaults.file_previewer*
     file_previewer: ~
         Function pointer to the default file_previewer. It is mostly used
@@ -1034,6 +1050,37 @@ builtin.git_bcommits({opts})                *telescope.builtin.git_bcommits()*
                                    used for bcommits (default: current buffer)
         {git_command}   (table)    command that will be executed.
                                    {"git","log","--pretty=oneline","--abbrev-commit"}
+
+
+builtin.git_bcommits_range({opts})    *telescope.builtin.git_bcommits_range()*
+    Lists commits for a range of lines in the current buffer with diff preview
+    In visual mode, lists commits for the selected lines With operator mode
+    enabled, lists commits inside the text object/motion
+    - Default keymaps or your overridden `select_` keys:
+      - `<cr>`: checks out the currently selected commit
+      - `<c-v>`: opens a diff in a vertical split
+      - `<c-x>`: opens a diff in a horizontal split
+      - `<c-t>`: opens a diff in a new tab
+
+
+    Parameters: ~
+        {opts} (table)  options to pass to the picker
+
+    Options: ~
+        {cwd}          (string)   specify the path of the repo
+        {use_git_root} (boolean)  if we should use git root as cwd or the cwd
+                                  (important for submodule) (default: true)
+        {current_file} (string)   specify the current file that should be used
+                                  for bcommits (default: current buffer)
+        {git_command}  (table)    command that will be executed. the last
+                                  element must be "-L".
+                                  {"git","log","--pretty=oneline","--abbrev-commit","--no-patch","-L"}
+        {from}         (number)   the first line number in the range (default:
+                                  current line)
+        {to}           (number)   the last line number in the range (default:
+                                  the value of `from`)
+        {operator}     (boolean)  select lines in operator-pending mode
+                                  (default: false)
 
 
 builtin.git_branches({opts})                *telescope.builtin.git_branches()*
@@ -1657,7 +1704,8 @@ builtin.lsp_dynamic_workspace_symbols({opts}) *telescope.builtin.lsp_dynamic_wor
     Dynamically lists LSP for all workspace symbols
     - Default keymaps:
       - `<C-l>`: show autocompletion menu to prefilter your query by type of
-        symbol you want to see (i.e. `:variable:`)
+        symbol you want to see (i.e. `:variable:`), only works after refining
+        to fuzzy search using <C-space>
 
 
     Parameters: ~
@@ -1684,6 +1732,9 @@ builtin.diagnostics({opts})                  *telescope.builtin.diagnostics()*
     - Default keymaps:
       - `<C-l>`: show autocompletion menu to prefilter your query with the
         diagnostic you want to see (i.e. `:warning:`)
+    - sort_by option:
+      - "buffer": order by bufnr (prioritizing current bufnr), severity, lnum
+      - "severity": order by severity, bufnr (prioritizing current bufnr), lnum
 
 
     Parameters: ~
@@ -1715,6 +1766,9 @@ builtin.diagnostics({opts})                  *telescope.builtin.diagnostics()*
                                                 specific namespace
         {disable_coordinates} (boolean)         don't show the line & row
                                                 numbers (default: false)
+        {sort_by}             (string)          sort order of the diagnostics
+                                                results; see above notes
+                                                (default: "buffer")
 
 
 
@@ -2532,6 +2586,22 @@ actions.preview_scrolling_down({prompt_bufnr}) *telescope.actions.preview_scroll
         {prompt_bufnr} (number)  The prompt bufnr
 
 
+actions.preview_scrolling_left({prompt_bufnr}) *telescope.actions.preview_scrolling_left()*
+    Scroll the preview window to the left
+
+
+    Parameters: ~
+        {prompt_bufnr} (number)  The prompt bufnr
+
+
+actions.preview_scrolling_right({prompt_bufnr}) *telescope.actions.preview_scrolling_right()*
+    Scroll the preview window to the right
+
+
+    Parameters: ~
+        {prompt_bufnr} (number)  The prompt bufnr
+
+
 actions.results_scrolling_up({prompt_bufnr}) *telescope.actions.results_scrolling_up()*
     Scroll the results window up
 
@@ -2542,6 +2612,22 @@ actions.results_scrolling_up({prompt_bufnr}) *telescope.actions.results_scrollin
 
 actions.results_scrolling_down({prompt_bufnr}) *telescope.actions.results_scrolling_down()*
     Scroll the results window down
+
+
+    Parameters: ~
+        {prompt_bufnr} (number)  The prompt bufnr
+
+
+actions.results_scrolling_left({prompt_bufnr}) *telescope.actions.results_scrolling_left()*
+    Scroll the results window to the left
+
+
+    Parameters: ~
+        {prompt_bufnr} (number)  The prompt bufnr
+
+
+actions.results_scrolling_right({prompt_bufnr}) *telescope.actions.results_scrolling_right()*
+    Scroll the results window to the right
 
 
     Parameters: ~
@@ -3136,10 +3222,32 @@ action_set.scroll_previewer({prompt_bufnr}, {direction}) *telescope.actions.set.
         {direction}    (number)  The direction of the scrolling
 
 
+action_set.scroll_horizontal_previewer({prompt_bufnr}, {direction}) *telescope.actions.set.scroll_horizontal_previewer()*
+    Scrolls the previewer to the left or right. Defaults to a half page scroll,
+    but can be overridden using the `scroll_speed` option in `layout_config`.
+    See |telescope.layout| for more details.
+
+
+    Parameters: ~
+        {prompt_bufnr} (number)  The prompt bufnr
+        {direction}    (number)  The direction of the scrolling
+
+
 action_set.scroll_results({prompt_bufnr}, {direction}) *telescope.actions.set.scroll_results()*
     Scrolls the results up or down. Defaults to a half page scroll, but can be
     overridden using the `scroll_speed` option in `layout_config`. See
     |telescope.layout| for more details.
+
+
+    Parameters: ~
+        {prompt_bufnr} (number)  The prompt bufnr
+        {direction}    (number)  The direction of the scrolling
+
+
+action_set.scroll_horizontal_results({prompt_bufnr}, {direction}) *telescope.actions.set.scroll_horizontal_results()*
+    Scrolls the results to the left or right. Defaults to a half page scroll,
+    but can be overridden using the `scroll_speed` option in `layout_config`.
+    See |telescope.layout| for more details.
 
 
     Parameters: ~
@@ -3407,6 +3515,7 @@ previewers.Previewer()                      *telescope.previewers.Previewer()*
     - `:teardown()`
     - `:send_input(input)`
     - `:scroll_fn(direction)`
+    - `:scroll_horizontal_fn(direction)`
 
     `Previewer:new()` expects a table as input with following keys:
       - `setup` function(self): Will be called the first time preview will be 
@@ -3422,6 +3531,8 @@ previewers.Previewer()                      *telescope.previewers.Previewer()*
         `termopen_previewer` and it can be used to send input to the terminal 
         application, like less.
       - `scroll_fn` function(self, direction): Used to make scrolling work.
+      - `scroll_horizontal_fn` function(self, direction): Used to make 
+        horizontal scrolling work.
 
 
 
@@ -3619,7 +3730,9 @@ previewers.vim_buffer_vimgrep()    *telescope.previewers.vim_buffer_vimgrep()*
     It uses the `buffer_previewer` interface. To integrate this one into your
     own picker make sure that the field `path` or `filename` and `lnum` is set
     in each entry. If the latter is not present, it will default to the first
-    line. The preferred way of using this previewer is like this
+    line. Additionally, `lnend`, `col` and `colend` can be set to highlight a
+    text range instead of a single line. All line/column values are 1-indexed.
+    The preferred way of using this previewer is like this
     `require('telescope.config').values.grep_previewer` This will respect user
     configuration and will use `termopen_previewer` in case it's configured
     that way.

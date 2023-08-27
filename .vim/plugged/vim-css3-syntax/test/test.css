@@ -479,8 +479,8 @@ template {
 	alignment-baseline: auto;
 	baseline-source: auto;
 	baseline-shift: auto;
-	text-edge: auto;
-	leading-trim: auto;
+	text-box-edge: auto;
+	text-box-trim: auto;
 	inline-sizing: auto;
 	initial-letter: auto;
 	initial-letter-align: auto;
@@ -808,8 +808,11 @@ mask {
 	animation-range: auto;
 	animation-delay-start: auto;
 	animation-delay-end: auto;
+	timeline-scope: auto;
 	display: entry;
 	display: exit;
+	display: defer;
+	display: ancestor;
 }
 
 .scroll-snap-1 {
