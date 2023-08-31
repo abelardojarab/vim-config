@@ -293,7 +293,7 @@ Plug 'Shougo/neosnippet-snippets'
 
 " Search
 Plug 'mileszs/ack.vim'
-if (has('nvim-0.5'))
+if (has('nvim-0.9'))
     " Plug 'kevinhwang91/nvim-hlslens'
     Plug 'nvim-telescope/telescope.nvim'
     Plug 'nvim-telescope/telescope-project.nvim'
