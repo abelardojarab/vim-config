@@ -1,0 +1,11 @@
+:Bazel	bazel.txt	/*:Bazel*
+bazel	bazel.txt	/*bazel*
+bazel#CompletionList()	bazel.txt	/*bazel#CompletionList()*
+bazel#Run()	bazel.txt	/*bazel#Run()*
+bazel-commands	bazel.txt	/*bazel-commands*
+bazel-config	bazel.txt	/*bazel-config*
+bazel-contents	bazel.txt	/*bazel-contents*
+bazel-functions	bazel.txt	/*bazel-functions*
+bazel-intro	bazel.txt	/*bazel-intro*
+bazel.txt	bazel.txt	/*bazel.txt*
+bazel:plugin[commands]	bazel.txt	/*bazel:plugin[commands]*

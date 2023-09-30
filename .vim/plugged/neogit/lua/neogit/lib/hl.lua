@@ -32,8 +32,9 @@ local function get_fg(name)
   local color = vim.api.nvim_get_hl(0, { name = name })
   if color["link"] then
     return get_fg(color["link"])
-  end
-  if color["fg"] then
+  elseif color["reverse"] and color["bg"] then
+    return "#" .. to_hex(color["bg"])
+  elseif color["fg"] then
     return "#" .. to_hex(color["fg"])
   end
 end
@@ -43,8 +44,9 @@ local function get_bg(name)
   local color = vim.api.nvim_get_hl(0, { name = name })
   if color["link"] then
     return get_bg(color["link"])
-  end
-  if color["bg"] then
+  elseif color["reverse"] and color["fg"] then
+    return "#" .. to_hex(color["fg"])
+  elseif color["bg"] then
     return "#" .. to_hex(color["bg"])
   end
 end
@@ -113,6 +115,7 @@ function M.setup()
     NeogitGraphBlue = { fg = palette.blue },
     NeogitGraphPurple = { fg = palette.purple },
     NeogitGraphGray = { fg = palette.grey },
+    NeogitGraphOrange = { fg = palette.orange },
     NeogitGraphBoldRed = { fg = palette.red, bold = true },
     NeogitGraphBoldWhite = { fg = palette.white, bold = true },
     NeogitGraphBoldYellow = { fg = palette.yellow, bold = true },
@@ -121,6 +124,14 @@ function M.setup()
     NeogitGraphBoldBlue = { fg = palette.blue, bold = true },
     NeogitGraphBoldPurple = { fg = palette.purple, bold = true },
     NeogitGraphBoldGray = { fg = palette.grey, bold = true },
+    NeogitSignatureGood = { link = "NeogitGraphGreen" },
+    NeogitSignatureBad = { link = "NeogitGraphBoldRed" },
+    NeogitSignatureMissing = { link = "NeogitGraphPurple" },
+    NeogitSignatureNone = { link = "Comment" },
+    NeogitSignatureGoodUnknown = { link = "NeogitGraphBlue" },
+    NeogitSignatureGoodExpired = { link = "NeogitGraphOrange" },
+    NeogitSignatureGoodExpiredKey = { link = "NeogitGraphYellow" },
+    NeogitSignatureGoodRevokedKey = { link = "NeogitGraphRed" },
     NeogitHunkHeader = { fg = palette.bg0, bg = palette.grey, bold = true },
     NeogitHunkHeaderHighlight = { fg = palette.bg0, bg = palette.md_purple, bold = true },
     NeogitDiffContext = { bg = palette.bg1 },
@@ -147,9 +158,6 @@ function M.setup()
     NeogitCommitViewHeader = { bg = palette.bg_cyan, fg = palette.bg0 },
     NeogitDiffHeader = { bg = palette.bg3, fg = palette.blue, bold = true },
     NeogitDiffHeaderHighlight = { bg = palette.bg3, fg = palette.orange, bold = true },
-    NeogitNotificationInfo = { link = "DiagnosticInfo" },
-    NeogitNotificationWarning = { link = "DiagnosticWarn" },
-    NeogitNotificationError = { link = "DiagnosticError" },
     NeogitCommandText = { link = "Comment" },
     NeogitCommandTime = { link = "Comment" },
     NeogitCommandCodeNormal = { link = "String" },
@@ -183,6 +191,8 @@ function M.setup()
     NeogitRebasing = { link = "NeogitSectionHeader" },
     NeogitPicking = { link = "NeogitSectionHeader" },
     NeogitReverting = { link = "NeogitSectionHeader" },
+    NeogitTagName = { fg = palette.yellow },
+    NeogitTagDistance = { fg = palette.cyan }
   }
   -- stylua: ignore end
 

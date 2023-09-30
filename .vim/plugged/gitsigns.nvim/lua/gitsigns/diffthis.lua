@@ -15,7 +15,7 @@ local M = {}
 
 --- @param bufnr integer
 --- @param dbufnr integer
---- @param base string
+--- @param base string?
 local bufread = async.void(function(bufnr, dbufnr, base)
   local bcache = cache[bufnr]
   local comp_rev = bcache:get_compare_rev(util.calc_base(base))
@@ -43,7 +43,7 @@ end)
 
 --- @param bufnr integer
 --- @param dbufnr integer
---- @param base string
+--- @param base string?
 local bufwrite = async.void(function(bufnr, dbufnr, base)
   local bcache = cache[bufnr]
   local buftext = util.buf_lines(dbufnr)
@@ -54,13 +54,13 @@ local bufwrite = async.void(function(bufnr, dbufnr, base)
   -- signs.
   if util.calc_base(base) == util.calc_base(bcache.base) then
     bcache.compare_text = buftext
-    manager.update(bufnr, bcache)
+    manager.update(bufnr)
   end
 end)
 
 --- Create a gitsigns buffer for a certain revision of a file
 --- @param bufnr integer
---- @param base string
+--- @param base string?
 --- @return string? buf Buffer name
 local function create_show_buf(bufnr, base)
   local bcache = assert(cache[bufnr])
@@ -114,7 +114,7 @@ end
 --- @field vertical boolean
 --- @field split string
 
---- @param base string
+--- @param base string?
 --- @param opts? Gitsigns.DiffthisOpts
 local function diffthis_rev(base, opts)
   local bufnr = api.nvim_get_current_buf()
@@ -135,7 +135,7 @@ local function diffthis_rev(base, opts)
   }, ' '))
 end
 
---- @param base string
+--- @param base string?
 --- @param opts Gitsigns.DiffthisOpts
 M.diffthis = async.void(function(base, opts)
   if vim.wo.diff then
@@ -160,9 +160,9 @@ M.diffthis = async.void(function(base, opts)
   api.nvim_set_current_win(cwin)
 end)
 
+--- @param bufnr integer
 --- @param base string
-M.show = async.void(function(base)
-  local bufnr = api.nvim_get_current_buf()
+M.show = async.void(function(bufnr, base)
   local bufname = create_show_buf(bufnr, base)
   if not bufname then
     return

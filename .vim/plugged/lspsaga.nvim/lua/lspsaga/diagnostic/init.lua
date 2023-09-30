@@ -52,7 +52,7 @@ function diag:get_diagnostic(opt)
   if opt.cursor then
     local res = {}
     for _, v in pairs(entrys) do
-      if v.col <= col and v.end_col > col then
+      if v.col <= col and (v.end_col and v.end_col > col or true) then
         res[#res + 1] = v
       end
     end
@@ -246,7 +246,8 @@ function diag:render_diagnostic_window(entry, option)
   local content = vim.split(entry.message, '\n', { trimempty = true })
 
   if diag_conf.extend_relatedInformation then
-    if entry.user_data.lsp.relatedInformation and #entry.user_data.lsp.relatedInformation > 0 then
+    local relatedInformation = vim.tbl_get(entry, 'user_data', 'lsp', 'relatedInformation')
+    if relatedInformation and #relatedInformation > 0 then
       vim.tbl_map(function(item)
         if item.location and item.location.range then
           local fname
@@ -264,7 +265,7 @@ function diag:render_diagnostic_window(entry, option)
     end
   end
 
-  if diag_conf.show_code_action then
+  if diag_conf.show_code_action and #util.get_client_by_method('textDocument/codeAction') > 0 then
     act:send_request(self.main_buf, {
       context = { diagnostics = self:get_cursor_diagnostic() },
       range = {

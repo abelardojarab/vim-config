@@ -35,7 +35,7 @@ ALEInfo.	ale.txt	/*ALEInfo.*
 ALEInfoLine	ale.txt	/*ALEInfoLine*
 ALEInfoSign	ale.txt	/*ALEInfoSign*
 ALEInfoSignLineNr	ale.txt	/*ALEInfoSignLineNr*
-ALEInfoToClipboard	ale.txt	/*ALEInfoToClipboard*
+ALEInfoToFile	ale.txt	/*ALEInfoToFile*
 ALEJobStarted	ale.txt	/*ALEJobStarted*
 ALEJobStarted-autocmd	ale.txt	/*ALEJobStarted-autocmd*
 ALELSPStarted	ale.txt	/*ALELSPStarted*
@@ -59,6 +59,7 @@ ALERepeatSelection	ale.txt	/*ALERepeatSelection*
 ALEReset	ale.txt	/*ALEReset*
 ALEResetBuffer	ale.txt	/*ALEResetBuffer*
 ALEStopAllLSPs	ale.txt	/*ALEStopAllLSPs*
+ALEStopLSP	ale.txt	/*ALEStopLSP*
 ALEStyleError	ale.txt	/*ALEStyleError*
 ALEStyleErrorSign	ale.txt	/*ALEStyleErrorSign*
 ALEStyleErrorSignLineNr	ale.txt	/*ALEStyleErrorSignLineNr*
@@ -254,6 +255,7 @@ ale-elixir-credo	ale-elixir.txt	/*ale-elixir-credo*
 ale-elixir-cspell	ale-elixir.txt	/*ale-elixir-cspell*
 ale-elixir-dialyxir	ale-elixir.txt	/*ale-elixir-dialyxir*
 ale-elixir-elixir-ls	ale-elixir.txt	/*ale-elixir-elixir-ls*
+ale-elixir-lexical	ale-elixir.txt	/*ale-elixir-lexical*
 ale-elixir-mix	ale-elixir.txt	/*ale-elixir-mix*
 ale-elixir-mix-format	ale-elixir.txt	/*ale-elixir-mix-format*
 ale-elixir-options	ale-elixir.txt	/*ale-elixir-options*
@@ -626,6 +628,7 @@ ale-ruby-brakeman	ale-ruby.txt	/*ale-ruby-brakeman*
 ale-ruby-cspell	ale-ruby.txt	/*ale-ruby-cspell*
 ale-ruby-debride	ale-ruby.txt	/*ale-ruby-debride*
 ale-ruby-options	ale-ruby.txt	/*ale-ruby-options*
+ale-ruby-packwerk	ale-ruby.txt	/*ale-ruby-packwerk*
 ale-ruby-prettier	ale-ruby.txt	/*ale-ruby-prettier*
 ale-ruby-rails_best_practices	ale-ruby.txt	/*ale-ruby-rails_best_practices*
 ale-ruby-reek	ale-ruby.txt	/*ale-ruby-reek*
@@ -666,6 +669,7 @@ ale-sh-shfmt	ale-sh.txt	/*ale-sh-shfmt*
 ale-sml-options	ale-sml.txt	/*ale-sml-options*
 ale-sml-smlnj	ale-sml.txt	/*ale-sml-smlnj*
 ale-sml-smlnj-cm	ale-sml.txt	/*ale-sml-smlnj-cm*
+ale-solidity-forge	ale-solidity.txt	/*ale-solidity-forge*
 ale-solidity-options	ale-solidity.txt	/*ale-solidity-options*
 ale-solidity-solc	ale-solidity.txt	/*ale-solidity-solc*
 ale-solidity-solhint	ale-solidity.txt	/*ale-solidity-solhint*
@@ -934,7 +938,7 @@ b:ale_dart_format_executable	ale-dart.txt	/*b:ale_dart_format_executable*
 b:ale_dart_format_options	ale-dart.txt	/*b:ale_dart_format_options*
 b:ale_default_navigation	ale.txt	/*b:ale_default_navigation*
 b:ale_deno_executable	ale-typescript.txt	/*b:ale_deno_executable*
-b:ale_deno_importMap	ale-typescript.txt	/*b:ale_deno_importMap*
+b:ale_deno_import_map	ale-typescript.txt	/*b:ale_deno_import_map*
 b:ale_deno_lsp_project_root	ale-typescript.txt	/*b:ale_deno_lsp_project_root*
 b:ale_deno_unstable	ale-typescript.txt	/*b:ale_deno_unstable*
 b:ale_desktop_desktop_file_validate_options	ale-desktop.txt	/*b:ale_desktop_desktop_file_validate_options*
@@ -958,6 +962,7 @@ b:ale_echo_delay	ale.txt	/*b:ale_echo_delay*
 b:ale_echo_msg_format	ale.txt	/*b:ale_echo_msg_format*
 b:ale_elixir_elixir_ls_config	ale-elixir.txt	/*b:ale_elixir_elixir_ls_config*
 b:ale_elixir_elixir_ls_release	ale-elixir.txt	/*b:ale_elixir_elixir_ls_release*
+b:ale_elixir_lexical_release	ale-elixir.txt	/*b:ale_elixir_lexical_release*
 b:ale_elixir_mix_format_options	ale-elixir.txt	/*b:ale_elixir_mix_format_options*
 b:ale_elixir_mix_options	ale-elixir.txt	/*b:ale_elixir_mix_options*
 b:ale_elm_format_executable	ale-elm.txt	/*b:ale_elm_format_executable*
@@ -1087,6 +1092,7 @@ b:ale_html_tidy_executable	ale-html.txt	/*b:ale_html_tidy_executable*
 b:ale_html_tidy_options	ale-html.txt	/*b:ale_html_tidy_options*
 b:ale_idris_idris_executable	ale-idris.txt	/*b:ale_idris_idris_executable*
 b:ale_idris_idris_options	ale-idris.txt	/*b:ale_idris_idris_options*
+b:ale_info_default_mode	ale.txt	/*b:ale_info_default_mode*
 b:ale_inko_inko_executable	ale-inko.txt	/*b:ale_inko_inko_executable*
 b:ale_ispc_ispc_executable	ale-ispc.txt	/*b:ale_ispc_ispc_executable*
 b:ale_ispc_ispc_options	ale-ispc.txt	/*b:ale_ispc_ispc_options*
@@ -1464,6 +1470,8 @@ b:ale_ruby_brakeman_options	ale-ruby.txt	/*b:ale_ruby_brakeman_options*
 b:ale_ruby_debride_executable	ale-ruby.txt	/*b:ale_ruby_debride_executable*
 b:ale_ruby_debride_options	ale-ruby.txt	/*b:ale_ruby_debride_options*
 b:ale_ruby_erblint_options	ale-eruby.txt	/*b:ale_ruby_erblint_options*
+b:ale_ruby_packwerk_executable	ale-ruby.txt	/*b:ale_ruby_packwerk_executable*
+b:ale_ruby_packwerk_options	ale-ruby.txt	/*b:ale_ruby_packwerk_options*
 b:ale_ruby_rails_best_practices_executable	ale-ruby.txt	/*b:ale_ruby_rails_best_practices_executable*
 b:ale_ruby_rails_best_practices_options	ale-ruby.txt	/*b:ale_ruby_rails_best_practices_options*
 b:ale_ruby_reek_executable	ale-ruby.txt	/*b:ale_ruby_reek_executable*
@@ -1833,7 +1841,7 @@ g:ale_dart_format_executable	ale-dart.txt	/*g:ale_dart_format_executable*
 g:ale_dart_format_options	ale-dart.txt	/*g:ale_dart_format_options*
 g:ale_default_navigation	ale.txt	/*g:ale_default_navigation*
 g:ale_deno_executable	ale-typescript.txt	/*g:ale_deno_executable*
-g:ale_deno_importMap	ale-typescript.txt	/*g:ale_deno_importMap*
+g:ale_deno_import_map	ale-typescript.txt	/*g:ale_deno_import_map*
 g:ale_deno_lsp_project_root	ale-typescript.txt	/*g:ale_deno_lsp_project_root*
 g:ale_deno_unstable	ale-typescript.txt	/*g:ale_deno_unstable*
 g:ale_desktop_desktop_file_validate_options	ale-desktop.txt	/*g:ale_desktop_desktop_file_validate_options*
@@ -1864,6 +1872,7 @@ g:ale_elixir_credo_config_file	ale-elixir.txt	/*g:ale_elixir_credo_config_file*
 g:ale_elixir_credo_strict	ale-elixir.txt	/*g:ale_elixir_credo_strict*
 g:ale_elixir_elixir_ls_config	ale-elixir.txt	/*g:ale_elixir_elixir_ls_config*
 g:ale_elixir_elixir_ls_release	ale-elixir.txt	/*g:ale_elixir_elixir_ls_release*
+g:ale_elixir_lexical_release	ale-elixir.txt	/*g:ale_elixir_lexical_release*
 g:ale_elixir_mix_format_options	ale-elixir.txt	/*g:ale_elixir_mix_format_options*
 g:ale_elixir_mix_options	ale-elixir.txt	/*g:ale_elixir_mix_options*
 g:ale_elm_format_executable	ale-elm.txt	/*g:ale_elm_format_executable*
@@ -1999,6 +2008,7 @@ g:ale_html_tidy_executable	ale-html.txt	/*g:ale_html_tidy_executable*
 g:ale_html_tidy_options	ale-html.txt	/*g:ale_html_tidy_options*
 g:ale_idris_idris_executable	ale-idris.txt	/*g:ale_idris_idris_executable*
 g:ale_idris_idris_options	ale-idris.txt	/*g:ale_idris_idris_options*
+g:ale_info_default_mode	ale.txt	/*g:ale_info_default_mode*
 g:ale_inko_inko_executable	ale-inko.txt	/*g:ale_inko_inko_executable*
 g:ale_ispc_ispc_executable	ale-ispc.txt	/*g:ale_ispc_ispc_executable*
 g:ale_ispc_ispc_options	ale-ispc.txt	/*g:ale_ispc_ispc_options*
@@ -2406,6 +2416,8 @@ g:ale_ruby_brakeman_options	ale-ruby.txt	/*g:ale_ruby_brakeman_options*
 g:ale_ruby_debride_executable	ale-ruby.txt	/*g:ale_ruby_debride_executable*
 g:ale_ruby_debride_options	ale-ruby.txt	/*g:ale_ruby_debride_options*
 g:ale_ruby_erblint_options	ale-eruby.txt	/*g:ale_ruby_erblint_options*
+g:ale_ruby_packwerk_executable	ale-ruby.txt	/*g:ale_ruby_packwerk_executable*
+g:ale_ruby_packwerk_options	ale-ruby.txt	/*g:ale_ruby_packwerk_options*
 g:ale_ruby_rails_best_practices_executable	ale-ruby.txt	/*g:ale_ruby_rails_best_practices_executable*
 g:ale_ruby_rails_best_practices_options	ale-ruby.txt	/*g:ale_ruby_rails_best_practices_options*
 g:ale_ruby_reek_executable	ale-ruby.txt	/*g:ale_ruby_reek_executable*
@@ -2447,6 +2459,7 @@ g:ale_rust_rustfmt_executable	ale-rust.txt	/*g:ale_rust_rustfmt_executable*
 g:ale_rust_rustfmt_options	ale-rust.txt	/*g:ale_rust_rustfmt_options*
 g:ale_sass_stylelint_executable	ale-sass.txt	/*g:ale_sass_stylelint_executable*
 g:ale_sass_stylelint_use_global	ale-sass.txt	/*g:ale_sass_stylelint_use_global*
+g:ale_save_hidden	ale.txt	/*g:ale_save_hidden*
 g:ale_scala_metals_executable	ale-scala.txt	/*g:ale_scala_metals_executable*
 g:ale_scala_metals_project_root	ale-scala.txt	/*g:ale_scala_metals_project_root*
 g:ale_scala_sbtserver_address	ale-scala.txt	/*g:ale_scala_sbtserver_address*

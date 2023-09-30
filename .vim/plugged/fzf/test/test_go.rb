@@ -8,6 +8,7 @@ require 'shellwords'
 require 'erb'
 require 'tempfile'
 require 'net/http'
+require 'json'
 
 TEMPLATE = DATA.read
 UNSETS = %w[
@@ -2776,9 +2777,21 @@ class TestGoFZF < TestBase
         -> { URI("http://localhost:#{File.read('/tmp/fzf-port').chomp}") } }.each do |opts, fn|
       tmux.send_keys "seq 10 | fzf #{opts}", :Enter
       tmux.until { |lines| assert_equal 10, lines.item_count }
+      state = JSON.parse(Net::HTTP.get(fn.call), symbolize_names: true)
+      assert_equal 10, state[:totalCount]
+      assert_equal 10, state[:matchCount]
+      assert_empty state[:query]
+      assert_equal({ index: 0, text: '1' }, state[:current])
+
       Net::HTTP.post(fn.call, 'change-query(yo)+reload(seq 100)+change-prompt:hundred> ')
       tmux.until { |lines| assert_equal 100, lines.item_count }
       tmux.until { |lines| assert_equal 'hundred> yo', lines[-1] }
+      state = JSON.parse(Net::HTTP.get(fn.call), symbolize_names: true)
+      assert_equal 100, state[:totalCount]
+      assert_equal 0, state[:matchCount]
+      assert_equal 'yo', state[:query]
+      assert_nil state[:current]
+
       teardown
       setup
     end
@@ -3351,6 +3364,34 @@ module CompletionTest
   ensure
     tmux.prepare
     tmux.send_keys 'unset -f _fzf_comprun', :Enter
+  end
+
+  def test_ssh_completion
+    (1..5).each { |i| FileUtils.touch("/tmp/fzf-test-ssh-#{i}") }
+
+    tmux.send_keys 'ssh jg@localhost**', :Tab
+    tmux.until do |lines|
+      assert lines.match_count >= 1
+    end
+
+    tmux.send_keys :Enter
+    tmux.until { |lines| assert lines.any_include?('ssh jg@localhost') }
+    tmux.send_keys ' -i /tmp/fzf-test-ssh**', :Tab
+    tmux.until do |lines|
+      assert lines.match_count >= 5
+      assert_equal 0, lines.select_count
+    end
+    tmux.send_keys :Tab, :Tab, :Tab
+    tmux.until do |lines|
+      assert_equal 3, lines.select_count
+    end
+    tmux.send_keys :Enter
+    tmux.until { |lines| assert lines.any_include?('ssh jg@localhost  -i /tmp/fzf-test-ssh-') }
+
+    tmux.send_keys 'localhost**', :Tab
+    tmux.until do |lines|
+      assert lines.match_count >= 1
+    end
   end
 end
 

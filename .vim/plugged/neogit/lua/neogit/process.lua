@@ -168,9 +168,7 @@ function Process:start_timer()
         if not self.timer then
           return
         end
-        self.timer = nil
-        timer:stop()
-        timer:close()
+        self:stop_timer()
         if not self.result or (self.result.code ~= 0) then
           local message = string.format(
             "Command %q running for more than: %.1f seconds",
@@ -182,7 +180,7 @@ function Process:start_timer()
           if config.values.auto_show_console then
             Process.show_console()
           else
-            notification.create(message .. "\n\nOpen the console for details", vim.log.levels.WARN)
+            notification.warn(message .. "\n\nOpen the console for details")
           end
         end
       end)
@@ -196,7 +194,9 @@ function Process:stop_timer()
     local timer = self.timer
     self.timer = nil
     timer:stop()
-    timer:close()
+    if not timer:is_closing() then
+      timer:close()
+    end
   end
 end
 
@@ -347,7 +347,7 @@ function Process:spawn(cb)
           table.concat(output, "\n")
         )
 
-        notification.create(message, vim.log.levels.ERROR)
+        notification.error(message)
       end
       -- vim.schedule(Process.show_console)
     end

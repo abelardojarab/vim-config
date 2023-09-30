@@ -124,6 +124,9 @@ local function render(chunks, new_name)
   local result = decode(chunks)
   local bufnr, winid = create_win()
   local line = 1
+  if vim.tbl_isempty(result) then
+    return
+  end
 
   for fname, item in pairs(result) do
     fname = util.path_sub(fname, get_root_dir())
@@ -167,7 +170,7 @@ function M:new(args)
   end
 
   handle, _ = uv.spawn('rg', {
-    args = { args[1], root_dir, '--json' },
+    args = { args[1], root_dir, '--json', unpack(args[3]) },
     stdio = { stdin, stdout, stderr },
   }, function(_, _)
     uv.read_stop(stdout)

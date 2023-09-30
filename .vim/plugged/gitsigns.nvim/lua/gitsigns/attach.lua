@@ -10,7 +10,6 @@ local hl = require('gitsigns.highlight')
 
 local gs_cache = require('gitsigns.cache')
 local cache = gs_cache.cache
-local CacheEntry = gs_cache.CacheEntry
 local Status = require('gitsigns.status')
 
 local gs_config = require('gitsigns.config')
@@ -111,6 +110,7 @@ end
 --- @param bufnr integer
 local function on_reload(_, bufnr)
   local __FUNC__ = 'on_reload'
+  cache[bufnr]:invalidate()
   dprint('Reload')
   manager.update_debounced(bufnr)
 end
@@ -219,11 +219,11 @@ end
 --- @field commit string
 --- @field base string
 
--- Ensure attaches cannot be interleaved.
--- Since attaches are asynchronous we need to make sure an attach isn't
--- performed whilst another one is in progress.
+--- Ensure attaches cannot be interleaved.
+--- Since attaches are asynchronous we need to make sure an attach isn't
+--- performed whilst another one is in progress.
 --- @param cbuf integer
---- @param ctx Gitsigns.GitContext
+--- @param ctx? Gitsigns.GitContext
 --- @param aucmd? string
 local attach_throttled = throttle_by_id(function(cbuf, ctx, aucmd)
   local __FUNC__ = 'attach'
@@ -336,7 +336,8 @@ local attach_throttled = throttle_by_id(function(cbuf, ctx, aucmd)
     return
   end
 
-  cache[cbuf] = CacheEntry.new({
+  cache[cbuf] = gs_cache.new({
+    bufnr = cbuf,
     base = ctx and ctx.base or config.base,
     file = file,
     commit = commit,
@@ -362,7 +363,7 @@ local attach_throttled = throttle_by_id(function(cbuf, ctx, aucmd)
   })
 
   -- Initial update
-  manager.update(cbuf, cache[cbuf])
+  manager.update(cbuf)
 end)
 
 --- Detach Gitsigns from all buffers it is attached to.

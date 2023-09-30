@@ -173,17 +173,37 @@ utils.is_path_hidden = function(opts, path_display)
     or type(path_display) == "table" and (vim.tbl_contains(path_display, "hidden") or path_display.hidden)
 end
 
-local URI_SCHEME_PATTERN = "^([a-zA-Z]+[a-zA-Z0-9.+-]*):.*"
-local WINDOWS_ROOT_PATTERN = "^[a-zA-Z]:\\"
 utils.is_uri = function(filename)
-  local is_uri_match = filename:match(URI_SCHEME_PATTERN) ~= nil
-  local is_windows_root_match = filename:match(WINDOWS_ROOT_PATTERN)
-  return is_uri_match and not is_windows_root_match
+  local char = string.byte(filename, 1) or 0
+
+  -- is alpha?
+  if char < 65 or (char > 90 and char < 97) or char > 122 then
+    return false
+  end
+
+  for i = 2, #filename do
+    char = string.byte(filename, i)
+    if char == 58 then -- `:`
+      return i < #filename and string.byte(filename, i + 1) ~= 92 -- `\`
+    elseif
+      not (
+        (char >= 48 and char <= 57) -- 0-9
+        or (char >= 65 and char <= 90) -- A-Z
+        or (char >= 97 and char <= 122) -- a-z
+        or char == 43 -- `+`
+        or char == 46 -- `.`
+        or char == 45 -- `-`
+      )
+    then
+      return false
+    end
+  end
+  return false
 end
 
 local calc_result_length = function(truncate_len)
   local status = get_status(vim.api.nvim_get_current_buf())
-  local len = vim.api.nvim_win_get_width(status.results_win) - status.picker.selection_caret:len() - 2
+  local len = vim.api.nvim_win_get_width(status.layout.results.winid) - status.picker.selection_caret:len() - 2
   return type(truncate_len) == "number" and len - truncate_len or len
 end
 
@@ -537,6 +557,14 @@ utils.__git_command = function(args, opts)
   end
 
   return vim.list_extend(_args, args)
+end
+
+utils.list_find = function(func, list)
+  for i, v in ipairs(list) do
+    if func(v, i, list) then
+      return i, v
+    end
+  end
 end
 
 return utils

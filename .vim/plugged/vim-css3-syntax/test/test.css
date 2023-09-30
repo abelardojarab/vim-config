@@ -672,6 +672,7 @@ mask {
 .page-3 {
 	marks: auto;
 	bleed: auto;
+	page-orientation: auto;
 }
 
 .page-floats-3 {
@@ -1190,6 +1191,12 @@ view {
 
 .transitions-1 {
 	display: auto;
+}
+
+@starting-style {
+	.transitions-2 {
+		display: auto;
+	}
 }
 
 .typed-om-1 {

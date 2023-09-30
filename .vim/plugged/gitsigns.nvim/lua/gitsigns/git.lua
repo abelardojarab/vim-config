@@ -8,14 +8,14 @@ local subprocess = require('gitsigns.subprocess')
 local gs_config = require('gitsigns.config')
 local config = gs_config.config
 
-local gs_hunks = require('gitsigns.hunks')
-
 local uv = vim.loop
 local startswith = vim.startswith
 
 local dprint = require('gitsigns.debug.log').dprint
+local dprintf = require('gitsigns.debug.log').dprintf
 local eprint = require('gitsigns.debug.log').eprint
 local err = require('gitsigns.message').error
+local error_once = require('gitsigns.message').error_once
 
 local M = {}
 
@@ -128,6 +128,8 @@ end
 --- @field writer? string[] | string
 --- @field suppress_stderr? boolean
 --- @field raw? boolean Do not strip trailing newlines from stdout
+--- @field text? boolean Convert CRLF to LF
+--- @field args? string[]
 
 --- @param args string[]
 --- @param spec? Gitsigns.Git.JobSpec
@@ -160,6 +162,10 @@ local git_command = async.create(function(args, spec)
       local cmd_str = table.concat({ spec.command, unpack(args) }, ' ')
       log.eprintf("Received stderr when running command\n'%s':\n%s", cmd_str, stderr)
     end
+  end
+
+  if stdout and spec.text then
+    stdout = stdout:gsub('\r\n', '\n')
   end
 
   local stdout_lines = vim.split(stdout or '', '\n', { plain = true })
@@ -308,7 +314,7 @@ function M.get_repo_info(path, cmd, gitdir, toplevel)
     toplevel = toplevel_r,
     gitdir = gitdir_r,
     abbrev_head = process_abbrev_head(gitdir_r, results[3], path, cmd),
-    detached = toplevel_r and gitdir_r ~= toplevel_r .. '/.git'
+    detached = toplevel_r and gitdir_r ~= toplevel_r .. '/.git',
   }
 end
 
@@ -352,38 +358,6 @@ function Repo:files_changed()
   return ret
 end
 
---- @param ... integer
---- @return string
-local function make_bom(...)
-  local r = {}
-  ---@diagnostic disable-next-line:no-unknown
-  for i, a in ipairs({ ... }) do
-    ---@diagnostic disable-next-line:no-unknown
-    r[i] = string.char(a)
-  end
-  return table.concat(r)
-end
-
-local BOM_TABLE = {
-  ['utf-8'] = make_bom(0xef, 0xbb, 0xbf),
-  ['utf-16le'] = make_bom(0xff, 0xfe),
-  ['utf-16'] = make_bom(0xfe, 0xff),
-  ['utf-16be'] = make_bom(0xfe, 0xff),
-  ['utf-32le'] = make_bom(0xff, 0xfe, 0x00, 0x00),
-  ['utf-32'] = make_bom(0xff, 0xfe, 0x00, 0x00),
-  ['utf-32be'] = make_bom(0x00, 0x00, 0xfe, 0xff),
-  ['utf-7'] = make_bom(0x2b, 0x2f, 0x76),
-  ['utf-1'] = make_bom(0xf7, 0x54, 0x4c),
-}
-
-local function strip_bom(x, encoding)
-  local bom = BOM_TABLE[encoding]
-  if bom and vim.startswith(x, bom) then
-    return x:sub(bom:len() + 1)
-  end
-  return x
-end
-
 --- @param encoding string
 --- @return boolean
 local function iconv_supported(encoding)
@@ -404,7 +378,6 @@ function Repo:get_show_text(object, encoding)
   local stdout, stderr = self:command({ 'show', object }, { raw = true, suppress_stderr = true })
 
   if encoding and encoding ~= 'utf-8' and iconv_supported(encoding) then
-    stdout[1] = strip_bom(stdout[1], encoding)
     for i, l in ipairs(stdout) do
       --- @diagnostic disable-next-line:param-type-mismatch
       stdout[i] = vim.iconv(l, encoding, 'utf-8')
@@ -563,13 +536,7 @@ Obj.unstage_file = function(self)
   self:command({ 'reset', self.file })
 end
 
---- @class Gitsigns.BlameInfo
---- -- Info in header
---- @field sha string
---- @field abbrev_sha string
---- @field orig_lnum integer
---- @field final_lnum integer
---- Porcelain fields
+--- @class Gitsigns.CommitInfo
 --- @field author string
 --- @field author_mail string
 --- @field author_time integer
@@ -579,39 +546,87 @@ end
 --- @field committer_time integer
 --- @field committer_tz string
 --- @field summary string
---- @field previous string
---- @field previous_filename string
---- @field previous_sha string
+--- @field sha string
+--- @field abbrev_sha string
+--- @field boundary? true
+
+--- @class Gitsigns.BlameInfoPublic: Gitsigns.BlameInfo, Gitsigns.CommitInfo
+--- @field body? string[]
+--- @field hunk_no? integer
+--- @field num_hunks? integer
+--- @field hunk? string[]
+--- @field hunk_head? string
+
+--- @class Gitsigns.BlameInfo
+--- @field orig_lnum integer
+--- @field final_lnum integer
+--- @field commit Gitsigns.CommitInfo
 --- @field filename string
+--- @field previous_filename? string
+--- @field previous_sha? string
+
+local NOT_COMMITTED = {
+  author = 'Not Committed Yet',
+  author_mail = '<not.committed.yet>',
+  committer = 'Not Committed Yet',
+  committer_mail = '<not.committed.yet>',
+}
+
+--- @param file string
+--- @return Gitsigns.CommitInfo
+function M.not_commited(file)
+  local time = os.time()
+  return {
+    sha = string.rep('0', 40),
+    abbrev_sha = string.rep('0', 8),
+    author = 'Not Committed Yet',
+    author_mail = '<not.committed.yet>',
+    author_tz = '+0000',
+    author_time = time,
+    committer = 'Not Committed Yet',
+    committer_time = time,
+    committer_mail = '<not.committed.yet>',
+    committer_tz = '+0000',
+    summary = 'Version of ' .. file,
+  }
+end
+
+---@param x any
+---@return integer
+local function asinteger(x)
+  return assert(tonumber(x))
+end
 
 --- @param lines string[]
---- @param lnum integer
---- @param ignore_whitespace boolean
---- @return Gitsigns.BlameInfo?
+--- @param lnum? integer
+--- @param ignore_whitespace? boolean
+--- @return table<integer,Gitsigns.BlameInfo?>?
 function Obj:run_blame(lines, lnum, ignore_whitespace)
-  local not_committed = {
-    author = 'Not Committed Yet',
-    ['author_mail'] = '<not.committed.yet>',
-    committer = 'Not Committed Yet',
-    ['committer_mail'] = '<not.committed.yet>',
-  }
+  local ret = {} --- @type table<integer,Gitsigns.BlameInfo>
 
   if not self.object_name or self.repo.abbrev_head == '' then
     -- As we support attaching to untracked files we need to return something if
     -- the file isn't isn't tracked in git.
     -- If abbrev_head is empty, then assume the repo has no commits
-    return not_committed
+    local commit = M.not_commited(self.file)
+    for i in ipairs(lines) do
+      ret[i] = {
+        orig_lnum = 0,
+        final_lnum = i,
+        commit = commit,
+        filename = self.file,
+      }
+    end
+    return ret
   end
 
-  local args = {
-    'blame',
-    '--contents',
-    '-',
-    '-L',
-    lnum .. ',+1',
-    '--line-porcelain',
-    self.file,
-  }
+  local args = { 'blame', '--contents', '-', '--incremental' }
+
+  if lnum then
+    vim.list_extend(args, { '-L', lnum .. ',+1' })
+  end
+
+  args[#args + 1] = self.file
 
   if ignore_whitespace then
     args[#args + 1] = '-w'
@@ -622,38 +637,99 @@ function Obj:run_blame(lines, lnum, ignore_whitespace)
     vim.list_extend(args, { '--ignore-revs-file', ignore_file })
   end
 
-  local results = self:command(args, { writer = lines })
+  local results, stderr = self:command(args, { writer = lines, suppress_stderr = true })
+  if stderr then
+    error_once('Error running git-blame: ' .. stderr)
+    return
+  end
+
   if #results == 0 then
     return
   end
-  local header = vim.split(table.remove(results, 1), ' ')
 
-  --- @diagnostic disable-next-line:missing-fields
-  local ret = {} --- @type Gitsigns.BlameInfo
-  ret.sha = header[1]
-  ret.orig_lnum = tonumber(header[2]) --[[@as integer]]
-  ret.final_lnum = tonumber(header[3]) --[[@as integer]]
-  ret.abbrev_sha = string.sub(ret.sha, 1, 8)
-  for _, l in ipairs(results) do
-    if not startswith(l, '\t') then
-      local cols = vim.split(l, ' ')
-      --- @type string
-      local key = table.remove(cols, 1):gsub('-', '_')
-      --- @diagnostic disable-next-line:no-unknown
-      ret[key] = table.concat(cols, ' ')
-      if key == 'previous' then
-        ret.previous_sha = cols[1]
-        ret.previous_filename = cols[2]
+  local commits = {} --- @type table<string,Gitsigns.CommitInfo>
+  local i = 1
+
+  while i <= #results do
+    --- @param pat? string
+    --- @return string
+    local function get(pat)
+      local l = assert(results[i])
+      i = i + 1
+      if pat then
+        return l:match(pat)
       end
+      return l
     end
-  end
 
-  -- New in git 2.41:
-  -- The output given by "git blame" that attributes a line to contents
-  -- taken from the file specified by the "--contents" option shows it
-  -- differently from a line attributed to the working tree file.
-  if ret.author_mail == '<external.file>' or ret.author_mail == 'External file (--contents)' then
-    ret = vim.tbl_extend('force', ret, not_committed)
+    local function peek(pat)
+      local l = results[i]
+      if l and pat then
+        return l:match(pat)
+      end
+      return l
+    end
+
+    local sha, orig_lnum_str, final_lnum_str, size_str = get('(%x+) (%d+) (%d+) (%d+)')
+    local orig_lnum = asinteger(orig_lnum_str)
+    local final_lnum = asinteger(final_lnum_str)
+    local size = asinteger(size_str)
+
+    if peek():match('^author ') then
+      --- @type table<string,string|true>
+      local commit = {
+        sha = sha,
+        abbrev_sha = sha:sub(1, 8),
+      }
+
+      -- filename terminates the entry
+      while peek() and not (peek():match('^filename ') or peek():match('^previous ')) do
+        local l = get()
+        local key, value = l:match('^([^%s]+) (.*)')
+        if key then
+          if vim.endswith(key, '_time') then
+            value = tonumber(value)
+          end
+          key = key:gsub('%-', '_') --- @type string
+          commit[key] = value
+        else
+          commit[l] = true
+          if l ~= 'boundary' then
+            dprintf("Unknown tag: '%s'", l)
+          end
+        end
+      end
+
+      -- New in git 2.41:
+      -- The output given by "git blame" that attributes a line to contents
+      -- taken from the file specified by the "--contents" option shows it
+      -- differently from a line attributed to the working tree file.
+      if
+        commit.author_mail == '<external.file>'
+        or commit.author_mail == 'External file (--contents)'
+      then
+        commit = vim.tbl_extend('force', commit, NOT_COMMITTED)
+      end
+      commits[sha] = commit
+    end
+
+    local previous_sha, previous_filename = peek():match('^previous (%x+) (.*)')
+    if previous_sha then
+      get()
+    end
+
+    local filename = assert(get():match('^filename (.*)'))
+
+    for j = 0, size - 1 do
+      ret[final_lnum + j] = {
+        final_lnum = final_lnum + j,
+        orig_lnum = orig_lnum + j,
+        commit = commits[sha],
+        filename = filename,
+        previous_filename = previous_filename,
+        previous_sha = previous_sha,
+      }
+    end
   end
 
   return ret
@@ -702,6 +778,8 @@ end
 --- @param invert? boolean
 function Obj.stage_hunks(self, hunks, invert)
   ensure_file_in_index(self)
+
+  local gs_hunks = require('gitsigns.hunks')
 
   local patch = gs_hunks.create_patch(self.relpath, hunks, self.mode_bits, invert)
 

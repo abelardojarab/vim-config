@@ -1,5 +1,4 @@
 :Neogit	neogit.txt	/*:Neogit*
-:NeogitMessages	neogit.txt	/*:NeogitMessages*
 :NeogitResetState	neogit.txt	/*:NeogitResetState*
 neogit	neogit.txt	/*neogit*
 neogit-lua	neogit.txt	/*neogit-lua*
@@ -29,6 +28,7 @@ neogit_branch_checkout_recent	neogit.txt	/*neogit_branch_checkout_recent*
 neogit_branch_checkout_rev	neogit.txt	/*neogit_branch_checkout_rev*
 neogit_branch_checkout_worktree	neogit.txt	/*neogit_branch_checkout_worktree*
 neogit_branch_config	neogit.txt	/*neogit_branch_config*
+neogit_branch_config_askSetPushDefault	neogit.txt	/*neogit_branch_config_askSetPushDefault*
 neogit_branch_config_autoSetupMerge	neogit.txt	/*neogit_branch_config_autoSetupMerge*
 neogit_branch_config_autoSetupRebase	neogit.txt	/*neogit_branch_config_autoSetupRebase*
 neogit_branch_config_baseBranch	neogit.txt	/*neogit_branch_config_baseBranch*
@@ -48,6 +48,7 @@ neogit_branch_popup	neogit.txt	/*neogit_branch_popup*
 neogit_branch_popup_actions	neogit.txt	/*neogit_branch_popup_actions*
 neogit_branch_popup_args	neogit.txt	/*neogit_branch_popup_args*
 neogit_branch_popup_variables	neogit.txt	/*neogit_branch_popup_variables*
+neogit_branch_pull_request	neogit.txt	/*neogit_branch_pull_request*
 neogit_branch_rename	neogit.txt	/*neogit_branch_rename*
 neogit_branch_reset	neogit.txt	/*neogit_branch_reset*
 neogit_branch_spin_off	neogit.txt	/*neogit_branch_spin_off*
@@ -123,7 +124,12 @@ neogit_rebase_popup	neogit.txt	/*neogit_rebase_popup*
 neogit_reflog_buffer	neogit.txt	/*neogit_reflog_buffer*
 neogit_remote	neogit.txt	/*neogit_remote*
 neogit_remote_config	neogit.txt	/*neogit_remote_config*
+neogit_remote_config_fetch	neogit.txt	/*neogit_remote_config_fetch*
 neogit_remote_config_popup	neogit.txt	/*neogit_remote_config_popup*
+neogit_remote_config_push	neogit.txt	/*neogit_remote_config_push*
+neogit_remote_config_pushurl	neogit.txt	/*neogit_remote_config_pushurl*
+neogit_remote_config_tagOpt	neogit.txt	/*neogit_remote_config_tagOpt*
+neogit_remote_config_url	neogit.txt	/*neogit_remote_config_url*
 neogit_remote_popup	neogit.txt	/*neogit_remote_popup*
 neogit_reset	neogit.txt	/*neogit_reset*
 neogit_reset_hard	neogit.txt	/*neogit_reset_hard*

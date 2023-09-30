@@ -480,8 +480,9 @@ files.current_buffer_fuzzy_find = function(opts)
     })
   end
 
+  opts.results_ts_highlight = vim.F.if_nil(opts.results_ts_highlight, true)
   local lang = vim.treesitter.language.get_lang(filetype)
-  if lang and utils.has_ts_parser(lang) then
+  if opts.results_ts_highlight and lang and utils.has_ts_parser(lang) then
     local parser = vim.treesitter.get_parser(opts.bufnr, lang)
     local query = vim.treesitter.query.get(lang, "highlights")
     local root = parser:parse()[1]:root()
@@ -538,6 +539,10 @@ files.current_buffer_fuzzy_find = function(opts)
         action_set.select:enhance {
           post = function()
             local selection = action_state.get_selected_entry()
+            if not selection then
+              return
+            end
+
             vim.api.nvim_win_set_cursor(0, { selection.lnum, 0 })
           end,
         }

@@ -185,11 +185,22 @@ function! coc#list#get_preview(...) abort
   return -1
 endfunction
 
-function! coc#list#scroll_preview(dir) abort
+function! coc#list#scroll_preview(dir, floatPreview) abort
   let winid = coc#list#get_preview()
   if winid == -1
     return
   endif
+  if a:floatPreview
+    let forward = a:dir ==# 'up' ? 0 : 1
+    let amount = 1
+    if s:is_vim
+      call coc#float#scroll_win(winid, forward, amount)
+    else
+      call timer_start(0, { -> coc#float#scroll_win(winid, forward, amount)})
+    endif
+    return
+  endif
+
   if exists('*win_execute')
     call win_execute(winid, "normal! ".(a:dir ==# 'up' ? "\<C-u>" : "\<C-d>"))
   else
@@ -370,10 +381,14 @@ function! s:preview_highlights(winid, bufnr, config, float) abort
   call sign_unplace(sign_group, {'buffer': a:bufnr})
   let lnum = get(a:config, 'lnum', 1)
   if !empty(filetype)
-    let start = max([0, lnum - 300])
-    let end = min([coc#compat#buf_line_count(a:bufnr), lnum + 300])
-    call coc#highlight#highlight_lines(a:winid, [{'filetype': filetype, 'startLine': start, 'endLine': end}])
-    call coc#compat#execute(a:winid, 'syn sync fromstart')
+    if get(g:, 'coc_list_preview_filetype', 0)
+      call coc#compat#execute(a:winid, 'setf '.filetype)
+    else
+      let start = max([0, lnum - 300])
+      let end = min([coc#compat#buf_line_count(a:bufnr), lnum + 300])
+      call coc#highlight#highlight_lines(a:winid, [{'filetype': filetype, 'startLine': start, 'endLine': end}])
+      call coc#compat#execute(a:winid, 'syn sync fromstart')
+    endif
   else
     call coc#compat#execute(a:winid, 'filetype detect')
     let ft = getbufvar(a:bufnr, '&filetype', '')

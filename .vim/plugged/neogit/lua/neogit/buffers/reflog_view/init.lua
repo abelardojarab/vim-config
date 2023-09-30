@@ -2,6 +2,7 @@ local Buffer = require("neogit.lib.buffer")
 local ui = require("neogit.buffers.reflog_view.ui")
 local config = require("neogit.config")
 local popups = require("neogit.popups")
+local notification = require("neogit.lib.notification")
 
 local CommitViewBuffer = require("neogit.buffers.commit_view")
 
@@ -28,7 +29,7 @@ function M:close()
   self.buffer = nil
 end
 
-function M:open()
+function M:open(_)
   self.buffer = Buffer.create {
     name = "NeogitReflogView",
     filetype = "NeogitReflogView",
@@ -40,7 +41,7 @@ function M:open()
           p { commits = self.buffer.ui:get_commits_in_selection() }
         end),
         ["b"] = popups.open("branch", function(p)
-          p { revisions = self.buffer.ui:get_commits_in_selection() }
+          p { commits = self.buffer.ui:get_commits_in_selection() }
         end),
         ["c"] = popups.open("commit", function(p)
           p { commit = self.buffer.ui:get_commit_under_cursor() }
@@ -66,7 +67,7 @@ function M:open()
           p { commits = { self.buffer.ui:get_commit_under_cursor() } }
         end),
         ["b"] = popups.open("branch", function(p)
-          p { revisions = { self.buffer.ui:get_commit_under_cursor() } }
+          p { commits = { self.buffer.ui:get_commit_under_cursor() } }
         end),
         ["c"] = popups.open("commit", function(p)
           p { commit = self.buffer.ui:get_commit_under_cursor() }
@@ -86,7 +87,7 @@ function M:open()
         end,
         ["d"] = function()
           if not config.check_integration("diffview") then
-            require("neogit.lib.notification").error("Diffview integration must be enabled for reflog diff")
+            notification.error("Diffview integration must be enabled for reflog diff")
             return
           end
 

@@ -1,12 +1,3 @@
-local warn
-do
-  -- this is included in gen_help.lua so don't error if requires fail
-  local ok, ret = pcall(require, 'gitsigns.message')
-  if ok then
-    warn = ret.warn
-  end
-end
-
 --- @class Gitsigns.SchemaElem
 --- @field type string|string[]
 --- @field deep_extend? boolean
@@ -50,7 +41,7 @@ end
 --- @class Gitsigns.Config
 --- @field debug_mode boolean
 --- @field diff_opts Gitsigns.DiffOpts
---- @field base string
+--- @field base? string
 --- @field signs table<Gitsigns.SignType,Gitsigns.SignConfig>
 --- @field _signs_staged table<Gitsigns.SignType,Gitsigns.SignConfig>
 --- @field _signs_staged_enable boolean
@@ -79,7 +70,6 @@ end
 --- @field trouble boolean
 --- -- Undocumented
 --- @field _refresh_staged_on_update boolean
---- @field _blame_cache boolean
 --- @field _threaded_diff boolean
 --- @field _inline2 boolean
 --- @field _extmark_signs boolean
@@ -119,7 +109,7 @@ M.config = setmetatable({}, {
       end
     end
     return rawget(t, k)
-  end
+  end,
 })
 
 --- @type table<string,Gitsigns.SchemaElem>
@@ -254,7 +244,7 @@ M.schema = {
       If normal attaching fails, then each entry in the table is attempted
       with the work tree details set.
 
-      Example: >
+      Example: >lua
         worktrees = {
           {
             toplevel = vim.env.HOME,
@@ -274,7 +264,7 @@ M.schema = {
       This callback must call its callback argument. The callback argument can
       accept an optional table argument with the keys: 'gitdir' and 'toplevel'.
 
-      Example: >
+      Example: >lua
       on_attach_pre = function(bufnr, callback)
         ...
         callback {
@@ -295,7 +285,7 @@ M.schema = {
 
       This callback can return `false` to prevent attaching to the buffer.
 
-      Example: >
+      Example: >lua
         on_attach = function(bufnr)
           if vim.api.nvim_buf_get_name(bufnr):match(<PATTERN>) then
             -- Don't attach to specific buffers whose name matches a pattern
@@ -395,7 +385,8 @@ M.schema = {
         vertical = true,
         linematch = nil,
       }
-      for _, o in ipairs(vim.opt.diffopt:get()) do
+      local diffopt = vim.opt.diffopt:get() --[[@as string[] ]]
+      for _, o in ipairs(diffopt) do
         if o == 'indent-heuristic' then
           r.indent_heuristic = true
         elseif o == 'internal' then
@@ -474,6 +465,8 @@ M.schema = {
 
   status_formatter = {
     type = 'function',
+    --- @param status Gitsigns.StatusObj
+    --- @return string
     default = function(status)
       local added, changed, removed = status.added, status.changed, status.removed
       local status_txt = {}
@@ -664,6 +657,7 @@ M.schema = {
                          • `summary`: string
                          • `previous`: string
                          • `filename`: string
+                         • `boundary`: true?
 
                        Note that the keys map onto the output of:
                          `git blame --line-porcelain`
@@ -727,7 +721,7 @@ M.schema = {
   },
 
   _test_mode = {
-    description = "Enable test mode",
+    description = 'Enable test mode',
     type = 'boolean',
     default = false,
   },
@@ -765,14 +759,6 @@ M.schema = {
     ]],
   },
 
-  _blame_cache = {
-    type = 'boolean',
-    default = true,
-    description = [[
-      Cache blame results for current_line_blame
-    ]],
-  },
-
   _threaded_diff = {
     type = 'boolean',
     default = true,
@@ -807,7 +793,7 @@ M.schema = {
   },
 }
 
-warn = function(s, ...)
+local function warn(s, ...)
   vim.notify(s:format(...), vim.log.levels.WARN, { title = 'gitsigns' })
 end
 
@@ -828,6 +814,7 @@ local function validate_config(config)
   end
 end
 
+--- @param cfg table<any, any>
 local function handle_deprecated(cfg)
   for k, v in pairs(M.schema) do
     local dep = v.deprecated
@@ -837,7 +824,7 @@ local function handle_deprecated(cfg)
           local opts_key, field = dep.new_field:match('(.*)%.(.*)')
           if opts_key and field then
             -- Field moved to an options table
-            local opts = (cfg[opts_key] or {})
+            local opts = (cfg[opts_key] or {}) --[[@as table<any,any>]]
             opts[field] = cfg[k]
             cfg[opts_key] = opts
           else
@@ -860,7 +847,7 @@ local function handle_deprecated(cfg)
   end
 end
 
---- @param user_config Gitsigns.Config
+--- @param user_config Gitsigns.Config|nil
 function M.build(user_config)
   user_config = user_config or {}
 

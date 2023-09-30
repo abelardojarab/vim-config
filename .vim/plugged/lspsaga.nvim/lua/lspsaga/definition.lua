@@ -77,11 +77,13 @@ function def:apply_maps(bufnr)
           vim.cmd[action]()
           return
         end
+        local restore = self.opt_restore
         self:close_all()
         local curbuf = api.nvim_get_current_buf()
         if action ~= 'edit' or curbuf ~= bufnr then
           vim.cmd[action](fname)
         end
+        restore()
         local ok = lsp.util.jump_to_location({
           uri = vim.uri_from_fname(fname),
           range = {
@@ -107,7 +109,7 @@ end
 function def:delete_maps(bufnr)
   for _, map in pairs(config.definition.keys) do
     for _, key in ipairs(util.as_table(map)) do
-      buf_del_keymap(bufnr, 'n', key)
+      pcall(buf_del_keymap, bufnr, 'n', key)
     end
   end
 end
@@ -127,7 +129,10 @@ function def:create_win(bufnr, root_dir)
     end
     return win
       :new_float(float_opt, true)
-      :winopt('winbar', '')
+      :winopt({
+        ['winbar'] = '',
+        ['signcolumn'] = 'no',
+      })
       :winhl('SagaNormal', 'SagaBorder')
       :wininfo()
   end
@@ -206,6 +211,9 @@ function def:peek_definition(method)
   self.pending_request = true
   local count = #util.get_client_by_method(method_name)
 
+  --set jumplist
+  vim.cmd("normal! m'")
+
   lsp.buf_request(current_buf, method_name, params, function(_, result, context)
     count = count - 1
     self.pending_request = false
@@ -271,9 +279,6 @@ function def:goto_definition(method, args)
     if vim.tbl_isempty(res) or not client then
       return
     end
-
-    --set jumplist
-    vim.cmd("normal! m'")
 
     local target_bufnr = vim.uri_to_bufnr(res.uri)
     if not api.nvim_buf_is_loaded(target_bufnr) then

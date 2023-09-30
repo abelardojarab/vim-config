@@ -115,7 +115,7 @@ require'nvim-treesitter.configs'.setup {
   -- Recommendation: set to false if you don't have `tree-sitter` CLI installed locally
   auto_install = true,
 
-  -- List of parsers to ignore installing (for "all")
+  -- List of parsers to ignore installing (or "all")
   ignore_install = { "javascript" },
 
   ---- If you need to change the installation directory of the parsers (see -> Advanced Setup)
@@ -174,7 +174,8 @@ We are looking for maintainers to add more parsers and to write query files for 
 <!--This section of the README is automatically updated by a CI job-->
 <!--parserinfo-->
 - [x] [ada](https://github.com/briot/tree-sitter-ada) (maintained by @briot)
-- [x] [agda](https://github.com/AusCyberman/tree-sitter-agda) (maintained by @Decodetalkers)
+- [x] [agda](https://github.com/tree-sitter/tree-sitter-agda) (maintained by @Decodetalkers)
+- [x] [apex](https://github.com/aheber/tree-sitter-sfapex) (maintained by @aheber)
 - [x] [arduino](https://github.com/ObserverOfTime/tree-sitter-arduino) (maintained by @ObserverOfTime)
 - [x] [astro](https://github.com/virchau13/tree-sitter-astro) (maintained by @virchau13)
 - [ ] [awk](https://github.com/Beaglefoot/tree-sitter-awk)
@@ -212,6 +213,7 @@ We are looking for maintainers to add more parsers and to write query files for 
 - [x] [doxygen](https://github.com/amaanq/tree-sitter-doxygen) (maintained by @amaanq)
 - [x] [dtd](https://github.com/ObserverOfTime/tree-sitter-xml) (maintained by @ObserverOfTime)
 - [x] [ebnf](https://github.com/RubixDev/ebnf) (experimental, maintained by @RubixDev)
+- [x] [eds](https://github.com/uyha/tree-sitter-eds) (maintained by @uyha)
 - [x] [eex](https://github.com/connorlay/tree-sitter-eex) (maintained by @connorlay)
 - [x] [elixir](https://github.com/elixir-lang/tree-sitter-elixir) (maintained by @connorlay)
 - [x] [elm](https://github.com/elm-tooling/tree-sitter-elm) (maintained by @zweimach)
@@ -247,7 +249,7 @@ We are looking for maintainers to add more parsers and to write query files for 
 - [x] [groovy](https://github.com/Decodetalkers/tree-sitter-groovy) (maintained by @Decodetalkers)
 - [ ] [hack](https://github.com/slackhq/tree-sitter-hack)
 - [x] [hare](https://github.com/amaanq/tree-sitter-hare) (maintained by @amaanq)
-- [ ] [haskell](https://github.com/tree-sitter/tree-sitter-haskell)
+- [x] [haskell](https://github.com/tree-sitter/tree-sitter-haskell) (maintained by @mrcjkb)
 - [x] [haskell_persistent](https://github.com/MercuryTechnologies/tree-sitter-haskell-persistent) (maintained by @lykahb)
 - [x] [hcl](https://github.com/MichaHoffmann/tree-sitter-hcl) (maintained by @MichaHoffmann)
 - [x] [heex](https://github.com/connorlay/tree-sitter-heex) (maintained by @connorlay)
@@ -271,6 +273,7 @@ We are looking for maintainers to add more parsers and to write query files for 
 - [x] [JSON with comments](https://gitlab.com/WhyNotHugo/tree-sitter-jsonc.git) (maintained by @WhyNotHugo)
 - [x] [jsonnet](https://github.com/sourcegraph/tree-sitter-jsonnet) (maintained by @nawordar)
 - [x] [julia](https://github.com/tree-sitter/tree-sitter-julia) (maintained by @theHamsta)
+- [x] [kconfig](https://github.com/amaanq/tree-sitter-kconfig) (maintained by @amaanq)
 - [x] [kdl](https://github.com/amaanq/tree-sitter-kdl) (maintained by @amaanq)
 - [x] [kotlin](https://github.com/fwcd/tree-sitter-kotlin) (maintained by @SalBakraa)
 - [x] [lalrpop](https://github.com/traxys/tree-sitter-lalrpop) (maintained by @traxys)
@@ -294,6 +297,7 @@ We are looking for maintainers to add more parsers and to write query files for 
 - [x] [ninja](https://github.com/alemuller/tree-sitter-ninja) (maintained by @alemuller)
 - [x] [nix](https://github.com/cstrahan/tree-sitter-nix) (maintained by @leo60228)
 - [x] [norg](https://github.com/nvim-neorg/tree-sitter-norg) (maintained by @JoeyGrajciar, @vhyrro)
+- [x] [nqc](https://github.com/amaanq/tree-sitter-nqc) (maintained by @amaanq)
 - [x] [objc](https://github.com/amaanq/tree-sitter-objc) (maintained by @amaanq)
 - [x] [ocaml](https://github.com/tree-sitter/tree-sitter-ocaml) (maintained by @undu)
 - [x] [ocaml_interface](https://github.com/tree-sitter/tree-sitter-ocaml) (maintained by @undu)
@@ -343,10 +347,14 @@ We are looking for maintainers to add more parsers and to write query files for 
 - [x] [slint](https://github.com/jrmoulton/tree-sitter-slint) (experimental, maintained by @jrmoulton)
 - [x] [smali](https://git.sr.ht/~yotam/tree-sitter-smali) (maintained by @amaanq)
 - [x] [smithy](https://github.com/indoorvivants/tree-sitter-smithy) (maintained by @amaanq, @keynmol)
+- [ ] [snakemake](https://github.com/osthomas/tree-sitter-snakemake) (experimental)
 - [x] [solidity](https://github.com/JoranHonig/tree-sitter-solidity) (maintained by @amaanq)
+- [x] [soql](https://github.com/aheber/tree-sitter-sfapex) (maintained by @aheber)
+- [x] [sosl](https://github.com/aheber/tree-sitter-sfapex) (maintained by @aheber)
 - [x] [sparql](https://github.com/BonaBeavis/tree-sitter-sparql) (maintained by @BonaBeavis)
 - [x] [sql](https://github.com/derekstride/tree-sitter-sql) (maintained by @derekstride)
 - [x] [squirrel](https://github.com/amaanq/tree-sitter-squirrel) (maintained by @amaanq)
+- [x] [ssh_config](https://github.com/ObserverOfTime/tree-sitter-ssh-config) (maintained by @ObserverOfTime)
 - [x] [starlark](https://github.com/amaanq/tree-sitter-starlark) (maintained by @amaanq)
 - [x] [strace](https://github.com/sigmaSd/tree-sitter-strace) (maintained by @amaanq)
 - [x] [supercollider](https://github.com/madskjeldgaard/tree-sitter-supercollider) (maintained by @madskjeldgaard)
@@ -359,6 +367,7 @@ We are looking for maintainers to add more parsers and to write query files for 
 - [x] [tablegen](https://github.com/amaanq/tree-sitter-tablegen) (maintained by @amaanq)
 - [x] [teal](https://github.com/euclidianAce/tree-sitter-teal) (maintained by @euclidianAce)
 - [x] [terraform](https://github.com/MichaHoffmann/tree-sitter-hcl) (maintained by @MichaHoffmann)
+- [x] [textproto](https://github.com/PorterAtGoogle/tree-sitter-textproto) (maintained by @Porter)
 - [x] [thrift](https://github.com/duskmoon314/tree-sitter-thrift) (maintained by @amaanq, @duskmoon314)
 - [x] [tiger](https://github.com/ambroisie/tree-sitter-tiger) (maintained by @ambroisie)
 - [x] [tlaplus](https://github.com/tlaplus-community/tree-sitter-tlaplus) (maintained by @ahelwer, @susliko)
@@ -370,6 +379,7 @@ We are looking for maintainers to add more parsers and to write query files for 
 - [x] [twig](https://github.com/gbprod/tree-sitter-twig) (maintained by @gbprod)
 - [x] [typescript](https://github.com/tree-sitter/tree-sitter-typescript) (maintained by @steelsojka)
 - [x] [ungrammar](https://github.com/Philipp-M/tree-sitter-ungrammar) (maintained by @Philipp-M, @amaanq)
+- [x] [unison](https://github.com/kylegoetz/tree-sitter-unison) (maintained by @tapegram)
 - [x] [usd](https://github.com/ColinKennedy/tree-sitter-usd) (maintained by @ColinKennedy)
 - [x] [uxn tal](https://github.com/amaanq/tree-sitter-uxntal) (maintained by @amaanq)
 - [x] [v](https://github.com/v-analyzer/v-analyzer) (maintained by @kkharji, @amaanq)

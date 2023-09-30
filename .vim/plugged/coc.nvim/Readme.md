@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://www.vim.org/scripts/script.php?script_id=5779">
-    <img alt="Logo" src="https://alfs.chigua.cn/dianyou/data/platform/default/20220525/coc.png" height="240" />
+    <img alt="Logo" src="https://github.com/neoclide/coc.nvim/assets/251450/9c2bc011-35f0-4ef5-93ba-bc3f17e65bb7" height="240" />
   </a>
   <p align="center">Make your Vim/Neovim as smart as VS Code</p>
   <p align="center">
@@ -8,13 +8,13 @@
     <a href="https://github.com/neoclide/coc.nvim/actions"><img alt="Actions" src="https://img.shields.io/github/actions/workflow/status/neoclide/coc.nvim/ci.yml?style=flat-square&branch=master"></a>
       <a href="https://codecov.io/gh/neoclide/coc.nvim"><img alt="Codecov Coverage Status" src="https://img.shields.io/codecov/c/github/neoclide/coc.nvim.svg?style=flat-square"></a>
     <a href="doc/coc.txt"><img alt="Doc" src="https://img.shields.io/badge/doc-%3Ah%20coc.txt-brightgreen.svg?style=flat-square"></a>
-    <a href="https://gitter.im/neoclide/coc.nvim"><img alt="Gitter" src="https://img.shields.io/gitter/room/neoclide/coc.nvim.svg?style=flat-square"></a>
+    <a href="https://matrix.to/#/#coc.nvim:matrix.org"><img alt="Gitter" src="https://img.shields.io/gitter/room/neoclide/coc.nvim.svg?style=flat-square"></a>
   </p>
 </p>
 
 ---
 
-<img alt="Custom coc popup menu with snippet support" src="https://alfs.chigua.cn/dianyou/data/platform/default/20220801/2022-08-01%2002-14-03.2022-08-01%2002_15_16.gif" width="60%" />
+<img alt="Custom coc popup menu with snippet support" src="https://github.com/neoclide/coc.nvim/assets/251450/05f60ab8-dcb1-40f7-9e4a-3c03f5db5398" width="60%" />
 
 _Custom popup menu with snippet support_
 
@@ -41,8 +41,8 @@ For [vim-plug](https://github.com/junegunn/vim-plug) users:
 " Use release branch (recommended)
 Plug 'neoclide/coc.nvim', {'branch': 'release'}
 
-" Or build from source code by using yarn: https://yarnpkg.com
-Plug 'neoclide/coc.nvim', {'branch': 'master', 'do': 'yarn install --frozen-lockfile'}
+" Or build from source code by using npm
+Plug 'neoclide/coc.nvim', {'branch': 'master', 'do': 'npm ci'}
 ```
 
 in your `.vimrc` or `init.vim`, then restart Vim and run `:PlugInstall`.
@@ -468,8 +468,8 @@ Try these steps if you experience problems with coc.nvim:
 
 - Have a question? Start a discussion on [GitHub Discussions](https://github.com/neoclide/coc.nvim/discussions).
 - File a bug in [GitHub Issues](https://github.com/neoclide/coc.nvim/issues).
-- Chat with us on [Gitter](https://gitter.im/neoclide/coc.nvim).
-- 中文用户请到 [中文 gitter](https://gitter.im/neoclide/coc-cn) 讨论
+- Chat with us on [Gitter](https://matrix.to/#/#coc.nvim:matrix.org).
+- 中文用户请到 [中文 gitter](https://matrix.to/#/#neoclide_coc-cn:gitter.im) 讨论
 
 ## Backers
 

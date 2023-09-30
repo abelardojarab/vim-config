@@ -94,6 +94,9 @@ function hover:open_floating_preview(content, option_fn)
     if line:find('^%-%-%-$') then
       line = util.gen_truncate_line(float_option.width)
     end
+    if line:find('\\') then
+      line = line:gsub('\\', '')
+    end
     if #line > 0 then
       new[#new + 1] = line
     end
@@ -228,7 +231,7 @@ function hover:do_request(args)
     end
 
     if not result or not result.contents then
-      if ignore_error(args, count == #clients) then
+      if not ignore_error(args, count == #clients) then
         vim.notify('No information available')
       end
       return
@@ -268,7 +271,9 @@ function hover:do_request(args)
     if not client then
       return
     end
-    content[#content + 1] = '`From: ' .. client.name .. '`'
+    if #clients ~= 1 then
+      content[#content + 1] = '`From: ' .. client.name .. '`'
+    end
 
     if
       self.bufnr

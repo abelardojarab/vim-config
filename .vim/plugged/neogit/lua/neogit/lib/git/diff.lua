@@ -103,6 +103,13 @@ local function hunk_hash(content)
   return sha256(table.concat(content, "\n"))
 end
 
+---@class Hunk
+---@field index_from number
+---@field index_len number
+---@field diff_from number
+---@field diff_to number
+
+---@return Hunk
 local function build_hunks(lines)
   local hunks = {}
   local hunk = nil
@@ -219,6 +226,15 @@ local function raw_staged(name)
   end
 end
 
+local function raw_staged_renamed(name, original)
+  return function()
+    local diff = cli.diff.no_ext_diff.cached.files(name, original).call():trim().stdout
+    local stats = cli.diff.no_ext_diff.cached.shortstat.files(name, original).call():trim().stdout
+
+    return { diff, stats }
+  end
+end
+
 local function invalidate_diff(filter, section, item)
   if not filter or filter:accepts(section, item.name) then
     logger.debug("[DIFF] Invalidating cached diff for: " .. item.name)
@@ -247,7 +263,11 @@ return {
 
       for _, f in ipairs(repo.staged.items) do
         invalidate_diff(filter, "staged", f)
-        build_metatable(f, raw_staged(f.name))
+        if f.mode == "R" then
+          build_metatable(f, raw_staged_renamed(f.name, f.original_name))
+        else
+          build_metatable(f, raw_staged(f.name))
+        end
       end
     end
   end,

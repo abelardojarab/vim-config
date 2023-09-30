@@ -1,4 +1,5 @@
 :LspAddTreeCallHierarchyIncoming	vim-lsp.txt	/*:LspAddTreeCallHierarchyIncoming*
+:LspAddTreeReferences	vim-lsp.txt	/*:LspAddTreeReferences*
 :LspCallHierarchyIncoming	vim-lsp.txt	/*:LspCallHierarchyIncoming*
 :LspCallHierarchyOutgoing	vim-lsp.txt	/*:LspCallHierarchyOutgoing*
 :LspCodeAction	vim-lsp.txt	/*:LspCodeAction*

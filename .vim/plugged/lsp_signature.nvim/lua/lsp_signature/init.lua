@@ -193,18 +193,28 @@ local function virtual_hint(hint, off_y)
   _LSP_SIG_VT_NS = _LSP_SIG_VT_NS or vim.api.nvim_create_namespace('lsp_signature_vt')
 
   helper.cleanup(false) -- cleanup extmark
-
+  if offset == nil then
+    log('virtual text: ', cur_line, 'invalid offset')
+    return -- no offset found
+  end
   local vt = { pad .. _LSP_SIG_CFG.hint_prefix .. hint, _LSP_SIG_CFG.hint_scheme }
 
   if _LSP_SIG_CFG.hint_inline() then
     log('virtual text: ', cur_line, r[1] - 1, r[2], vt)
-    vim.api.nvim_buf_set_extmark(0, _LSP_SIG_VT_NS, r[1] - 1, offset, { -- Note: the vt was put after of cursor.
-      -- this seems eaiser to handle in the code also easy to read
-      virt_text_pos = 'inline',
-      virt_text = { vt },
-      hl_mode = 'combine',
-      -- hl_group = _LSP_SIG_CFG.hint_scheme
-    })
+    vim.api.nvim_buf_set_extmark(
+      0,
+      _LSP_SIG_VT_NS,
+      r[1] - 1,
+      offset,
+      { -- Note: the vt was put after of cursor.
+        -- this seems eaiser to handle in the code also easy to read
+        virt_text_pos = 'inline',
+        virt_text = { vt },
+        hl_mode = 'combine',
+        ephemeral = false,
+        -- hl_group = _LSP_SIG_CFG.hint_scheme
+      }
+    )
   else -- I may deprecated this when nvim 0.10 release
     log('virtual text: ', cur_line, show_at, vt)
     vim.api.nvim_buf_set_extmark(0, _LSP_SIG_VT_NS, show_at, 0, {

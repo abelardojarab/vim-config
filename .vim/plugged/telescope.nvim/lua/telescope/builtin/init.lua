@@ -103,6 +103,7 @@ builtin.treesitter = require_on_exported_call("telescope.builtin.__files").trees
 --- Live fuzzy search inside of the currently open buffer
 ---@param opts table: options to pass to the picker
 ---@field skip_empty_lines boolean: if true we don't display empty lines (default: false)
+---@field results_ts_highlight boolean: highlight result entries with treesitter (default: true)
 ---@field file_encoding string: file encoding for the previewer
 builtin.current_buffer_fuzzy_find = require_on_exported_call("telescope.builtin.__files").current_buffer_fuzzy_find
 
@@ -532,7 +533,7 @@ builtin.lsp_dynamic_workspace_symbols = require_on_exported_call("telescope.buil
 ---@field root_dir string|boolean: if set to string, get diagnostics only for buffers under this dir otherwise cwd
 ---@field no_unlisted boolean: if true, get diagnostics only for listed buffers
 ---@field no_sign boolean: hide DiagnosticSigns from Results (default: false)
----@field line_width number: set length of diagnostic entry text in Results
+---@field line_width string|number: set length of diagnostic entry text in Results. Use 'full' for full untruncated text
 ---@field namespace number: limit your diagnostics to a specific namespace
 ---@field disable_coordinates boolean: don't show the line & row numbers (default: false)
 ---@field sort_by string: sort order of the diagnostics results; see above notes (default: "buffer")

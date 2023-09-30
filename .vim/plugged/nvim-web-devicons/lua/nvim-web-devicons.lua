@@ -27,7 +27,7 @@ local icons_by_filename = {
   [".editorconfig"] = {
     icon = "",
     color = "#ffffff",
-    cterm_color = "15",
+    cterm_color = "231",
     name = "EditorConfig",
   },
   [".eslintrc"] = {
@@ -120,6 +120,12 @@ local icons_by_filename = {
     cterm_color = "113",
     name = "Zshrc",
   },
+  ["avif"] = {
+    icon = "",
+    color = "#a074c4",
+    cterm_color = "140",
+    name = "Avif",
+  },
   ["brewfile"] = {
     icon = "",
     color = "#701516",
@@ -187,6 +193,12 @@ local icons_by_filename = {
     name = "License",
   },
   ["r"] = {
+    icon = "󰟔",
+    color = "#358a5b",
+    cterm_color = "29",
+    name = "R",
+  },
+  ["R"] = {
     icon = "󰟔",
     color = "#358a5b",
     cterm_color = "29",
@@ -512,6 +524,12 @@ local icons_by_file_extension = {
     cterm_color = "113",
     name = "Csv",
   },
+  ["cts"] = {
+    icon = "",
+    color = "#519aba",
+    cterm_color = "74",
+    name = "Cts",
+  },
   ["cxx"] = {
     icon = "",
     color = "#519aba",
@@ -793,6 +811,12 @@ local icons_by_file_extension = {
     cterm_color = "196",
     name = "Html",
   },
+  ["huff"] = {
+    icon = "󰡘",
+    color = "#4242c7",
+    cterm_color = "56",
+    name = "Huff",
+  },
   ["hxx"] = {
     icon = "",
     color = "#a074c4",
@@ -1021,6 +1045,12 @@ local icons_by_file_extension = {
     cterm_color = "135",
     name = "Motoko",
   },
+  ["mts"] = {
+    icon = "",
+    color = "#519aba",
+    cterm_color = "74",
+    name = "Mts",
+  },
   ["mustache"] = {
     icon = "",
     color = "#e37933",
@@ -1171,6 +1201,12 @@ local icons_by_file_extension = {
     name = "Query",
   },
   ["r"] = {
+    icon = "󰟔",
+    color = "#358a5b",
+    cterm_color = "29",
+    name = "R",
+  },
+  ["R"] = {
     icon = "󰟔",
     color = "#358a5b",
     cterm_color = "29",
@@ -1591,7 +1627,7 @@ local icons_by_file_extension = {
     name = "Solidity",
   },
   ["prisma"] = {
-    icon = "󰔶",
+    icon = "",
     color = "#ffffff",
     cterm_color = "231",
     name = "Prisma",
@@ -1640,6 +1676,7 @@ end
 
 -- Map of filetypes -> icon names
 local filetypes = {
+  ["avif"] = "avif",
   ["bzl"] = "bzl",
   ["brewfile"] = "brewfile",
   ["commit"] = "commit_editmsg",
@@ -2091,13 +2128,15 @@ end
 -- Load the icons already, the loaded tables depend on the 'background' setting.
 refresh_icons()
 
+local function refresh()
+  refresh_icons()
+  set_up_highlights(true)
+end
+
 -- Change icon set on background change
 vim.api.nvim_create_autocmd("OptionSet", {
   pattern = "background",
-  callback = function()
-    refresh_icons()
-    set_up_highlights(true) -- Force update highlights
-  end,
+  callback = refresh,
 })
 
 return {
@@ -2121,4 +2160,5 @@ return {
     return icons
   end,
   set_up_highlights = set_up_highlights,
+  refresh = refresh,
 }

@@ -31,32 +31,38 @@ end
 local ns = api.nvim_create_namespace('SagaFinder')
 
 function fd:init_layout()
+  self.callerwinid = api.nvim_get_current_win()
   local win_width = api.nvim_win_get_width(0)
   if config.finder.right_width > 0.6 then
     vim.notify('[lspsaga] finder right width must be less than 0.7')
     config.finder.right_width = 0.5
   end
-  self.lbufnr, self.lwinid, _, self.rwinid = ly:new(self.layout)
-    :left(
-      math.floor(vim.o.lines * config.finder.max_height),
-      math.floor(win_width * config.finder.left_width),
-      nil,
-      nil,
-      self.layout == 'normal' and config.finder.sp_global or nil
-    )
-    :bufopt({
-      ['filetype'] = 'sagafinder',
-      ['buftype'] = 'nofile',
-      ['bufhidden'] = 'wipe',
-      ['modifiable'] = true,
-    })
-    :winopt('wrap', false)
-    :right({ width = config.finder.right_width })
-    :bufopt({
-      ['buftype'] = 'nofile',
-      ['bufhidden'] = 'wipe',
-    })
-    :done()
+  if self.layout == 'dropdown' then
+    self.lbufnr, self.lwinid, _, self.rwinid =
+      ly:new(self.layout):dropdown(math.floor(vim.o.lines * config.finder.max_height)):done()
+  else
+    self.lbufnr, self.lwinid, _, self.rwinid = ly:new(self.layout)
+      :left(
+        math.floor(vim.o.lines * config.finder.max_height),
+        math.floor(win_width * config.finder.left_width),
+        nil,
+        nil,
+        self.layout == 'normal' and config.finder.sp_global or nil
+      )
+      :bufopt({
+        ['filetype'] = 'sagafinder',
+        ['buftype'] = 'nofile',
+        ['bufhidden'] = 'wipe',
+        ['modifiable'] = true,
+      })
+      :winopt('wrap', false)
+      :right({ width = config.finder.right_width })
+      :bufopt({
+        ['buftype'] = 'nofile',
+        ['bufhidden'] = 'wipe',
+      })
+      :done()
+  end
   self:apply_maps()
   self:event()
 end
@@ -123,6 +129,9 @@ function fd:handler(method, results, spin_close, done)
         row = row + 1
       end
       local fname = vim.uri_to_fname(uri)
+      if config.finder.fname_sub and type(config.finder.fname_sub) == 'function' then
+        fname = config.finder.fname_sub(fname)
+      end
       local client = lsp.get_client_by_id(client_id)
       if not client then
         return
@@ -219,10 +228,12 @@ function fd:event()
       if node.value.wipe then
         vim.bo[node.value.bufnr].filetype = self.ft
       end
-      api.nvim_set_option_value('winhl', 'Normal:SagaNormal,FloatBorder:SagaBorder', {
-        scope = 'local',
-        win = self.rwinid,
-      })
+      if config.finder.layout ~= 'dropdown' then
+        api.nvim_set_option_value('winhl', 'Normal:SagaNormal,FloatBorder:SagaBorder', {
+          scope = 'local',
+          win = self.rwinid,
+        })
+      end
       local client = vim.lsp.get_client_by_id(node.value.client_id)
       if not client then
         return
@@ -321,12 +332,15 @@ function fd:toggle_or_open()
           client.offset_encoding
         ),
       }
+      local callerwinid = self.callerwinid
       self:clean()
       local restore = win:minimal_restore()
       local bufnr = vim.uri_to_bufnr(uri)
-      api.nvim_win_set_buf(0, bufnr)
+      api.nvim_win_set_buf(callerwinid, bufnr)
+      vim.bo[bufnr].buflisted = true
       restore()
-      api.nvim_win_set_cursor(0, pos)
+      api.nvim_set_current_win(callerwinid)
+      api.nvim_win_set_cursor(callerwinid, pos)
       beacon({ pos[1] - 1, 0 }, #api.nvim_get_current_line())
       return
     end
@@ -492,7 +506,7 @@ function fd:new(args)
   self.list = slist.new()
   local params = lsp.util.make_position_params()
   params.context = {
-    includeDeclaration = false,
+    includeDeclaration = true,
   }
 
   local spin_close = box.spinner()
@@ -514,10 +528,14 @@ function fd:new(args)
     end
     coroutine.yield()
     count = 0
-    local total = #vim.tbl_keys(retval)
-    for method, results in pairs(retval) do
+    local keys = vim.tbl_keys(retval)
+    table.sort(keys, function(a, b)
+      return util.tbl_index(methods, a) < util.tbl_index(methods, b)
+    end)
+
+    for _, m in pairs(keys) do
       count = count + 1
-      self:handler(method, results, spin_close, count == total)
+      self:handler(m, retval[m], spin_close, count == #keys)
     end
     if not self.lwinid then
       spin_close()

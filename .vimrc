@@ -301,6 +301,13 @@ endif
 Plug 'romainl/vim-cool'
 
 " Completion
+if (has('nvim-0.9'))
+Plug 'github/copilot.vim'
+endif
+if v:version >= 899
+Plug 'github/copilot.vim'
+endif
+
 if (has('nvim'))
 Plug 'neoclide/coc.nvim', {'for':['zig','cmake','rust',
      \'java','json', 'haskell', 'ts','sh', 'cs',

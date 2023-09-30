@@ -95,7 +95,7 @@ describe('gitsigns', function()
 
     check {
       status = {head='', added=18, changed=0, removed=0},
-      signs = {untracked=8}
+      signs = {untracked=nvim_ver == 10 and 7 or 8}
     }
 
     git{"add", test_file}
@@ -315,14 +315,7 @@ describe('gitsigns', function()
   describe('on_attach()', function()
     it('can prevent attaching to a buffer', function()
       setup_test_repo{no_add=true}
-
-      -- Functions can't be serialized over rpc so need to setup config
-      -- remotely
-      setup_gitsigns(config, [[
-        config.on_attach = function()
-          return false
-        end
-      ]])
+      setup_gitsigns(config, true)
 
       edit(test_file)
       match_debug_messages {

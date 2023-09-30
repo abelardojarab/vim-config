@@ -1,3 +1,9 @@
+TelescopeLayout	telescope.txt	/*TelescopeLayout*
+TelescopeLayout.config	telescope.txt	/*TelescopeLayout.config*
+TelescopeWindow	telescope.txt	/*TelescopeWindow*
+TelescopeWindow.config	telescope.txt	/*TelescopeWindow.config*
+TelescopeWindowBorder	telescope.txt	/*TelescopeWindowBorder*
+TelescopeWindowBorder.config	telescope.txt	/*TelescopeWindowBorder.config*
 telescope.actions	telescope.txt	/*telescope.actions*
 telescope.actions._close()	telescope.txt	/*telescope.actions._close()*
 telescope.actions.add_selected_to_loclist()	telescope.txt	/*telescope.actions.add_selected_to_loclist()*
@@ -30,6 +36,7 @@ telescope.actions.git_create_branch()	telescope.txt	/*telescope.actions.git_crea
 telescope.actions.git_delete_branch()	telescope.txt	/*telescope.actions.git_delete_branch()*
 telescope.actions.git_merge_branch()	telescope.txt	/*telescope.actions.git_merge_branch()*
 telescope.actions.git_rebase_branch()	telescope.txt	/*telescope.actions.git_rebase_branch()*
+telescope.actions.git_rename_branch()	telescope.txt	/*telescope.actions.git_rename_branch()*
 telescope.actions.git_reset_hard()	telescope.txt	/*telescope.actions.git_reset_hard()*
 telescope.actions.git_reset_mixed()	telescope.txt	/*telescope.actions.git_reset_mixed()*
 telescope.actions.git_reset_soft()	telescope.txt	/*telescope.actions.git_reset_soft()*
@@ -181,6 +188,7 @@ telescope.defaults.borderchars	telescope.txt	/*telescope.defaults.borderchars*
 telescope.defaults.buffer_previewer_maker	telescope.txt	/*telescope.defaults.buffer_previewer_maker*
 telescope.defaults.cache_picker	telescope.txt	/*telescope.defaults.cache_picker*
 telescope.defaults.color_devicons	telescope.txt	/*telescope.defaults.color_devicons*
+telescope.defaults.create_layout	telescope.txt	/*telescope.defaults.create_layout*
 telescope.defaults.cycle_layout_list	telescope.txt	/*telescope.defaults.cycle_layout_list*
 telescope.defaults.default_mappings	telescope.txt	/*telescope.defaults.default_mappings*
 telescope.defaults.dynamic_preview_title	telescope.txt	/*telescope.defaults.dynamic_preview_title*
@@ -230,6 +238,10 @@ telescope.make_entry	telescope.txt	/*telescope.make_entry*
 telescope.mappings	telescope.txt	/*telescope.mappings*
 telescope.nvim	telescope.txt	/*telescope.nvim*
 telescope.pickers.entry_display	telescope.txt	/*telescope.pickers.entry_display*
+telescope.pickers.layout	telescope.txt	/*telescope.pickers.layout*
+telescope.pickers.layout:mount()	telescope.txt	/*telescope.pickers.layout:mount()*
+telescope.pickers.layout:unmount()	telescope.txt	/*telescope.pickers.layout:unmount()*
+telescope.pickers.layout:update()	telescope.txt	/*telescope.pickers.layout:update()*
 telescope.previewers	telescope.txt	/*telescope.previewers*
 telescope.previewers.Previewer()	telescope.txt	/*telescope.previewers.Previewer()*
 telescope.previewers.buffer_previewer_maker()	telescope.txt	/*telescope.previewers.buffer_previewer_maker()*

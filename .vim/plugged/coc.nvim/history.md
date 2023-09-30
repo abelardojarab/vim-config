@@ -1,3 +1,16 @@
+# 2023-09-02
+
+- Support `g:coc_list_preview_filetype`.
+
+# 2023-08-31
+
+- Minimal node version changed from 14.14.0 to 16.18.0.
+- Inlay hint support requires neovim >= 0.10.0.
+- Removed configurations:
+  - `inlayHint.subSeparator`
+  - `inlayHint.typeSeparator`
+  - `inlayHint.parameterSeparator`
+
 # 2023-01-30
 
 - Always show `cancellable` progress as notification without check

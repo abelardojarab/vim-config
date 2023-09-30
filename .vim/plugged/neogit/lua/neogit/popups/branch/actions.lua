@@ -1,9 +1,10 @@
 local M = {}
 
 local git = require("neogit.lib.git")
+local config = require("neogit.config")
 local input = require("neogit.lib.input")
 local util = require("neogit.lib.util")
-local notif = require("neogit.lib.notification")
+local notification = require("neogit.lib.notification")
 local operation = require("neogit.operations")
 
 local FuzzyFinderBuffer = require("neogit.buffers.fuzzy_finder")
@@ -23,7 +24,7 @@ end
 
 local function spin_off_branch(checkout)
   if git.status.is_dirty() and not checkout then
-    notif.create("Staying on HEAD due to uncommitted changes", vim.log.levels.INFO)
+    notification.info("Staying on HEAD due to uncommitted changes")
     checkout = true
   end
 
@@ -60,7 +61,7 @@ M.spin_out_branch = operation("spin_out_branch", function()
 end)
 
 M.checkout_branch_revision = operation("checkout_branch_revision", function(popup)
-  local options = util.merge(popup.state.env.revisions, git.branch.get_all_branches())
+  local options = util.merge(popup.state.env.commits, git.branch.get_all_branches())
 
   local selected_branch = FuzzyFinderBuffer.new(options):open_async()
   if not selected_branch then
@@ -188,7 +189,7 @@ M.reset_branch = operation("reset_branch", function()
   git.cli.reset.hard.args(to).call_sync()
   git.log.update_ref(git.branch.current_full_name(), to)
 
-  notif.create(string.format("Reset '%s' to '%s'", current, to), vim.log.levels.INFO)
+  notification.info(string.format("Reset '%s' to '%s'", current, to))
 end)
 
 M.delete_branch = operation("delete_branch", function()
@@ -244,10 +245,43 @@ M.delete_branch = operation("delete_branch", function()
 
   if success then
     if remote then
-      notif.create(string.format("Deleted remote branch '%s/%s'", remote, branch_name), vim.log.levels.INFO)
+      notification.info(string.format("Deleted remote branch '%s/%s'", remote, branch_name))
     else
-      notif.create(string.format("Deleted branch '%s'", branch_name), vim.log.levels.INFO)
+      notification.info(string.format("Deleted branch '%s'", branch_name))
     end
+  end
+end)
+
+local function parse_remote_info(url)
+  local repo, owner
+  if url:match("^https?://") or url:match("^ssh://") then
+    repo, owner, _ = unpack(util.reverse(vim.split(url, "/")))
+  else
+    owner, repo = unpack(vim.split(vim.split(url, ":")[2], "/"))
+  end
+
+  repo, _ = repo:gsub(".git$", "")
+  return { repository = repo, owner = owner, branch_name = git.branch.current() }
+end
+
+M.open_pull_request = operation("open_pull_request", function()
+  local template
+  local url = git.remote.get_url(git.branch.upstream_remote())[1]
+  for service, v in pairs(config.values.git_services) do
+    if url:match(service) then
+      template = v
+      break
+    end
+  end
+
+  if template then
+    if vim.ui.open then
+      vim.ui.open(util.format(template, parse_remote_info(url)))
+    else
+      notification.warn("Requires Neovim 0.10")
+    end
+  else
+    notification.warn("Pull request URL template not found for this branch's upstream")
   end
 end)
 

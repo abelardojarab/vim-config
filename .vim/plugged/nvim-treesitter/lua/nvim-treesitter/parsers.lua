@@ -45,6 +45,7 @@ for ft, lang in pairs {
   svg = "xml",
   xsd = "xml",
   xslt = "xml",
+  sbt = "scala",
 } do
   register_lang(lang, ft)
 end
@@ -85,10 +86,19 @@ list.ada = {
 
 list.agda = {
   install_info = {
-    url = "https://github.com/AusCyberman/tree-sitter-agda",
-    files = { "src/parser.c", "src/scanner.cc" },
+    url = "https://github.com/tree-sitter/tree-sitter-agda",
+    files = { "src/parser.c", "src/scanner.c" },
   },
   maintainers = { "@Decodetalkers" },
+}
+
+list.apex = {
+  install_info = {
+    url = "https://github.com/aheber/tree-sitter-sfapex",
+    files = { "src/parser.c" },
+    location = "apex",
+  },
+  maintainers = { "@aheber" },
 }
 
 list.arduino = {
@@ -403,6 +413,14 @@ list.ebnf = {
   experimental = true,
 }
 
+list.eds = {
+  install_info = {
+    url = "https://github.com/uyha/tree-sitter-eds",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@uyha" },
+}
+
 list.eex = {
   install_info = {
     url = "https://github.com/connorlay/tree-sitter-eex",
@@ -701,12 +719,13 @@ list.haskell = {
     url = "https://github.com/tree-sitter/tree-sitter-haskell",
     files = { "src/parser.c", "src/scanner.c" },
   },
+  maintainers = { "@mrcjkb" },
 }
 
 list.haskell_persistent = {
   install_info = {
     url = "https://github.com/MercuryTechnologies/tree-sitter-haskell-persistent",
-    files = { "src/parser.c", "src/scanner.cc" },
+    files = { "src/parser.c", "src/scanner.c" },
   },
   filetype = "haskellpersistent",
   maintainers = { "@lykahb" },
@@ -897,6 +916,14 @@ list.julia = {
     files = { "src/parser.c", "src/scanner.c" },
   },
   maintainers = { "@theHamsta" },
+}
+
+list.kconfig = {
+  install_info = {
+    url = "https://github.com/amaanq/tree-sitter-kconfig",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainers = { "@amaanq" },
 }
 
 list.kdl = {
@@ -1093,6 +1120,14 @@ list.norg = {
     use_makefile = true,
   },
   maintainers = { "@JoeyGrajciar", "@vhyrro" },
+}
+
+list.nqc = {
+  install_info = {
+    url = "https://github.com/amaanq/tree-sitter-nqc",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@amaanq" },
 }
 
 list.objc = {
@@ -1496,6 +1531,15 @@ list.smali = {
   maintainers = { "@amaanq" },
 }
 
+list.snakemake = {
+  install_info = {
+    url = "https://github.com/osthomas/tree-sitter-snakemake",
+    files = { "src/parser.c", "src/scanner.c" },
+  },
+  maintainer = { "@osthomas" },
+  experimental = true,
+}
+
 list.smithy = {
   install_info = {
     url = "https://github.com/indoorvivants/tree-sitter-smithy",
@@ -1510,6 +1554,24 @@ list.solidity = {
     files = { "src/parser.c" },
   },
   maintainers = { "@amaanq" },
+}
+
+list.soql = {
+  install_info = {
+    url = "https://github.com/aheber/tree-sitter-sfapex",
+    files = { "src/parser.c" },
+    location = "soql",
+  },
+  maintainers = { "@aheber" },
+}
+
+list.sosl = {
+  install_info = {
+    url = "https://github.com/aheber/tree-sitter-sfapex",
+    files = { "src/parser.c" },
+    location = "sosl",
+  },
+  maintainers = { "@aheber" },
 }
 
 list.sparql = {
@@ -1535,6 +1597,15 @@ list.squirrel = {
     files = { "src/parser.c", "src/scanner.c" },
   },
   maintainers = { "@amaanq" },
+}
+
+list.ssh_config = {
+  install_info = {
+    url = "https://github.com/ObserverOfTime/tree-sitter-ssh-config",
+    files = { "src/parser.c" },
+  },
+  filetype = "sshconfig",
+  maintainers = { "@ObserverOfTime" },
 }
 
 list.starlark = {
@@ -1638,6 +1709,14 @@ list.terraform = {
   maintainers = { "@MichaHoffmann" },
 }
 
+list.textproto = {
+  install_info = {
+    url = "https://github.com/PorterAtGoogle/tree-sitter-textproto",
+    files = { "src/parser.c" },
+  },
+  maintainers = { "@Porter" },
+}
+
 list.thrift = {
   install_info = {
     url = "https://github.com/duskmoon314/tree-sitter-thrift",
@@ -1733,6 +1812,15 @@ list.ungrammar = {
     files = { "src/parser.c" },
   },
   maintainers = { "@Philipp-M", "@amaanq" },
+}
+
+list.unison = {
+  install_info = {
+    url = "https://github.com/kylegoetz/tree-sitter-unison",
+    files = { "src/parser.c", "src/scanner.c" },
+    requires_generate_from_grammar = true,
+  },
+  maintainers = { "@tapegram" },
 }
 
 list.usd = {
