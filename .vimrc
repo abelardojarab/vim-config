@@ -209,6 +209,8 @@ cmap <Esc>[1;2D <S-Left>
 cmap <Esc>[1;2C <S-Right>
 
 " ---  Clipboard  ---
+noremap <leader>pp  :set invpaste<cr>
+
 " Allow Shift+Insert to paste
 map <S-Insert> <MiddleMouse>
 map! <S-Insert> <MiddleMouse>
