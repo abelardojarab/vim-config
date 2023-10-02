@@ -457,6 +457,8 @@ Plug 'tpope/vim-sleuth'
 if (has('nvim-0.5'))
     Plug 'karb94/neoscroll.nvim'
     Plug 'chipsenkbeil/distant.nvim'
+endif
+if (has('nvim-0.8'))
     Plug 'lukas-reineke/indent-blankline.nvim'
 endif
 
