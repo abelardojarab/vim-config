@@ -1,6 +1,9 @@
 " --- Start with Windows
 source ~/.vim/autoload/win.vim
+if !has('nvim')
 behave mswin
+endif
+
 smap <Del> <C-g>"_d
 smap <C-c> <C-g>y
 smap <C-x> <C-g>x
@@ -368,7 +371,7 @@ if (has('nvim-0.5'))
 endif
 
 " Syntax checker
-Plug 'scrooloose/syntastic'  " Adds syntax checking
+" Plug 'scrooloose/syntastic'
 Plug 'tinyheero/vim-snippets'  " Fork of honza/vim-snippets
 Plug 'dense-analysis/ale'
 
@@ -457,8 +460,6 @@ Plug 'tpope/vim-sleuth'
 if (has('nvim-0.5'))
     Plug 'karb94/neoscroll.nvim'
     Plug 'chipsenkbeil/distant.nvim'
-endif
-if (has('nvim-0.8'))
     Plug 'lukas-reineke/indent-blankline.nvim'
 endif
 
@@ -835,6 +836,7 @@ nnoremap <C-f><C-g> :Commits<CR>
 nnoremap <C-f><Space> :BLines<CR>
 
 " --- ALE settings ---
+let g:ale_virtualtext_cursor = 0
 let g:ale_sign_column_always = 1
 let g:ale_linters            = {
     \ 'c'          : ['clang'],
@@ -844,8 +846,8 @@ let g:ale_linters            = {
     \ 'tex'        : ['chktex'],
     \ }
 let g:ale_lint_on_save = 1
-let g:ale_sign_error = '❌'
-let g:ale_sign_warning = '🔹'
+" let g:ale_sign_error = '❌'
+" let g:ale_sign_warning = '🔹'
 let g:ale_sign_column_always = 1
 let g:ale_set_highlights = 0
 
@@ -855,7 +857,7 @@ endif
 
 " --- Syntastic settings ---
 nmap <silent> <leader>q :SyntasticCheck # <CR> :bp <BAR> bd #<CR>
-
+let g:syntastic_echo_current_error = 0
 let g:syntastic_always_populate_loc_list=1
 let g:syntastic_auto_loc_list=1
 let g:syntastic_enable_signs=1
