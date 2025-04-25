@@ -228,7 +228,7 @@ endif
 :nmap yZ :let @" = expand("%:p")<CR>
 
 " F2 = Paste Toggle (in insert mode, pasting indented text behavior changes)
-set pastetoggle=<F2>
+" set pastetoggle=<F2>
 
 " Toggle paste mode
 nmap <leader>o :set paste!<CR>
