@@ -49,6 +49,6 @@
     "mustache": "~2.2.1",
     "node-static": "~0.7.1",
     "requirejs": "^2.3.3",
-    "webpack": "^2.2.1"
+    "webpack": "^5.75.0"
   }
 }
