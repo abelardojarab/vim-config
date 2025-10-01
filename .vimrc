@@ -171,7 +171,7 @@ Plug 'jistr/vim-nerdtree-tabs'
 Plug 'Nopik/vim-nerdtree-direnter'
 Plug 'junegunn/fzf', { 'do': { -> fzf#install() } }
 Plug 'junegunn/fzf.vim'
-if has('nvim-0.5')
+if has('nvim-0.9')
   Plug 'nvim-lua/plenary.nvim'
   Plug 'nvim-telescope/telescope.nvim', { 'tag': '0.1.*' }
   Plug 'nvim-telescope/telescope-project.nvim'
@@ -313,7 +313,7 @@ else
 endif
 
 " Treesitter (Neovim)
-if has('nvim-0.5')
+if has('nvim-0.9')
 lua << EOF
 require('nvim-treesitter.configs').setup{
   ensure_installed = {},
