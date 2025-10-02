@@ -194,7 +194,7 @@ else
   Plug 'prabirshrestha/asyncomplete-lsp.vim'
 
   " works with both vim and neovim; provides :lspinstallserver
-  plug 'mattn/vim-lsp-settings'
+  Plug 'mattn/vim-lsp-settings'
 
   " auto-install on first open of a filetype (optional)
   let g:lsp_settings_auto_install = 1
