@@ -192,20 +192,20 @@ else
   Plug 'prabirshrestha/vim-lsp'
   Plug 'prabirshrestha/asyncomplete.vim'
   Plug 'prabirshrestha/asyncomplete-lsp.vim'
+
+  " works with both vim and neovim; provides :lspinstallserver
+  plug 'mattn/vim-lsp-settings'
+
+  " auto-install on first open of a filetype (optional)
+  let g:lsp_settings_auto_install = 1
+
+  " prefer these servers (optional)
+  let g:lsp_settings_filetype_c   = ['clangd']
+  let g:lsp_settings_filetype_cpp = ['clangd']
+  let g:lsp_settings_filetype_python = ['pylsp']
+  let g:lsp_settings_filetype_typescript = ['typescript-language-server']
+  let g:lsp_settings_filetype_javascript = ['typescript-language-server']
 endif
-
-" Works with both Vim and Neovim; provides :LspInstallServer
-Plug 'mattn/vim-lsp-settings'
-
-" Auto-install on first open of a filetype (optional)
-let g:lsp_settings_auto_install = 1
-
-" Prefer these servers (optional)
-let g:lsp_settings_filetype_c   = ['clangd']
-let g:lsp_settings_filetype_cpp = ['clangd']
-let g:lsp_settings_filetype_python = ['pylsp']
-let g:lsp_settings_filetype_typescript = ['typescript-language-server']
-let g:lsp_settings_filetype_javascript = ['typescript-language-server']
 
 " --- Linting (single source of truth) ---
 Plug 'dense-analysis/ale'
